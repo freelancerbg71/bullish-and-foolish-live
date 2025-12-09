@@ -1,0 +1,547 @@
+﻿[
+  {
+    "ticker": "GMGI",
+    "valuation": {
+      "marketCap": "122.03M",
+      "enterpriseValue": "122.87M"
+    },
+    "importantDates": {
+      "earningsDate": "2025-10-30",
+      "exDividendDate": null
+    },
+    "shareStats": {
+      "sharesOutstanding": "141.18M",
+      "sharesChangeYoY": "+25.52%",
+      "sharesChangeQoQ": "+3.47%",
+      "insiderOwnership": "89.43%",
+      "institutionOwnership": "3.51%",
+      "float": "14.92M"
+    },
+    "valuationRatios": {
+      "peRatio": null,
+      "forwardPE": 43.22,
+      "psRatio": 0.63,
+      "forwardPS": 0.58,
+      "pbRatio": 0.96,
+      "pfcfRatio": 4.56,
+      "pocfRatio": 3.53,
+      "fcfYield": null,
+      "evToEbitda": null
+    },
+    "financialPosition": {
+      "currentRatio": 0.61,
+      "quickRatio": 0.50,
+      "debtToEquity": 0.20,
+      "debtToEbitda": 1.68,
+      "debtToFCF": 0.99,
+      "interestCoverage": -0.47,
+      "netDebtToFcfYears": 0.99,
+      "netCashToPrice": null
+    },
+    "profitMargins": {
+      "grossMargin": "56.80%",
+      "operatingMargin": "-1.62%",
+      "profitMargin": "-3.00%",
+      "fcfMargin": null
+    },
+    "growth": {
+      "revenueGrowthTTM": null,
+      "revenueCagr3y": null,
+      "perShareGrowth": null
+    },
+    "stability": {
+      "growthYearsCount": null,
+      "fcfPositiveYears": null
+    },
+    "returns": {
+      "roe": null,
+      "roic": null
+    },
+    "cash": {
+      "cashConversion": null,
+      "capexToRevenue": null
+    },
+    "capitalReturns": {
+      "shareholderYield": null,
+      "totalYield": null
+    },
+    "dividends": {
+      "payoutToFcf": null,
+      "growthYears": null
+    },
+    "priceStats": {
+      "beta": 1.95,
+      "week52Change": "-68.55%",
+      "rsi": 40.42,
+      "movingAverage50": 1.00,
+      "movingAverage200": 1.56
+    }
+  },
+  {
+    "ticker": "JNJ",
+    "valuation": {
+      "marketCap": "489.26B",
+      "enterpriseValue": "515.63B"
+    },
+    "importantDates": {
+      "earningsDate": "2025-10-14",
+      "exDividendDate": "2025-11-25"
+    },
+    "shareStats": {
+      "sharesOutstanding": "2.41B",
+      "sharesChangeYoY": "-0.17%",
+      "sharesChangeQoQ": "+0.39%",
+      "insiderOwnership": "0.04%",
+      "institutionOwnership": "74.25%",
+      "float": "2.41B"
+    },
+    "valuationRatios": {
+      "peRatio": 19.62,
+      "forwardPE": 18.21,
+      "psRatio": 5.29,
+      "forwardPS": 4.98,
+      "pbRatio": 6.15,
+      "pfcfRatio": 24.92,
+      "pegRatio": 2.69,
+      "evToEbitda": 16.15,
+      "fcfYield": "4.01%"
+    },
+    "financialPosition": {
+      "currentRatio": 1.07,
+      "quickRatio": 0.71,
+      "debtToEquity": 0.58,
+      "debtToEbitda": 1.43,
+      "debtToFCF": 2.34,
+      "interestCoverage": 27.44,
+      "netDebtToFcfYears": 1.39,
+      "netCashToPrice": null
+    },
+    "profitMargins": {
+      "grossMargin": "68.35%",
+      "operatingMargin": "26.62%",
+      "profitMargin": "27.26%",
+      "fcfMargin": "21.27%"
+    },
+    "growth": {
+      "revenueGrowthTTM": "5.08%",
+      "revenueCagr3y": "5.0%",
+      "perShareGrowth": "5.0%"
+    },
+    "stability": {
+      "growthYearsCount": 5,
+      "fcfPositiveYears": 5
+    },
+    "returns": {
+      "roe": "33.62%",
+      "roic": "13.28%"
+    },
+    "cash": {
+      "cashConversion": 0.78,
+      "capexToRevenue": "5.0%"
+    },
+    "capitalReturns": {
+      "shareholderYield": "2.73%",
+      "totalYield": "2.73%"
+    },
+    "dividends": {
+      "payoutToFcf": "49.67%",
+      "growthYears": 63
+    },
+    "priceStats": {
+      "beta": 0.36,
+      "week52Change": "+32.78%",
+      "rsi": 78.94,
+      "movingAverage50": 187.76,
+      "movingAverage200": 167.81
+    }
+  },
+  {
+    "ticker": "META",
+    "valuation": {
+      "marketCap": "1.48T",
+      "enterpriseValue": "1.49T"
+    },
+    "importantDates": {
+      "earningsDate": "2025-10-29",
+      "exDividendDate": "2025-09-22"
+    },
+    "shareStats": {
+      "sharesOutstanding": "2.52B",
+      "sharesChangeYoY": "-1.40%",
+      "sharesChangeQoQ": "+0.08%",
+      "insiderOwnership": "13.64%",
+      "institutionOwnership": "67.14%",
+      "float": "2.17B"
+    },
+    "valuationRatios": {
+      "peRatio": 26.03,
+      "forwardPE": 19.72,
+      "psRatio": 7.86,
+      "forwardPS": 6.45,
+      "pbRatio": 7.67,
+      "pfcfRatio": 32.99,
+      "pegRatio": 1.26,
+      "evToEbitda": 15.10,
+      "fcfYield": "3.03%"
+    },
+    "financialPosition": {
+      "currentRatio": 1.98,
+      "quickRatio": 1.67,
+      "debtToEquity": 0.26,
+      "debtToEbitda": 0.50,
+      "debtToFCF": 1.14,
+      "interestCoverage": 84.10,
+      "netDebtToFcfYears": 0.15,
+      "netCashToPrice": "-0.4%"
+    },
+    "profitMargins": {
+      "grossMargin": "82.01%",
+      "operatingMargin": "42.61%",
+      "profitMargin": "30.89%",
+      "fcfMargin": "23.67%"
+    },
+    "growth": {
+      "revenueGrowthTTM": "21.27%",
+      "revenueCagr3y": "18.0%",
+      "perShareGrowth": "6.9%"
+    },
+    "stability": {
+      "growthYearsCount": 5,
+      "fcfPositiveYears": 5
+    },
+    "returns": {
+      "roe": "32.64%",
+      "roic": "22.00%"
+    },
+    "cash": {
+      "cashConversion": 0.77,
+      "capexToRevenue": "33.1%"
+    },
+    "capitalReturns": {
+      "shareholderYield": "1.76%",
+      "totalYield": "1.76%"
+    },
+    "dividends": {
+      "payoutToFcf": "9.28%",
+      "growthYears": 1
+    },
+    "priceStats": {
+      "beta": 1.27,
+      "week52Change": "+5.01%",
+      "rsi": 23.11,
+      "movingAverage50": 700.89,
+      "movingAverage200": 675.38
+    }
+  },
+  {
+    "ticker": "IOVA",
+    "valuation": {
+      "marketCap": "865.39M",
+      "enterpriseValue": "621.05M"
+    },
+    "importantDates": {
+      "earningsDate": "2025-11-06",
+      "exDividendDate": null
+    },
+    "shareStats": {
+      "sharesOutstanding": "396.97M",
+      "sharesChangeYoY": "+19.46%",
+      "sharesChangeQoQ": "+8.83%",
+      "insiderOwnership": "7.38%",
+      "institutionOwnership": "46.88%",
+      "float": "338.70M"
+    },
+    "valuationRatios": {
+      "peRatio": null,
+      "forwardPE": null,
+      "psRatio": 2.99,
+      "forwardPS": 2.33,
+      "pbRatio": 1.24,
+      "pfcfRatio": null,
+      "pegRatio": null,
+      "evToEbitda": null,
+      "fcfYield": "-40.47%"
+    },
+    "financialPosition": {
+      "currentRatio": 3.41,
+      "quickRatio": 2.92,
+      "debtToEquity": 0.07,
+      "debtToEbitda": null,
+      "debtToFCF": null,
+      "interestCoverage": null,
+      "netDebtToFcfYears": null,
+      "netCashToPrice": "31.0%"
+    },
+    "profitMargins": {
+      "grossMargin": "20.69%",
+      "operatingMargin": "-164.25%",
+      "profitMargin": "-158.78%",
+      "fcfMargin": "-140.49%"
+    },
+    "growth": {
+      "revenueGrowthTTM": "175.62%",
+      "revenueCagr3y": "30.0%",
+      "perShareGrowth": "-20.0%"
+    },
+    "stability": {
+      "growthYearsCount": 2,
+      "fcfPositiveYears": 0
+    },
+    "returns": {
+      "roe": "-53.89%",
+      "roic": "-31.99%"
+    },
+    "cash": {
+      "cashConversion": 0.88,
+      "capexToRevenue": "11.4%"
+    },
+    "capitalReturns": {
+      "shareholderYield": "-19.46%",
+      "totalYield": "-19.46%"
+    },
+    "dividends": {
+      "payoutToFcf": null,
+      "growthYears": 0
+    },
+    "priceStats": {
+      "beta": 0.85,
+      "week52Change": "-73.26%",
+      "rsi": 47.10,
+      "movingAverage50": 2.21,
+      "movingAverage200": 2.76
+    }
+  },
+  {
+    "ticker": "WDP",
+    "valuation": {
+      "marketCap": "5.27B",
+      "enterpriseValue": "8.84B"
+    },
+    "importantDates": {
+      "earningsDate": "2026-01-30",
+      "exDividendDate": "2025-05-02"
+    },
+    "shareStats": {
+      "sharesOutstanding": "234.61M",
+      "sharesChangeYoY": "+4.15%",
+      "sharesChangeQoQ": "+1.94%",
+      "insiderOwnership": "19.46%",
+      "institutionOwnership": "33.53%",
+      "float": "143.86M"
+    },
+    "valuationRatios": {
+      "peRatio": 13.63,
+      "forwardPE": 14.10,
+      "psRatio": 10.01,
+      "forwardPS": null,
+      "pbRatio": 1.08,
+      "pfcfRatio": 12.79,
+      "pegRatio": 2.55,
+      "evToEbitda": 19.86,
+      "fcfYield": "7.82%"
+    },
+    "financialPosition": {
+      "currentRatio": 0.13,
+      "quickRatio": 0.13,
+      "debtToEquity": 0.73,
+      "debtToEbitda": 8.06,
+      "debtToFCF": 8.72,
+      "interestCoverage": 5.58,
+      "netDebtToFcfYears": 8.66,
+      "netCashToPrice": "-72.0%"
+    },
+    "profitMargins": {
+      "grossMargin": "87.16%",
+      "operatingMargin": "82.04%",
+      "profitMargin": "71.42%",
+      "fcfMargin": "78.28%"
+    },
+    "growth": {
+      "revenueGrowthTTM": "15.62%",
+      "revenueCagr3y": "5.0%",
+      "perShareGrowth": "29.33%"
+    },
+    "stability": {
+      "growthYearsCount": 5,
+      "fcfPositiveYears": 5
+    },
+    "returns": {
+      "roe": "7.91%",
+      "roic": "3.37%"
+    },
+    "cash": {
+      "cashConversion": 1.10,
+      "capexToRevenue": "5.6%"
+    },
+    "capitalReturns": {
+      "shareholderYield": "1.21%",
+      "totalYield": "1.21%"
+    },
+    "dividends": {
+      "payoutToFcf": "43.49%",
+      "growthYears": 12
+    },
+    "priceStats": {
+      "beta": 1.00,
+      "week52Change": "+9.85%",
+      "rsi": 59.10,
+      "movingAverage50": 21.79,
+      "movingAverage200": 21.31
+    }
+  },
+  {
+    "ticker": "MRL",
+    "valuation": {
+      "marketCap": "7.08B",
+      "enterpriseValue": "10.90B"
+    },
+    "importantDates": {
+      "earningsDate": "2025-11-14",
+      "exDividendDate": "2025-11-21"
+    },
+    "shareStats": {
+      "sharesOutstanding": "562.81M",
+      "sharesChangeYoY": "-11.75%",
+      "sharesChangeQoQ": "+0.80%",
+      "insiderOwnership": "8.18%",
+      "institutionOwnership": "30.97%",
+      "float": "377.74M"
+    },
+    "valuationRatios": {
+      "peRatio": 10.00,
+      "forwardPE": 22.27,
+      "psRatio": 13.20,
+      "pbRatio": 0.89,
+      "pfcfRatio": null,
+      "pegRatio": 2.71,
+      "evToEbitda": 26.27,
+      "fcfYield": null
+    },
+    "financialPosition": {
+      "currentRatio": 5.50,
+      "quickRatio": 5.23,
+      "debtToEquity": 0.65,
+      "debtToEbitda": 12.51,
+      "debtToFCF": null,
+      "interestCoverage": 3.03,
+      "netDebtToFcfYears": null,
+      "netCashToPrice": "-52.0%"
+    },
+    "profitMargins": {
+      "grossMargin": "100.00%",
+      "operatingMargin": "76.20%",
+      "profitMargin": "119.59%",
+      "fcfMargin": null
+    },
+    "growth": {
+      "revenueGrowthTTM": "9.10%",
+      "revenueCagr3y": "3.0%",
+      "perShareGrowth": "46.55%"
+    },
+    "stability": {
+      "growthYearsCount": 3,
+      "fcfPositiveYears": 4
+    },
+    "returns": {
+      "roe": "8.27%",
+      "roic": "1.98%"
+    },
+    "cash": {
+      "cashConversion": null,
+      "capexToRevenue": null
+    },
+    "capitalReturns": {
+      "shareholderYield": "14.94%",
+      "totalYield": "14.94%"
+    },
+    "dividends": {
+      "payoutToFcf": null,
+      "growthYears": 1
+    },
+    "priceStats": {
+      "beta": 0.97,
+      "week52Change": "+27.99%",
+      "rsi": 28.62,
+      "movingAverage50": 13.17,
+      "movingAverage200": 11.49
+    }
+  },
+  {
+    "ticker": "SOFI",
+    "valuation": {
+      "marketCap": "30.03B",
+      "enterpriseValue": "30.52B"
+    },
+    "importantDates": {
+      "earningsDate": "2025-10-28",
+      "exDividendDate": null
+    },
+    "shareStats": {
+      "sharesOutstanding": "1.21B",
+      "sharesChangeYoY": "+15.07%",
+      "sharesChangeQoQ": "+9.14%",
+      "insiderOwnership": "1.74%",
+      "institutionOwnership": "52.96%",
+      "float": "1.18B"
+    },
+    "valuationRatios": {
+      "peRatio": 45.94,
+      "forwardPE": 44.45,
+      "psRatio": 9.06,
+      "forwardPS": 7.10,
+      "pbRatio": 3.67,
+      "pfcfRatio": null,
+      "pegRatio": 1.73,
+      "evToEbitda": null,
+      "fcfYield": "-10.23%"
+    },
+    "financialPosition": {
+      "currentRatio": 1.15,
+      "quickRatio": 0.49,
+      "debtToEquity": 0.32,
+      "debtToEbitda": null,
+      "debtToFCF": null,
+      "interestCoverage": null,
+      "netDebtToFcfYears": null,
+      "netCashToPrice": "1.5%"
+    },
+    "profitMargins": {
+      "grossMargin": "82.51%",
+      "operatingMargin": "12.19%",
+      "profitMargin": "19.46%",
+      "fcfMargin": "-96.33%"
+    },
+    "growth": {
+      "revenueGrowthTTM": "30.62%",
+      "revenueCagr3y": "30.0%",
+      "perShareGrowth": "26.0%"
+    },
+    "stability": {
+      "growthYearsCount": 4,
+      "fcfPositiveYears": 0
+    },
+    "returns": {
+      "roe": "8.59%",
+      "roic": null
+    },
+    "cash": {
+      "cashConversion": -4.95,
+      "capexToRevenue": "6.6%"
+    },
+    "capitalReturns": {
+      "shareholderYield": "-15.07%",
+      "totalYield": "-15.07%"
+    },
+    "dividends": {
+      "payoutToFcf": null,
+      "growthYears": 0
+    },
+    "priceStats": {
+      "beta": 1.94,
+      "week52Change": "+72.75%",
+      "rsi": 39.48,
+      "movingAverage50": 28.15,
+      "movingAverage200": 19.41
+    }
+  }
+]

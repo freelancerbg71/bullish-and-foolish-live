@@ -1,0 +1,2085 @@
+
+import { rules, ruleExplainers, percentToNumber } from "./shared-rules.js";
+    const API_ROOT = window.API_ROOT || localStorage.getItem("apiRoot") || "/api";
+    const API_BASE = `${API_ROOT}/ticker`;
+    const RATE_LIMIT_MESSAGE = "You hit the request limit. Please wait a few seconds and try again.";
+    const ticker = new URLSearchParams(location.search).get("ticker")-.toUpperCase();
+    const statusEl = document.getElementById("status");
+    const CACHE_ONLY = false; // allow backend proxy calls; set true for offline cache-only runs
+    const DISABLE_BUNDLE = true; // presentation mode: skip local bundle load/save and always hit live API
+    if (!ticker) { statusEl.textContent = "No ticker provided."; throw new Error("No ticker"); }
+    document.getElementById("title").textContent = ticker;
+    const EDGAR_STATUS_URL = `${API_ROOT}/ticker/${encodeURIComponent(ticker)}`;
+    const EDGAR_STATUS_FALLBACK_URL = `${API_ROOT}/edgar-facts-ticker=${encodeURIComponent(ticker)}&status=1`;
+    const compareBtn = document.getElementById("compareBtn");
+    if (compareBtn) compareBtn.href = `compare.html-t1=${encodeURIComponent(ticker)}`;
+    // Wire donation modal trigger if present (shared with about/support modal)
+    const supportLink = document.querySelector(".rating-meta a[href*='about.html#support']");
+    if (supportLink) {
+      supportLink.addEventListener("click", (e) => {
+        // If a modal exists on the page, use it; otherwise allow navigation
+        const modal = document.getElementById("supportModal");
+        const donateBtn = document.getElementById("donateBtn");
+        const supportClose = document.getElementById("supportClose");
+        const laterBtn = document.getElementById("laterBtn");
+        if (modal && donateBtn) {
+          e.preventDefault();
+          modal.style.display = "flex";
+          const closeModal = () => { modal.style.display = "none"; };
+          if (supportClose) supportClose.onclick = closeModal;
+          if (laterBtn) laterBtn.onclick = closeModal;
+          modal.onclick = (evt) => { if (evt.target === modal) closeModal(); };
+          window.addEventListener("keydown", function escClose(evt) { if (evt.key === "Escape") { closeModal(); window.removeEventListener("keydown", escClose); } });
+          donateBtn.onclick = () => window.open("http://revolut.me/viktorc8gv", "_blank");
+        }
+      });
+    }
+    ensurePriceElements();
+    const lastPriceEl = document.getElementById("lastPrice");
+    const providerSelect = document.getElementById("providerSelect");
+    const goBtn = document.getElementById("goBtn");
+    const saveBundleBtn = document.getElementById("saveBundleBtn");
+    const rangeSwitch = document.getElementById("rangeSwitch");
+    const tableToggles = Array.from(document.querySelectorAll(".table-toggle"));
+    let lastBundlePayload = null;
+    let bundleAvailable = false;
+
+    function cacheKey(kind) { const day = new Date().toISOString().slice(0, 10); return `edgar-${kind}-${ticker}-${day}`; }
+    function latestKey(kind) { return `edgar-${kind}-${ticker}-latest`; }
+
+    let bundlePromise = null;
+    let bundleCache = null;
+    let selectedProvider = "edgar";
+    let edgarFundamentals = null;
+    let priceSeriesFull = [];
+    let priceSeriesLight = [];
+    let chartPoints = [];
+    let selectedRange = "all";
+    let lastIncome = [];
+    let lastBalance = [];
+    let lastCash = [];
+    let lastPriceSeries = [];
+    let lastPriceStats = null;
+    let lastVmPayload = null;
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    const loadingText = loadingOverlay - loadingOverlay.querySelector("div:nth-child(2)") : null;
+
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function showLoadingOverlay(text = "Loading...") {
+      if (loadingOverlay) {
+        loadingOverlay.classList.remove("hidden");
+        if (loadingText) loadingText.textContent = text;
+      }
+    }
+
+    function hideLoadingOverlay() {
+      if (loadingOverlay) loadingOverlay.classList.add("hidden");
+    }
+
+    async function fetchEdgarStatus() {
+      const tryFetch = async (url) => {
+        const res = await fetch(url, { headers: { Accept: "application/json" } });
+        if (!res.ok) {
+          const err = new Error(`EDGAR status failed ${res.status}`);
+          err.status = res.status;
+          throw err;
+        }
+        return res.json();
+      };
+      try {
+        return await tryFetch(EDGAR_STATUS_URL);
+      } catch (err) {
+        if (err.status === 404) {
+          return tryFetch(EDGAR_STATUS_FALLBACK_URL);
+        }
+        throw err;
+      }
+    }
+
+    async function ensureEdgarFundamentalsReady() {
+      const cached = localStorage.getItem(latestKey("edgar-fundamentals"));
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length) {
+            edgarFundamentals = parsed;
+            return parsed;
+          }
+        } catch (_) {}
+      }
+      let attempt = 0;
+      const maxAttempts = 20; // cap ~40s at 2s intervals
+      while (attempt < maxAttempts) {
+        let payload;
+        try {
+          payload = await fetchEdgarStatus();
+        } catch (err) {
+          console.warn("EDGAR status check failed; proceeding without queue gating", err);
+          return null;
+        }
+        const isReady = payload-.status === "ready";
+        const hasArray = Array.isArray(payload-.data) && payload.data.length;
+        const hasObjectData = !Array.isArray(payload-.data) && payload-.data;
+        if (isReady && (hasArray || hasObjectData)) {
+          edgarFundamentals = Array.isArray(payload.data) - payload.data : null;
+          try {
+            if (payload.data) {
+              localStorage.setItem(latestKey("edgar-fundamentals"), JSON.stringify(payload.data));
+            }
+          } catch (_) {}
+          return payload.data || payload;
+        }
+        if (payload-.status === "error") {
+          throw new Error(payload-.error || "EDGAR fetch failed");
+        }
+        const waitMs = Number(payload-.nextPollMs) || 2000;
+        const overlayText =
+          payload-.status === "running"
+            - "Loading EDGAR data..."
+            : "Queued for EDGAR... warming cache";
+        console.debug("[edgar-status]", { attempt, status: payload-.status, nextPollMs: waitMs });
+        showLoadingOverlay(overlayText);
+        await sleep(waitMs);
+        attempt++;
+      }
+      console.warn("Timed out waiting for EDGAR status; proceeding without gate");
+      statusEl.textContent = "EDGAR may still be warming up; showing what we have.";
+      return null;
+    }
+
+    async function runBatched(taskFns, batchSize = 5, delayMs = 1000) {
+      const results = [];
+      for (let i = 0; i < taskFns.length; i += batchSize) {
+        const chunk = taskFns.slice(i, i + batchSize);
+        console.debug(`Batch ${i / batchSize + 1}: starting ${chunk.length} requests`);
+        const chunkResults = await Promise.all(
+          chunk.map(async (fn, idx) => {
+            try {
+              const r = await fn();
+              console.debug(`  ✓ chunk item ${idx + 1} ok`);
+              return r;
+            } catch (err) {
+              console.warn(`  ✗ chunk item ${idx + 1} failed: ${err.message || err}`);
+              throw err;
+            }
+          })
+        );
+        results.push(...chunkResults);
+        if (i + batchSize < taskFns.length) {
+          console.debug(`Batch ${i / batchSize + 1}: sleeping ${delayMs}ms`);
+          await sleep(delayMs);
+        }
+      }
+      return results;
+    }
+
+    function buildApiUrl(kind) {
+      const params = new URLSearchParams({ symbol: ticker, section: kind });
+      return `${API_BASE}-${params.toString()}`;
+    }
+
+    function showRateLimitNotice() {
+      if (statusEl) statusEl.textContent = RATE_LIMIT_MESSAGE;
+    }
+
+    function handleLoadError(err) {
+      if (err-.rateLimited) {
+        showRateLimitNotice();
+        return;
+      }
+      statusEl.textContent = `Error: ${err-.message || "Failed to load data"}`;
+      console.error(err);
+      if (!CACHE_ONLY && lastBundlePayload && !bundleAvailable) {
+        maybePersistBundle(lastBundlePayload, { force: true });
+      }
+      hideLoadingOverlay();
+    }
+
+    async function fetchWithCache(kind, url, options = {}) {
+      const { allowPaywall = false, allowRetry = false, noApiWhenMissing = false, treatEmptyAsMissing = false } = options;
+      const cacheOnly = CACHE_ONLY || noApiWhenMissing;
+      const key = cacheKey(kind); const latest = latestKey(kind);
+      const cachedRaw = localStorage.getItem(key) || localStorage.getItem(latest);
+      let cached;
+      if (cachedRaw) { try { cached = JSON.parse(cachedRaw); } catch (_) {} }
+      // If we already have a non-null cached copy, reuse it and avoid API calls (testing mode).
+      if (cached !== undefined && cached !== null) {
+        if (treatEmptyAsMissing && Array.isArray(cached) && cached.length === 0) {
+          // fall through to bundle/API
+        } else {
+          return cached;
+        }
+      }
+      // Skip bundle fetches in presentation mode
+      if (!DISABLE_BUNDLE) {
+        const bundleVal = await loadFromBundle(kind);
+        if (bundleVal !== undefined && bundleVal !== null) {
+          bundleAvailable = true;
+          if (!CACHE_ONLY) {
+            localStorage.setItem(key, JSON.stringify(bundleVal));
+            localStorage.setItem(latest, JSON.stringify(bundleVal));
+          }
+          return bundleVal;
+        }
+      }
+      // If we already loaded a bundle for this ticker and it lacks this kind, fall through to API to fill gaps.
+      // Optional: skip API entirely if not cached (to avoid burning calls in testing).
+      if (cacheOnly) return null;
+      // Try bundled file under /data if present
+      if (!DISABLE_BUNDLE) {
+        const bundlePath = `data/${ticker}-bundle-${new Date().toISOString().slice(0,10)}.json`;
+        try {
+          const res = await fetch(bundlePath);
+          if (res.ok) {
+            const bundle = await res.json();
+            const fromBundle = bundle-.[kind] -- bundle-.[kind.replace(/-/g,"")] -- null;
+            if (fromBundle !== null && fromBundle !== undefined) {
+              localStorage.setItem(key, JSON.stringify(fromBundle));
+              localStorage.setItem(latest, JSON.stringify(fromBundle));
+              return fromBundle;
+            }
+          }
+        } catch (_) {}
+      }
+      // As last resort, hit API.
+      const paywallKey = `paywall-${ticker}-${kind}`;
+      if (allowPaywall && allowRetry) localStorage.removeItem(paywallKey);
+      const paywallFlag = localStorage.getItem(paywallKey);
+      if (allowPaywall && paywallFlag === "1" && !options.allowRetry) {
+        console.warn(`${kind} marked paywalled - skipping API`);
+        return null;
+      }
+      try {
+        const requestUrl = url || buildApiUrl(kind);
+        console.debug(`fetch ${kind} -> ${requestUrl}`);
+        const res = await fetch(requestUrl);
+        if (res.status === 429) {
+          showRateLimitNotice();
+          if (cached !== undefined) return cached;
+          const rateErr = new Error("Rate limited");
+          rateErr.rateLimited = true;
+          throw rateErr;
+        }
+        if (!res.ok) {
+          console.warn(`fetch ${kind} failed`, res.status, res.statusText);
+          if (allowPaywall && res.status === 402) {
+            console.warn(`${kind} is paywalled (402) - returning null for now`);
+            if (!CACHE_ONLY) {
+              localStorage.setItem(key, JSON.stringify(null));
+              localStorage.setItem(latest, JSON.stringify(null));
+              localStorage.setItem(paywallKey, "1");
+            }
+            return null;
+          }
+          const errText = await res.text().catch(() => "");
+          const err = new Error(`${kind} fetch failed ${res.status}`);
+          err.status = res.status;
+          err.body = errText;
+          console.error(`fetch ${kind} failed ${res.status}`, { url: requestUrl, body: errText });
+          throw err;
+        }
+        const data = await res.json();
+        if (!CACHE_ONLY) {
+          localStorage.setItem(key, JSON.stringify(data));
+          localStorage.setItem(latest, JSON.stringify(data));
+          if (allowPaywall) localStorage.removeItem(paywallKey);
+        }
+        return data;
+      } catch (err) {
+        console.error(`fetchWithCache error for ${kind}`, err);
+        if (cached !== undefined) {
+          console.warn(`Using cached ${kind} due to error`, err.message);
+          return cached;
+        }
+        if (allowPaywall) return null;
+        throw err;
+      }
+    }
+
+    async function loadAll() {
+      statusEl.textContent = "Loading EDGAR fundamentals...";
+      showLoadingOverlay("Loading EDGAR data…");
+      await ensureEdgarFundamentalsReady();
+      let vmPayload = null;
+      try {
+        const res = await fetch(`${API_ROOT}/ticker/${encodeURIComponent(ticker)}`, {
+          headers: { Accept: "application/json" }
+        });
+        const data = await res.json();
+        if (data-.status && data.status !== "ready") {
+          throw new Error(data-.message || `Ticker not ready: ${data.status}`);
+        }
+        vmPayload = data-.data || data;
+      } catch (err) {
+        console.error("Failed to fetch ticker view model", err);
+        statusEl.textContent = `Error: ${err-.message || "Could not load ticker"}`;
+        hideLoadingOverlay();
+        return;
+      }
+      if (!vmPayload) {
+        statusEl.textContent = "No data available.";
+        hideLoadingOverlay();
+        return;
+      }
+      const subtitleEl = document.getElementById("subtitle");
+      if (subtitleEl) {
+        if (vmPayload.companyName) {
+          subtitleEl.textContent = vmPayload.companyName;
+          subtitleEl.style.display = "block";
+        } else {
+          subtitleEl.textContent = "";
+          subtitleEl.style.display = "none";
+        }
+      }
+
+      // Map view model -> legacy shapes for renderers
+      const quartersDesc = (vmPayload.quarterlySeries || [])
+        .slice()
+        .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd));
+      const income = quartersDesc.map((q) => ({
+        date: q.periodEnd,
+        revenue: q.revenue,
+        grossProfit: q.grossProfit,
+        operatingIncome: q.operatingIncome,
+        netIncome: q.netIncome,
+        shareBasedCompensation: q.shareBasedCompensation,
+        researchAndDevelopmentExpenses: q.researchAndDevelopmentExpenses,
+        eps: q.epsBasic,
+        epsdiluted: q.epsBasic,
+        epsDiluted: q.epsBasic
+      }));
+      const balance = quartersDesc.map((q) => ({
+        date: q.periodEnd,
+        cashAndCashEquivalents: q.cash,
+        totalDebt: q.totalDebt,
+        shortTermDebt: q.shortTermDebt,
+        leaseLiabilities: q.leaseLiabilities,
+        shortTermInvestments: q.shortTermInvestments,
+        interestExpense: q.interestExpense,
+        totalStockholdersEquity: q.totalEquity,
+        totalAssets: q.totalAssets,
+        totalLiabilities: q.totalLiabilities,
+        commonStockSharesOutstanding: q.sharesOutstanding
+      }));
+      const cash = quartersDesc.map((q) => ({
+        date: q.periodEnd,
+        netCashProvidedByOperatingActivities: q.operatingCashFlow,
+        operatingCashFlow: q.operatingCashFlow,
+        capitalExpenditure: q.capex,
+        fcfComputed:
+          q.freeCashFlow != null
+            - q.freeCashFlow
+            : q.operatingCashFlow != null && q.capex != null
+            - q.operatingCashFlow - q.capex
+            : null
+      }));
+      const findLatestFinite = (arr, key) => {
+        if (!Array.isArray(arr)) return null;
+        for (const item of arr) {
+          const v = Number(item-.[key]);
+          if (Number.isFinite(v) && v > 0) return v;
+        }
+        return null;
+      };
+      const sharesLatest = findLatestFinite(quartersDesc, "sharesOutstanding");
+      const hasShares = Number.isFinite(sharesLatest) && sharesLatest > 0;
+      const revenueTtm = vmPayload.ttm-.revenue -- null;
+      const fcfTtm = vmPayload.ttm-.freeCashFlow -- null;
+      const equityLatest = findLatestFinite(quartersDesc, "totalEquity");
+      const priceCloseVm = vmPayload.priceSummary-.lastClose -- null;
+      const priceHistoryRaw = Array.isArray(vmPayload.priceHistory) - vmPayload.priceHistory.slice() : [];
+      const priceHistorySorted = priceHistoryRaw.sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+      const lastHistoryPrice = priceHistorySorted.length - Number(priceHistorySorted[priceHistorySorted.length - 1].close) : null;
+      const priceCloseFallback = Number.isFinite(priceCloseVm) - priceCloseVm : (Number.isFinite(lastHistoryPrice) - lastHistoryPrice : null);
+      const pricePrevFallback = (() => {
+        if (Number.isFinite(vmPayload.priceSummary-.prevClose)) return vmPayload.priceSummary.prevClose;
+        if (priceHistorySorted.length >= 2) {
+          const prev = Number(priceHistorySorted[priceHistorySorted.length - 2].close);
+          return Number.isFinite(prev) - prev : null;
+        }
+        return null;
+      })();
+      const epsTtm = vmPayload.ttm-.epsBasic -- null;
+      const safeDivide = (num, den) => {
+        if (!Number.isFinite(num) || !Number.isFinite(den) || den === 0 || Math.abs(den) < 1e-6) return null;
+        return num / den;
+      };
+
+      const makeKeyMetricRow = (label, rev, fcf, equity, eps, shares, price, vmFallback = {}) => {
+        const revenuePerShare = safeDivide(rev, shares);
+        const fcfPerShare = safeDivide(fcf, shares);
+        const bvPerShare = safeDivide(equity, shares);
+        return {
+          date: label,
+          freeCashFlowPerShareTTM: fcfPerShare -- vmFallback.freeCashFlowPerShareTTM -- null,
+          revenuePerShareTTM: revenuePerShare -- vmFallback.revenuePerShareTTM -- null,
+          bookValuePerShareTTM: bvPerShare -- vmFallback.bookValuePerShareTTM -- null,
+          pfcfRatio: (() => {
+            if (vmFallback.pfcfRatio != null) return vmFallback.pfcfRatio;
+            if (price != null && fcfPerShare != null) return safeDivide(price, fcfPerShare);
+            return null;
+          })(),
+          peRatio: (() => {
+            if (vmFallback.peRatio != null) return vmFallback.peRatio;
+            if (price != null && eps != null && Math.abs(eps) >= 1e-6) return price / eps;
+            return null;
+          })(),
+          priceToSalesRatio: (() => {
+            if (vmFallback.priceToSalesRatio != null) return vmFallback.priceToSalesRatio;
+            if (price != null && revenuePerShare != null) return safeDivide(price, revenuePerShare);
+            return null;
+          })(),
+          priceToBookRatio: (() => {
+            if (vmFallback.priceToBookRatio != null) return vmFallback.priceToBookRatio;
+            if (price != null && bvPerShare != null) return safeDivide(price, bvPerShare);
+            return null;
+          })()
+        };
+      };
+
+      const keyMetrics = [
+        {
+          date: vmPayload.ttm-.asOf || "TTM",
+          ...makeKeyMetricRow(
+            "TTM",
+            revenueTtm,
+            fcfTtm,
+            equityLatest,
+            epsTtm,
+            sharesLatest,
+            priceCloseFallback,
+            {
+              pfcfRatio: vmPayload.keyMetrics-.freeCashFlowYield - 1 / vmPayload.keyMetrics.freeCashFlowYield : null,
+              peRatio: vmPayload.keyMetrics-.peTtm -- null,
+              priceToSalesRatio: vmPayload.keyMetrics-.psTtm -- null,
+              priceToBookRatio: vmPayload.keyMetrics-.pb -- null,
+              revenuePerShareTTM: vmPayload.keyMetrics-.revenuePerShareTTM -- null,
+              freeCashFlowPerShareTTM: vmPayload.keyMetrics-.freeCashFlowPerShareTTM -- null,
+              bookValuePerShareTTM: vmPayload.keyMetrics-.bookValuePerShareTTM -- null
+            }
+          )
+        },
+        ...quartersDesc.slice(0, 2).map((q) =>
+          makeKeyMetricRow(q.periodEnd || q.label || "Q", q.revenue, q.freeCashFlow -- q.operatingCashFlow, q.totalEquity, q.epsBasic, q.sharesOutstanding, priceCloseFallback)
+        )
+      ];
+      const latestQuarter = quartersDesc[0] || {};
+      const ratios = [
+        {
+          date: latestQuarter.periodEnd || "latest",
+          grossProfitMargin: vmPayload.keyMetrics-.grossMargin -- safeDivide(latestQuarter.grossProfit, latestQuarter.revenue),
+          operatingProfitMargin: vmPayload.keyMetrics-.operatingMargin -- safeDivide(latestQuarter.operatingIncome, latestQuarter.revenue),
+          netProfitMargin: vmPayload.keyMetrics-.netMargin -- safeDivide(latestQuarter.netIncome, latestQuarter.revenue),
+          returnOnEquity: vmPayload.keyMetrics-.roe -- safeDivide(latestQuarter.netIncome, latestQuarter.totalEquity),
+          returnOnInvestedCapital:
+            vmPayload.keyMetrics-.roic --
+            safeDivide(
+              latestQuarter.netIncome,
+              latestQuarter.totalEquity != null && latestQuarter.totalDebt != null && latestQuarter.cash != null
+                - latestQuarter.totalEquity + latestQuarter.totalDebt - latestQuarter.cash
+                : null
+            ),
+          debtEquityRatio: vmPayload.keyMetrics-.debtToEquity -- safeDivide(latestQuarter.totalDebt, latestQuarter.totalEquity)
+        },
+        ...quartersDesc.slice(0, 2).map((q) => ({
+          date: q.periodEnd || q.label || "Q",
+          grossProfitMargin: safeDivide(q.grossProfit, q.revenue),
+          operatingProfitMargin: safeDivide(q.operatingIncome, q.revenue),
+          netProfitMargin: safeDivide(q.netIncome, q.revenue),
+          returnOnEquity: safeDivide(q.netIncome, q.totalEquity),
+          returnOnInvestedCapital: safeDivide(
+            q.netIncome,
+            q.totalEquity != null && q.totalDebt != null && q.cash != null - q.totalEquity + q.totalDebt - q.cash : null
+          ),
+          debtEquityRatio: safeDivide(q.totalDebt, q.totalEquity)
+        }))
+      ];
+      const debugTag = `[${ticker}-debug]`;
+      console.debug(`${debugTag} quartersDesc head`, quartersDesc.slice(0,3));
+      console.debug(`${debugTag} price summary`, vmPayload.priceSummary, "price fallback", priceCloseFallback, "prev", pricePrevFallback);
+      console.debug(`${debugTag} keyMetrics rows`, keyMetrics);
+      console.debug(`${debugTag} ratios rows`, ratios);
+
+      // Price mapping
+      const priceFull = (vmPayload.priceHistory || []).map((p) => ({
+        date: p.date,
+        close: Number(p.close),
+        adjClose: Number(p.close),
+        high: Number(p.close),
+        low: Number(p.close),
+        open: Number(p.close),
+        volume: 0
+      }));
+      const priceLight = priceFull;
+      const priceInfo = renderPriceBlock(priceLight, priceFull);
+      priceSeriesFull = priceInfo.seriesForChart || [];
+      priceSeriesLight = priceLight || [];
+      renderPriceChart(filterSeriesByRange(priceSeriesFull, selectedRange));
+      const latestPrice =
+        vmPayload.priceSummary-.lastClose --
+        getLatestPrice(priceFull, priceLight) --
+        parsePriceString(priceInfo.lastCloseText);
+      const dayChangePct =
+        vmPayload.priceSummary-.dayChangePct != null
+          - vmPayload.priceSummary.dayChangePct * 100
+          : priceInfo.dayChange;
+      if (Number.isFinite(latestPrice)) {
+        const prev = vmPayload.priceSummary-.prevClose -- null;
+        const derivedDayChange =
+          prev != null && prev !== 0 - ((latestPrice - prev) / prev) * 100 : dayChangePct;
+        updatePriceDisplay(latestPrice, priceInfo.lastCloseText, derivedDayChange);
+      } else {
+        updatePriceDisplay(null, priceInfo.lastCloseText, dayChangePct);
+      }
+
+      renderTables(income, balance, cash, keyMetrics, ratios, [], []);
+      const stock = buildStockFromStatements({
+        income,
+        balance,
+        cash,
+        keyMetrics,
+        ratios,
+        keyMetricsTtm: [],
+        ratiosTtm: [],
+        financialScores: [],
+        ownerEarnings: [],
+        incomeGrowth: [],
+        priceFull
+      });
+      renderScoreboard(stock);
+      const effectivePrice = Number.isFinite(latestPrice)
+        - latestPrice
+        : parsePriceString(priceInfo.lastCloseText) -- getCachedPrice();
+      renderSnapshotFromVm(vmPayload, effectivePrice);
+      renderProjections(vmPayload);
+      renderDataCompleteness(vmPayload);
+      const chartWrapper = document.getElementById("priceChartWrapper");
+      if (chartWrapper) chartWrapper.style.display = "none";
+      const rangeSwitchEl = document.getElementById("rangeSwitch");
+      if (rangeSwitchEl) rangeSwitchEl.style.display = "none";
+      const momentumSection = document.querySelector(".future-outlook");
+      const trendSection = document.querySelector(".sparkline-wrap");
+      if (momentumSection) momentumSection.style.display = "block";
+      if (trendSection) trendSection.style.display = "none";
+      if (subtitleEl) subtitleEl.textContent = "";
+      hideLoadingOverlay();
+    }
+
+    function renderSnapshotFromVm(vm, latestPrice) {
+      const statsEl = document.getElementById("snapshotStats"); if (statsEl) statsEl.innerHTML = "";
+      const dateEl = document.getElementById("snapshotDate");
+      if (dateEl) dateEl.textContent = vm.ttm-.asOf - `Latest period: ${vm.ttm.asOf}` : "";
+      const s = vm.snapshot || {};
+      const proj = vm.projections || {};
+      const rows = [
+        { label: "Net Margin (TTM)", value: pctf(s.netMarginTTM) },
+        { label: "Free Cash Flow (TTM)", value: nf(s.freeCashFlowTTM) },
+        { label: "Revenue CAGR (3Y)", value: pctf(s.revenueCAGR3Y) },
+        { label: "Debt / Equity", value: numf(s.debtToEquity) },
+        { label: "Net Debt / FCF (yrs)", value: numf(s.netDebtToFCFYears) },
+        { label: "Interest Coverage", value: s.interestCoverage != null - numf(s.interestCoverage) : "n/a" },
+        { label: "Share Count Change (YoY)", value: pctf(s.sharesOutChangeYoY) },
+        { label: "OCF Trend (4Q)", value: s.operatingCashFlowTrend4Q || "n/a" }
+      ];
+      if (statsEl) {
+        statsEl.innerHTML = rows.slice(0, 10).map(r => `
+          <div class="pill" style="display:flex; justify-content:space-between; gap:8px;">
+            <span class="muted">${r.label}</span><span>${r.value}</span>
+          </div>
+        `).join("");
+      }
+      const rangeLabelEl = document.getElementById("rangeLabel");
+      if (rangeLabelEl) rangeLabelEl.textContent = "Forward-looking health snapshot";
+    }
+
+    function renderProjections(vm) {
+      const wrap = document.querySelector(".future-outlook");
+      const grid = document.getElementById("futureGrid");
+      if (!wrap || !grid) return;
+      const proj = vm.projections || {};
+      const snapshot = vm.snapshot || {};
+      const keyMetrics = vm.keyMetrics || {};
+
+      const clampScore = (val) => {
+        const num = Number(val);
+        return Number.isFinite(num) - Math.max(0, Math.min(1, num)) : null;
+      };
+      const formatScore = (val) => {
+        const num = clampScore(val);
+        return num === null - "n/a" : num.toFixed(2);
+      };
+      const classifyGrowth = (score, labelHint) => {
+        if (score === null || score === undefined) return { label: labelHint || "No signal", className: "", color: "#8ea3c0" };
+        if (score >= 0.6) return { label: labelHint || "Likely continuation", className: "pill-good", color: "#4ade80" };
+        if (score >= 0.3) return { label: labelHint || "At risk of stalling", className: "pill-warn", color: "#f6c453" };
+        return { label: labelHint || "Weak continuation", className: "pill-risk", color: "#ff9b9b" };
+      };
+      const classifyRisk = (score, labelHint) => {
+        if (score === null || score === undefined) return { label: labelHint || "n/a", className: "", color: "#8ea3c0" };
+        if (score < 0.3) return { label: labelHint || "Low", className: "pill-good", color: "#4ade80" };
+        if (score < 0.6) return { label: labelHint || "Medium", className: "pill-warn", color: "#f6c453" };
+        return { label: labelHint || "High", className: "pill-risk", color: "#ff9b9b" };
+      };
+      const normalizeTrend = (label) => {
+        if (!label) return null;
+        const lower = String(label).toLowerCase();
+        if (lower.includes("wors") || lower.includes("declin") || lower.includes("down")) return "Worsening";
+        if (lower.includes("improv") || lower.includes("up")) return "Improving";
+        return "Stable";
+      };
+      const growthScore = clampScore(proj.growthContinuationScore -- proj.futureGrowthScore);
+      const dilutionScore = clampScore(proj.dilutionRiskScore -- proj.dilutionRisk);
+      const bankruptcyScore = clampScore(proj.bankruptcyRiskScore);
+      const businessTrend = normalizeTrend(proj.businessTrendLabel -- proj.deteriorationLabel);
+
+      const growthMeta = classifyGrowth(growthScore, proj.growthContinuationLabel);
+      const dilutionMeta = classifyRisk(dilutionScore, proj.dilutionRiskLabel);
+      const bankruptcyMeta = classifyRisk(bankruptcyScore, proj.bankruptcyRiskLabel);
+
+      const trajectoryCopy =
+        businessTrend === "Improving"
+          - "Revenue and FCF slopes are strengthening."
+          : businessTrend === "Worsening"
+          - "Key profitability or cash metrics are deteriorating."
+          : "Core metrics are moving sideways.";
+      const trajectoryColor =
+        businessTrend === "Improving" - "#5ce0c2" : businessTrend === "Worsening" - "#ff9b9b" : "#e0e8f5";
+      const ocfTrend =
+        snapshot.operatingCashFlowTrend4Q === "up"
+          - "up"
+          : snapshot.operatingCashFlowTrend4Q === "down"
+          - "down"
+          : snapshot.operatingCashFlowTrend4Q === "flat"
+          - "flat"
+          : "n/a";
+      const growthContext =
+        businessTrend === "Improving"
+          - "Revenue & cash flow trending upward."
+          : businessTrend === "Worsening"
+          - "Growth momentum may be fading."
+          : "Signals are balanced; momentum is steady.";
+      const momentumMicro = `Revenue CAGR (3Y): ${pctf(snapshot.revenueCAGR3Y)} | OCF trend: ${ocfTrend}`;
+
+      const barWidth = (score) => `${(clampScore(score) -- 0) * 100}%`;
+
+      grid.innerHTML = `
+        <div class="future-card">
+          <div class="future-label">Upside Momentum</div>
+          <div class="future-value-row">
+            <div class="future-value">${formatScore(growthScore)}</div>
+            <span class="future-pill ${growthMeta.className}">${growthMeta.label}</span>
+          </div>
+          <div class="future-bar"><div class="fill" style="width:${barWidth(growthScore)}; background:${growthMeta.color};"></div></div>
+          <div class="future-footnote">>0.6 continuation | 0.3-0.6 stall | <0.3 weakness</div>
+          <div class="future-note">${growthContext}</div>
+          <div class="future-footnote">${momentumMicro}</div>
+        </div>
+        <div class="future-card">
+          <div class="future-label">Risk Radar</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div>
+              <div class="future-note" style="font-weight:600;">Dilution</div>
+              <div class="future-value-row">
+                <div class="future-value">${formatScore(dilutionScore)}</div>
+                <span class="future-pill ${dilutionMeta.className}">${dilutionMeta.label}</span>
+              </div>
+              <div class="future-bar"><div class="fill" style="width:${barWidth(dilutionScore)}; background:${dilutionMeta.color};"></div></div>
+            </div>
+            <div>
+              <div class="future-note" style="font-weight:600;">Bankruptcy</div>
+              <div class="future-value-row">
+                <div class="future-value">${formatScore(bankruptcyScore)}</div>
+                <span class="future-pill ${bankruptcyMeta.className}">${bankruptcyMeta.label}</span>
+              </div>
+              <div class="future-bar"><div class="fill" style="width:${barWidth(bankruptcyScore)}; background:${bankruptcyMeta.color};"></div></div>
+            </div>
+          </div>
+          <div class="future-footnote">Risk gauges combine leverage, coverage and trend metrics.</div>
+        </div>
+        <div class="future-card">
+          <div class="future-label">Trajectory</div>
+          <div class="trajectory-title" style="color:${trajectoryColor};">${businessTrend || "Pending"}</div>
+          <div class="trajectory-narrative">${trajectoryCopy}</div>
+          <div class="chip-row">
+            <div class="mini-chip">Net Margin (TTM): ${pctf(snapshot.netMarginTTM)}</div>
+            <div class="mini-chip">Free Cash Flow (TTM): ${nf(snapshot.freeCashFlowTTM)}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDataCompleteness(vm) {
+      const box = document.getElementById("dataCompleteness");
+      if (!box) return;
+      const latestQ = (vm.quarterlySeries || []).slice(-1)[0] || {};
+      const ttm = vm.ttm || {};
+      const price = vm.priceSummary || {};
+      const missing = [];
+      const check = (cond, label) => { if (cond) missing.push(label); };
+      check(!Number.isFinite(latestQ.revenue), "Revenue (latest quarter)");
+      check(latestQ.grossProfit == null && latestQ.costOfRevenue == null, "Gross Profit/Cost of Revenue");
+      check(!Number.isFinite(latestQ.operatingIncome), "Operating Income (latest quarter)");
+      check(!Number.isFinite(latestQ.sharesOutstanding), "Shares Outstanding");
+      check(!Number.isFinite(latestQ.totalEquity), "Equity (latest quarter)");
+      check(!Number.isFinite(ttm.revenue), "Revenue (TTM)");
+      check(!Number.isFinite(ttm.netIncome), "Net Income (TTM)");
+      check(!Number.isFinite(ttm.freeCashFlow), "Free Cash Flow (TTM)");
+      check(!Number.isFinite(price.lastClose), "Last Close Price");
+      const status = missing.length - "Data gaps detected" : "All core inputs present";
+      const statusClass = missing.length - "miss" : "ok";
+      box.innerHTML = `
+        <h4>Data Completeness</h4>
+        <div class="${statusClass}">${status}</div>
+        <ul>
+          ${missing.length - missing.map((m) => `<li class="miss">${m}</li>`).join("") : "<li class=\"ok\">No missing fields</li>"}
+        </ul>
+      `;
+    }
+
+    function buildStockFromStatements(all) {
+      const { income = [], balance = [], cash = [], keyMetrics = [], ratios = [], keyMetricsTtm = [], ratiosTtm = [], financialScores = [], ownerEarnings = [], incomeGrowth = [], priceFull = [] } = all || {};
+      const inc = income;
+      const bal = balance;
+      const cf = cash;
+      const curInc = inc[0] || {};
+      const prevInc = inc[1] || {};
+      const prevIncYoY = inc[3] || {};
+      const curBal = bal[0] || {};
+      const prevBal = bal[1] || {};
+      const balYoY = bal[3] || {};
+      const curCf = cf[0] || {};
+      const prevCf = cf[1] || {};
+      const cfYoY = cf[3] || {};
+      const ratiosLatest = ratios-.[0] || {};
+      const ratiosT = ratiosTtm-.[0] || {};
+      const keyLatest = keyMetrics-.[0] || {};
+      const keyT = keyMetricsTtm-.[0] || {};
+      const priceStats = computePriceStats(priceFull);
+      const ttmSum = (arr, key, start = 0) => {
+        const slice = arr.slice(start, start + 4);
+        const vals = slice.map((r) => toNumber(r-.[key])).filter((v) => isFinite(v));
+        if (vals.length < 4) return null;
+        return vals.reduce((a, b) => a + b, 0);
+      };
+      const revTtm = ttmSum(inc, "revenue");
+      const revPrevTtm = ttmSum(inc, "revenue", 4);
+      const netTtm = ttmSum(inc, "netIncome");
+      const netPrevTtm = ttmSum(inc, "netIncome", 4);
+      const opTtm = ttmSum(inc, "operatingIncome");
+      const ocfTtm = ttmSum(cf, "netCashProvidedByOperatingActivities") -- ttmSum(cf, "operatingCashFlow");
+      const capexTtmRaw = ttmSum(cf, "capitalExpenditure");
+      const capexTtm = capexTtmRaw == null - null : Math.abs(capexTtmRaw);
+      const fcfTtm = ocfTtm != null && capexTtm != null - ocfTtm - capexTtm : null;
+      const ocfPrevTtm = ttmSum(cf, "netCashProvidedByOperatingActivities", 4) -- ttmSum(cf, "operatingCashFlow", 4);
+      const fcfPrevTtmRaw = ttmSum(cf, "capitalExpenditure", 4);
+      const fcfPrevTtm =
+        ocfPrevTtm != null && fcfPrevTtmRaw != null - ocfPrevTtm - Math.abs(fcfPrevTtmRaw) : null;
+      const latestPrice = Array.isArray(priceFull) && priceFull.length
+        - Number(priceFull.slice().sort((a,b)=> new Date(b.date) - new Date(a.date))[0].close -- priceFull[0].price)
+        : null;
+      const sharesLatest = toNumber(curBal.commonStockSharesOutstanding);
+      const marketCap = Number.isFinite(latestPrice) && Number.isFinite(sharesLatest)
+        - latestPrice * sharesLatest
+        : null;
+      const pfcfRatio = marketCap != null && fcfTtm != null && fcfTtm !== 0 - marketCap / fcfTtm : null;
+      const peRatio = marketCap != null && netTtm != null && sharesLatest
+        - (() => {
+            const eps = netTtm / sharesLatest;
+            return Math.abs(eps) > 1e-6 - latestPrice / eps : null;
+          })()
+        : null;
+      const priceToSalesRatio = marketCap != null && revTtm
+        - (revTtm !== 0 - marketCap / revTtm : null)
+        : null;
+
+      const revGrowth = pctChange(revTtm, revPrevTtm);
+      const profitGrowth = pctChange(netTtm, netPrevTtm);
+      const fcfYoY = pctChange(fcfTtm, fcfPrevTtm);
+      const fcfMargin = calcMargin(fcfTtm, revTtm);
+      const netMargin = calcMargin(netTtm, revTtm);
+      const fcfPositiveQuarters = cf.slice(0, 4).filter((r) => calcFcf(r) > 0).length;
+      const opMargin = calcMargin(toNumber(curInc.operatingIncome), toNumber(curInc.revenue));
+      const opMarginYoY = calcMargin(toNumber(prevIncYoY-.operatingIncome -- prevInc-.operatingIncome), toNumber(prevIncYoY-.revenue -- prevInc-.revenue));
+      const operatingLeverage = pctChange(opMargin, opMarginYoY);
+      const marginTrend = marginDelta(inc);
+      const equityVal = toNumber(curBal.totalStockholdersEquity);
+      const debtVal =
+        (toNumber(curBal.totalDebt) || 0) +
+        Math.max(0, toNumber(curBal.shortTermDebt) || 0) +
+        Math.max(0, toNumber(curBal.leaseLiabilities) || 0);
+      const cashVal = toNumber(curBal.cashAndCashEquivalents -- curBal.cash);
+      const shortTermInv = Math.max(0, toNumber(curBal.shortTermInvestments) || 0);
+      const hasDebtData =
+        isFinite(toNumber(curBal.totalDebt)) ||
+        isFinite(toNumber(curBal.shortTermDebt)) ||
+        isFinite(toNumber(curBal.leaseLiabilities));
+      const netDebtToEquity =
+        equityVal != null && equityVal !== 0 && hasDebtData && cashVal != null
+          - (debtVal - cashVal - shortTermInv) / equityVal
+          : null;
+      const netDebtToFcfYears =
+        fcfTtm != null && fcfTtm !== 0 && hasDebtData && cashVal != null
+          - (debtVal - cashVal - shortTermInv) / fcfTtm
+          : null;
+      const cashToLiabilities = calcMargin(
+        (toNumber(curBal.cashAndCashEquivalents -- curBal.cash) || 0) + shortTermInv,
+        toNumber(curBal.totalLiabilities)
+      );
+      const interestCoverage = toNumber(ratiosLatest.interestCoverage -- ratiosT.interestCoverage);
+      const roe = calcMargin(toNumber(curInc.netIncome), toNumber(curBal.totalStockholdersEquity));
+      const sharesChangeYoY =
+        balYoY-.commonStockSharesOutstanding != null
+          - pctChange(
+              toNumber(curBal.commonStockSharesOutstanding),
+              toNumber(balYoY.commonStockSharesOutstanding -- balYoY.sharesOutstanding)
+            )
+          : null;
+      const sharesChange = pctChange(toNumber(curBal.commonStockSharesOutstanding), toNumber(prevBal.commonStockSharesOutstanding));
+      const sbcToRevenue = calcMargin(toNumber(curInc.shareBasedCompensation), toNumber(curInc.revenue));
+      const capexToRev = calcMargin(Math.abs(toNumber(curCf.capitalExpenditure) -- 0), toNumber(curInc.revenue));
+      const fcfTrend = pctChange(fcfMargin, calcMargin(fcfPrevTtm, revPrevTtm));
+      const positiveNetIncomeQuarters = inc.slice(0, 4).filter((r) => toNumber(r.netIncome) > 0).length;
+
+      return {
+        ticker,
+        growth: { revenueGrowthTTM: revGrowth, fcfGrowthTTM: fcfYoY, profitGrowthTTM: profitGrowth },
+        momentum: { operatingLeverage, fcfTrend, marginTrend },
+        stability: { fcfPositiveQuarters, positiveNetIncomeQuarters, fcfPositiveYears: fcfPositiveQuarters },
+        profitMargins: { netMargin, fcfMargin },
+        financialPosition: {
+          netDebtToEquity,
+          netDebtToFcfYears,
+          cashToLiabilities,
+          interestCoverage
+        },
+        returns: { roe },
+        shareStats: { sharesChangeYoY: sharesChangeYoY -- sharesChange },
+        expenses: { sbcToRevenue },
+        cash: { capexToRevenue: capexToRev },
+        priceStats,
+        valuationRatios: {
+          pfcfRatio,
+          peRatio,
+          priceToSalesRatio
+        }
+      };
+    }
+
+    function renderScoreboard(stock) {
+      const scoreReasonsEl = document.getElementById("scoreReasons");
+      scoreReasonsEl.className = "reason-grid";
+      const missingReasonsEl = document.getElementById("missingReasons");
+      const missingToggle = document.getElementById("missingToggle");
+      scoreReasonsEl.innerHTML = "";
+      missingReasonsEl.innerHTML = "";
+      const metrics = { metric1: 0, metric2: 0, metric3: 0 };
+      const reasons = [];
+      let total = 0;
+      rules.forEach(rule => {
+        const outcome = rule.evaluate(stock, metrics);
+        const score = outcome-.score || 0;
+        total += score;
+        reasons.push({ message: outcome-.message || rule.name, score, name: rule.name, description: rule.description, weight: rule.weight, missing: outcome-.missing });
+      });
+      const missing = reasons.filter(r => r.missing);
+      const applicable = reasons.filter(r => !r.missing);
+      applicable.sort((a,b)=> Math.abs(b.score) - Math.abs(a.score) || b.score - a.score);
+      applicable.forEach(reason => {
+        const div = document.createElement("div");
+        const badgeClass = getScoreClass(reason.score);
+        div.className = `reason-card`;
+        const explainer = ruleExplainers[reason.name] || {};
+        const posText = explainer.pos || "Positive scores mean the metric meets or beats the target, reinforcing quality/valuation strength.";
+        const negText = explainer.neg || "Negative scores mean the metric falls short, signaling risk, dilution, or overvaluation.";
+        const explainerText = reason.score >= 0 - posText : negText;
+        const titleText = toTitleCase(reason.name);
+        const numericScore = Number(reason.score) || 0;
+        const scoreText = numericScore > 0 - `+${numericScore}` : (numericScore < 0 - `${numericScore}` : "0");
+        const displayValue = reason.message || "";
+        div.innerHTML = `
+          <div class="header">
+            <div class="icon">${iconForRule(reason.name)}</div>
+            <div class="title whitespace-normal leading-tight">${titleText}</div>
+            <div class="score-tag ${badgeClass}">${scoreText}</div>
+          </div>
+          <div class="value-pill ${badgeClass} whitespace-normal leading-tight" style="margin-top:4px;">${displayValue}</div>
+          <div class="overlay">${explainerText}</div>
+        `;
+        if (window.matchMedia("(pointer: coarse)").matches) {
+          div.addEventListener("click", () => div.classList.toggle("expanded"));
+        }
+        scoreReasonsEl.appendChild(div);
+      });
+      if (missing.length) {
+        missingToggle.classList.remove("hidden");
+        missingReasonsEl.classList.add("hidden");
+        missing.forEach(reason => {
+          const card = document.createElement("div");
+          card.className = "reason-card miss";
+          const titleText = toTitleCase(reason.name);
+          const displayValue = reason.message || "Data missing for this rule";
+          card.innerHTML = `
+            <div class="header">
+              <div class="icon">${iconForRule(reason.name)}</div>
+              <div class="title whitespace-normal leading-tight">${titleText}</div>
+              <div class="score-tag miss">MISS</div>
+            </div>
+            <div class="value-pill miss whitespace-normal leading-tight" style="margin-top:4px;">${displayValue}</div>
+            <div class="overlay">We need this metric to score this rule. Refresh fundamentals or try another provider.</div>
+          `;
+          if (window.matchMedia("(pointer: coarse)").matches) {
+            card.addEventListener("click", () => card.classList.toggle("expanded"));
+          }
+          scoreReasonsEl.appendChild(card);
+          const div = document.createElement("div");
+          div.className = "reason";
+          div.innerHTML = `<strong>${reason.name}</strong> - ${reason.message}`;
+          missingReasonsEl.appendChild(div);
+        });
+      } else {
+        missingToggle.classList.add("hidden");
+        missingReasonsEl.classList.add("hidden");
+      }
+      const scoreEl = document.getElementById("score");
+      if (scoreEl) scoreEl.textContent = ""; // hide numeric score in UI
+      updateSummaries(stock);
+      updatePillars(stock, total);
+      renderAchievements();
+
+      missingToggle.onclick = () => {
+        const isHidden = missingReasonsEl.classList.contains("hidden");
+        if (isHidden) missingReasonsEl.classList.remove("hidden"); else missingReasonsEl.classList.add("hidden");
+      };
+    }
+
+function renderSnapshot(income, balance, cash, keyMetrics, keyMetricsTtm, ratios, priceSeries, latestPrice) {
+      const statsEl = document.getElementById("snapshotStats"); if (statsEl) statsEl.innerHTML = "";
+      const inc = income-.[0]; const bal = balance-.[0];
+      const km = keyMetricsTtm-.[0] || keyMetrics-.[0] || {};
+      const marketCap = km.marketCapTTM || km.marketCap || (latestPrice && bal-.commonStockSharesOutstanding - latestPrice * bal.commonStockSharesOutstanding : null);
+      const pe = km.peRatio || km.peRatioTTM || km.priceEarningsRatioTTM || null;
+      const beta = km.beta || null;
+      const rangeInfo = computeRangeInfo(priceSeries, latestPrice);
+      const date = inc-.date || inc-.fillingDate || "n/a";
+      const dateEl = document.getElementById("snapshotDate");
+      if (dateEl) dateEl.textContent = `Latest period: ${date}`;
+      const stats = [
+        { label: "Market Cap", value: marketCap - nf(marketCap) : "n/a" },
+        { label: "Forward P/E", value: pe - `${numf(pe)}x` : "n/a" },
+        { label: "Beta", value: beta - numf(beta) : "n/a" },
+        { label: "Current Position", value: rangeInfo.positionLabel }
+      ];
+      if (statsEl) {
+        stats.forEach(f => {
+          const div = document.createElement("div");
+          div.className = "pill";
+          div.style.display = "flex";
+          div.style.justifyContent = "space-between";
+          div.style.gap = "8px";
+          div.innerHTML = `<span class="muted">${f.label}</span><span>${f.value}</span>`;
+          statsEl.appendChild(div);
+        });
+      }
+      renderRangeBar(rangeInfo);
+      renderMomentumCards(income, cash, ratios);
+      renderSparklineBlocks(income, cash);
+    }
+
+    function renderMomentumCards(income, cash, ratios) {
+      const grid = document.getElementById("momentumGrid");
+      if (!grid) return;
+      grid.innerHTML = "";
+      const revTrend = yoyChange(income, "revenue");
+      const epsTrend = yoyChange(income, "eps")
+        -- yoyChange(income, "epsdiluted")
+        -- yoyChange(income, "epsDiluted")
+        -- yoyChange(income, "netIncome");
+      const fcfTrend = yoyChange(cash, "fcfComputed", (r) => calcFcf(r));
+      const netMarginTrend = marginDelta(income);
+      const cards = [
+        { label: "Revenue Trend", change: revTrend, suffix: "YoY" },
+        { label: "EPS Trend", change: epsTrend, suffix: "YoY" },
+        { label: "Cash Trend", change: fcfTrend, suffix: "YoY", formatter: (val) => val-.toFixed(1) + "%" },
+        { label: "Margin Trend", change: netMarginTrend, suffix: "ppt YoY", formatter: (val) => val === null - null : `${val >= 0 - "+" : ""}${val.toFixed(1)}` }
+      ];
+      cards.forEach(card => {
+        const div = document.createElement("div");
+        div.className = "momentum-card";
+        const trend = formatTrend(card.change, card.formatter, card.suffix);
+        div.innerHTML = `
+          <div class="momentum-label">${card.label}</div>
+          <div class="momentum-change" style="color:${trend.color};">
+            <span class="dir">${trend.icon}</span>
+            <span style="font-size:20px; font-weight:800;">${trend.text}</span>
+          </div>
+          <div class="momentum-sub">${trend.sub}</div>
+        `;
+        grid.appendChild(div);
+      });
+    }
+
+    function renderSparklineBlocks(income, cash) {
+      const row = document.getElementById("sparklineRow");
+      if (!row) return;
+      row.innerHTML = "";
+      const revSeries = extractSeriesValues(income, "revenue");
+      const epsSeries = extractSeriesValues(income, "eps")
+        || extractSeriesValues(income, "epsdiluted")
+        || extractSeriesValues(income, "epsDiluted")
+        || extractSeriesValues(income, "netIncome");
+      const fcfSeries = extractSeriesValues(cash, "fcfComputed", (r) => calcFcf(r));
+      const marginSeries = Array.isArray(income)
+        - income.map(r => ({ date: r.date || r.filingDate || r.fillingDate, value: calcMargin(toNumber(r.netIncome), toNumber(r.revenue)) })).filter(r => r.value !== null)
+        : null;
+      const blocks = [
+        { label: "Revenue", series: revSeries, formatter: nf },
+        { label: "EPS", series: epsSeries, formatter: numf },
+        { label: "FCF", series: fcfSeries, formatter: nf },
+        { label: "Margin", series: marginSeries, formatter: (v) => `${v.toFixed(1)}%` }
+      ];
+      blocks.forEach(block => {
+        const div = document.createElement("div");
+        div.className = "sparkline-card";
+        const spark = buildSparkline(block.series);
+        const lastVal = block.series-.length - block.series.at(-1).value : null;
+        const change = Array.isArray(block.series) && block.series.length - pctChange(block.series.at(-1).value, block.series[0].value) : null;
+        const status = interpretTrend(change);
+        div.innerHTML = `
+          <div class="sparkline-label">
+            <span>${block.label}</span>
+            <span style="color:${status.color}; font-weight:700;">${change === null - "n/a" : `${change >= 0 - "+" : ""}${change.toFixed(1)}%`}</span>
+          </div>
+          <div class="sparkline-text">${spark.line}</div>
+          <div class="sparkline-value" style="color:${status.color}; font-weight:700;">${status.label}</div>
+        `;
+        row.appendChild(div);
+      });
+    }
+
+    function renderTables(income, balance, cash, keyMetrics, ratios, keyMetricsTtm, ratiosTtm) {
+      const incomeTtm = buildTtmFromSeries(income, ["revenue", "grossProfit", "operatingIncome", "netIncome"]);
+      const cashTtm = buildTtmFromSeries(cash, ["netCashProvidedByOperatingActivities", "operatingCashFlow", "capitalExpenditure"]);
+      const balanceTtm = buildPointInTimeTtm(balance, ["cashAndCashEquivalents", "totalDebt", "totalStockholdersEquity", "commonStockSharesOutstanding"]);
+      renderTransposed(document.getElementById("incomeTable"), income, [
+        { key: "revenue", label: "Revenue", formatter: nf },
+        { key: "grossProfit", label: "Gross Profit", formatter: nf },
+        { key: "operatingIncome", label: "Operating Income", formatter: nf },
+        { key: "netIncome", label: "Net Income", formatter: nf }
+      ], incomeTtm);
+      renderTransposed(document.getElementById("balanceTable"), balance, [
+        { key: "cashAndCashEquivalents", label: "Cash", formatter: nf },
+        { key: "totalDebt", label: "Total Debt", formatter: nf },
+        { key: "totalStockholdersEquity", label: "Equity", formatter: nf },
+        { key: "commonStockSharesOutstanding", label: "Shares Out", formatter: nf }
+      ], balanceTtm);
+      renderTransposed(document.getElementById("cashTable"), cash, [
+        { key: "netCashProvidedByOperatingActivities", alt: "operatingCashFlow", label: "CFO", formatter: nf },
+        { key: "capitalExpenditure", label: "Capex", formatter: nf },
+        { key: "fcfComputed", label: "FCF", formatter: nf }
+      ], cashTtm);
+
+      // Use precomputed rows; avoid duplicating TTM since we already added it above.
+      const kmsTtmEntry = null;
+      const ratiosTtmEntry = null;
+      console.debug("key metrics dataset", keyMetrics);
+      console.debug("ratios dataset", ratios);
+      renderTransposed(document.getElementById("keyMetricsTable"), keyMetrics, [
+        { key: "freeCashFlowPerShareTTM", label: "FCF/Share", formatter: nf },
+        { key: "revenuePerShareTTM", label: "Revenue/Share", formatter: nf },
+        { key: "bookValuePerShareTTM", label: "Book Value/Share", formatter: nf },
+        { key: "pfcfRatio", alt: "priceToFreeCashFlowsRatio", label: "P/FCF", formatter: numf },
+        { key: "peRatio", label: "P/E", formatter: numf },
+        { key: "priceToSalesRatio", label: "P/S", formatter: numf },
+        { key: "priceToBookRatio", label: "P/B", formatter: numf }
+      ], kmsTtmEntry);
+
+      renderTransposed(document.getElementById("ratiosTable"), ratios, [
+        { key: "currentRatio", label: "Current Ratio", formatter: numf },
+        { key: "quickRatio", label: "Quick Ratio", formatter: numf },
+        { key: "debtEquityRatio", alt: "debtToEquity", label: "Debt/Equity", formatter: numf },
+        { key: "interestCoverage", label: "Interest Coverage", formatter: numf },
+        { key: "grossProfitMargin", label: "Gross Margin %", formatter: pctf },
+        { key: "operatingProfitMargin", label: "Operating Margin %", formatter: pctf },
+        { key: "netProfitMargin", label: "Net Margin %", formatter: pctf },
+        { key: "returnOnEquity", label: "ROE %", formatter: pctf },
+        { key: "returnOnInvestedCapital", label: "ROIC %", formatter: pctf }
+      ], ratiosTtmEntry);
+    }
+
+    function renderTransposed(el, data, metrics, ttmEntry = null) {
+      const rows = [];
+      if (ttmEntry) rows.push(ttmEntry);
+      (data || []).forEach(r => rows.push(r));
+      const periods = rows.map(r => r.date || r.filingDate || r.fillingDate || "n/a");
+      if (!rows.length) { el.innerHTML = "<tbody><tr><td colspan=\"99\">No quarterly data (missing or paywalled bundle).</td></tr></tbody>"; return; }
+      let html = "<thead><tr><th>Metric</th>"; periods.forEach(p => html += `<th>${p}</th>`); html += "</tr></thead><tbody>";
+      metrics.forEach(m => {
+        html += `<tr><td>${m.label}</td>`;
+        rows.forEach(r => {
+          let val = r[m.key];
+          if (val === undefined && m.alt) val = r[m.alt];
+          if (m.label === "FCF") val = calcFcf(r);
+          if (m.label === "FCF" && val === undefined) val = calcFcf(r);
+          const shown = m.formatter(val);
+          html += `<td>${shown}</td>`;
+        });
+        html += "</tr>";
+      });
+      html += "</tbody>"; el.innerHTML = html;
+    }
+
+    function yoyChange(series, key, getter) {
+      if (!Array.isArray(series) || series.length < 4) return null;
+      const sorted = [...series].sort((a,b) => new Date(b.date || b.filingDate || b.fillingDate || 0) - new Date(a.date || a.filingDate || a.fillingDate || 0));
+      const latest = getter - getter(sorted[0]) : toNumber(sorted[0]-.[key]);
+      const prev = getter - getter(sorted[3]) : toNumber(sorted[3]-.[key]);
+      return pctChange(latest, prev);
+    }
+
+    function marginDelta(income) {
+      if (!Array.isArray(income) || income.length < 4) return null;
+      const sorted = [...income].sort((a,b) => new Date(b.date || b.filingDate || b.fillingDate || 0) - new Date(a.date || a.filingDate || a.fillingDate || 0));
+      const latest = calcMargin(toNumber(sorted[0]-.netIncome), toNumber(sorted[0]-.revenue));
+      const prev = calcMargin(toNumber(sorted[3]-.netIncome), toNumber(sorted[3]-.revenue));
+      if (!isFinite(latest) || !isFinite(prev)) return null;
+      return latest - prev;
+    }
+
+    function formatTrend(change, formatter = null, suffix = "") {
+      if (change === null || change === undefined || isNaN(change)) {
+        return { icon: "--", color: "#cbd5e1", text: "n/a", sub: "No data" };
+      }
+      const isUp = change >= 0;
+      const color = isUp - "#4ade80" : "#ff6b6b";
+      const icon = isUp - "--" : "--";
+      const formatted = formatter - formatter(change) : `${change >= 0 - "+" : ""}${change.toFixed(1)}%`;
+      const sub = change === 0 - "Mixed" : (isUp - "Improving" : "Weakening");
+      return { icon, color, text: `${formatted}${suffix - " " + suffix : ""}`, sub };
+    }
+
+    function extractSeriesValues(series, key, getter) {
+      if (!Array.isArray(series) || !series.length) return null;
+      const sorted = [...series].sort((a,b) => new Date(a.date || a.filingDate || a.fillingDate || 0) - new Date(b.date || b.filingDate || b.fillingDate || 0));
+      return sorted.map(r => {
+        const raw = getter - getter(r) : toNumber(r-.[key]);
+        return { date: r.date || r.filingDate || r.fillingDate, value: isFinite(raw) - raw : null };
+      }).filter(r => r.value !== null);
+    }
+
+    function buildSparkline(series) {
+      if (!Array.isArray(series) || !series.length) return { line: "no data", label: "n/a" };
+      const values = series.map(s => s.value).filter(v => isFinite(v));
+      if (!values.length) return { line: "no data", label: "n/a" };
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const blocks = ["-","-","-","_","-","-","-","¦"];
+      const range = max - min || 1;
+      const line = values.map(v => {
+        const norm = (v - min) / range;
+        const idx = Math.max(0, Math.min(blocks.length - 1, Math.round(norm * (blocks.length - 1))));
+        return blocks[idx];
+      }).join("");
+      const change = pctChange(values.at(-1), values[0]);
+      const label = change === null - "n/a" : `${change >= 0 - "+" : ""}${change.toFixed(1)}%`;
+      return { line, label };
+    }
+    function formatPrice(val) { if (!Number.isFinite(val)) return "n/a"; return `$${Number(val).toFixed(2)}`; }
+    function interpretTrend(change) {
+      if (change === null || change === undefined || isNaN(change)) return { label: "Mixed", color: "#cbd5e1" };
+      if (change > 10) return { label: "Rising", color: "#4ade80" };
+      if (change > 3) return { label: "Improving", color: "#7ae3ff" };
+      if (change > -3) return { label: "Stable", color: "#e3d28f" };
+      if (change > -10) return { label: "Weakening", color: "#f59e0b" };
+      return { label: "Falling", color: "#ff6b6b" };
+    }
+
+    function computeVolume(series = []) {
+      const arr = Array.isArray(series) - series : (series-.historical || []);
+      const withVol = arr.filter(r => Number.isFinite(Number(r.volume)));
+      if (!withVol.length) return { text: "n/a" };
+      const latest = Number(withVol[0].volume);
+      const sample = withVol.slice(0, 30);
+      const avg = sample.reduce((a,b) => a + Number(b.volume), 0) / sample.length;
+      return { text: `${nf(avg)} avg / ${nf(latest)} last` };
+    }
+
+    function computeRangeInfo(series = [], latestPrice = null) {
+      const arr = Array.isArray(series) - series : (series-.historical || []);
+      if (!arr.length) return { rangeText: "n/a", label: "Range unavailable", position: null };
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 365);
+      const filtered = arr.filter(r => new Date(r.date) >= cutoff);
+      const scoped = filtered.length - filtered : arr;
+      const prices = scoped.map(r => Number(r.close -- r.price)).filter(v => isFinite(v));
+      if (!prices.length) return { rangeText: "n/a", label: "Range unavailable", position: null };
+      const low = Math.min(...prices);
+      const high = Math.max(...prices);
+      const price = Number.isFinite(latestPrice) - latestPrice : prices.at(-1);
+      const span = high - low || 1;
+      let position = (price - low) / span;
+      position = Math.max(0, Math.min(1, position));
+      const label = (() => {
+        if (!Number.isFinite(price)) return "Price position unavailable.";
+        if (position >= 0.66) return "Near the recent highs - momentum needs to hold.";
+        if (position >= 0.33) return "Mid-range price - neither stretched nor cheap.";
+        return "Closer to the lows - look for a catalyst before it can re-rate.";
+      })();
+      const positionLabel = (() => {
+        if (!Number.isFinite(price)) return "Position unknown";
+        if (position >= 0.66) return "Near high";
+        if (position >= 0.33) return "Middle";
+        return "Near low";
+      })();
+      return { rangeText: `${formatPrice(low)}  ${formatPrice(high)}`, label, positionLabel, position, low, high, price };
+    }
+
+    function renderRangeBar(info) {
+      const fill = document.getElementById("rangeFill");
+      const marker = document.getElementById("rangeMarker");
+      const label = document.getElementById("rangeLabel");
+      const lowLabel = document.getElementById("rangeLowLabel");
+      const highLabel = document.getElementById("rangeHighLabel");
+      const nowLabel = document.getElementById("rangeNow");
+      const markerPrice = document.getElementById("rangeMarkerPrice");
+      if (lowLabel) lowLabel.textContent = formatPrice(info.low);
+      if (highLabel) highLabel.textContent = formatPrice(info.high);
+      if (nowLabel) nowLabel.textContent = "";
+      if (markerPrice) markerPrice.textContent = info.price - formatPrice(info.price) : "";
+      if (label) label.textContent = info.label || "";
+      if (!fill || !marker || info.position === null || info.position === undefined) {
+        if (fill) fill.style.width = "0%";
+        if (marker) marker.style.left = "0%";
+        return;
+      }
+      const pct = Math.max(0, Math.min(1, info.position)) * 100;
+      fill.style.width = `${pct}%`;
+      marker.style.left = `${pct}%`;
+    }
+
+    function renderPriceBlock(light, full) {
+      const series = Array.isArray(full)
+        - full
+        : (full-.historical || light-.historical || light || []);
+      const hasContainer = Boolean(document.getElementById("priceBlock"));
+      const container = hasContainer - document.getElementById("priceBlock") : null;
+      if (container) container.innerHTML = "";
+      if (!Array.isArray(series) || !series.length) {
+        const div = document.createElement("div");
+        div.className = "pill";
+        div.textContent = "No price data";
+        if (container) container.appendChild(div);
+        return { latestPrice: null, lastCloseText: null, seriesForChart: [], dayChange: null };
+      }
+      const sorted = [...series].sort((a,b) => new Date(b.date) - new Date(a.date));
+      const latest = sorted[0];
+      const oldest = sorted.at(-1);
+      const maxClose = Math.max(...sorted.map(r => Number(r.close) || 0));
+      const change = pctChange(Number(latest.close), Number(oldest.close));
+      const dd = pctChange(Number(latest.close), Number(maxClose));
+      const prev = sorted[1];
+      const dayChange = prev - pctChange(Number(latest.close), Number(prev.close -- prev.price)) : null;
+      let lastCloseText = null;
+      if (container) {
+        const items = [
+          { label: "Last Close", value: nf(latest.close -- latest.price) },
+          { label: "Period Change", value: change === null - "n/a" : `${change.toFixed(2)}%` },
+          { label: "Drawdown from high", value: dd === null - "n/a" : `${dd.toFixed(2)}%` },
+          { label: "Last Volume", value: nf(latest.volume) }
+        ];
+        items.forEach(it => {
+          const div = document.createElement("div");
+          div.className = "pill";
+          div.style.display = "flex";
+          div.style.justifyContent = "space-between";
+          div.innerHTML = `<span class="muted">${it.label}</span><span>${it.value}</span>`;
+          container.appendChild(div);
+          if (it.label === "Last Close") lastCloseText = it.value;
+        });
+      } else {
+        lastCloseText = nf(latest.close -- latest.price);
+      }
+      const lp = Number(latest.close -- latest.price);
+      if (isFinite(lp)) localStorage.setItem(`latest-price-${ticker}`, String(lp));
+      const lcText = nf(latest.close -- latest.price);
+      return { latestPrice: isFinite(lp) - lp : null, lastVolume: latest.volume -- null, periodChange: change, drawdown: dd, dayChange, lastCloseText: lcText, seriesForChart: sorted };
+    }
+
+    function buildTtmFromSeries(series, keys) {
+      if (!Array.isArray(series) || !series.length) return null;
+      const entry = { date: "TTM" };
+      keys.forEach(key => {
+        let total = 0; let count = 0;
+        for (let i = 0; i < Math.min(4, series.length); i++) {
+          const val = toNumber(series[i][key] -- series[i][key-.alt]);
+          if (isFinite(val)) { total += val; count++; }
+        }
+        entry[key] = count - total : null;
+        if (key === "capitalExpenditure") entry.key = entry.key; // no-op to keep structure
+      });
+      return entry;
+    }
+
+    function buildPointInTimeTtm(series, keys) {
+      if (!Array.isArray(series) || !series.length) return null;
+      const entry = { date: "TTM" };
+      keys.forEach(k => { entry[k] = series[0][k]; });
+      return entry;
+    }
+
+    function computeWinsLosses(series = [], lookback = 5) {
+      if (!Array.isArray(series) || series.length < 2) return { wins: 0, losses: 0, streak: 0, direction: 0 };
+      const sorted = [...series].sort((a,b) => new Date(b.date) - new Date(a.date));
+      let wins = 0; let losses = 0; let streak = 0; let direction = 0;
+      for (let i = 0; i < Math.min(lookback, sorted.length - 1); i++) {
+        const today = Number(sorted[i].close -- sorted[i].price);
+        const prev = Number(sorted[i + 1].close -- sorted[i + 1].price);
+        if (!isFinite(today) || !isFinite(prev)) continue;
+        const diff = today - prev;
+        const dir = diff > 0 - 1 : diff < 0 - -1 : 0;
+        if (dir > 0) wins++; else if (dir < 0) losses++;
+        if (dir === direction && dir !== 0) {
+          streak += 1;
+        } else if (dir !== 0) {
+          streak = 1;
+          direction = dir;
+        }
+      }
+      return { wins, losses, streak, direction };
+    }
+
+    function changeSince(sortedDesc, days) {
+      if (!Array.isArray(sortedDesc) || !sortedDesc.length) return null;
+      const latest = sortedDesc[0];
+      const latestDate = new Date(latest.date);
+      const cutoff = new Date(latestDate);
+      cutoff.setDate(cutoff.getDate() - days);
+      const past = sortedDesc.find((r) => new Date(r.date) <= cutoff);
+      if (!past) return null;
+      return pctChange(Number(latest.close -- latest.price), Number(past.close -- past.price));
+    }
+
+    function computePriceStats(priceSeries) {
+      const series = Array.isArray(priceSeries) - priceSeries : (priceSeries-.historical || []);
+      if (!series.length) {
+        return {
+          beta: null,
+          week52Change: null,
+          rsi: null,
+          movingAverage50: null,
+          movingAverage200: null,
+          change7d: null,
+          change30d: null,
+          change90d: null,
+          wins: 0,
+          losses: 0,
+          priceStreak: 0,
+          rangePosition: null,
+          rangeLabel: null,
+          latestPrice: null
+        };
+      }
+      const sorted = [...series].sort((a,b) => new Date(b.date) - new Date(a.date));
+      const latest = sorted[0];
+      const window52w = sorted.slice(0, 252);
+      const maxClose = Math.max(...window52w.map(r => Number(r.close) || 0));
+      const dd = pctChange(Number(latest.close), maxClose);
+      const winsLosses = computeWinsLosses(sorted, 5);
+      const change7d = changeSince(sorted, 7);
+      const change30d = changeSince(sorted, 30);
+      const change90d = changeSince(sorted, 90);
+      const rangeInfo = computeRangeInfo(sorted, Number(latest.close -- latest.price));
+      return {
+        beta: null,
+        week52Change: dd,
+        rsi: null,
+        movingAverage50: null,
+        movingAverage200: null,
+        change7d,
+        change30d,
+        change90d,
+        wins: winsLosses.wins,
+        losses: winsLosses.losses,
+        priceStreak: winsLosses.streak,
+        rangePosition: rangeInfo.position,
+        rangeLabel: rangeInfo.positionLabel,
+        latestPrice: Number(latest.close -- latest.price)
+      };
+    }
+
+    function getLatestPrice(full, light) {
+      const series = Array.isArray(full) - full : (full-.historical || light-.historical || light || []);
+      if (!Array.isArray(series) || !series.length) return null;
+      const sorted = [...series].sort((a,b) => new Date(b.date) - new Date(a.date));
+      const latest = sorted[0];
+      const price = Number(latest.close -- latest.price);
+      if (isFinite(price)) {
+        localStorage.setItem(`latest-price-${ticker}`, String(price));
+        return price;
+      }
+      return null;
+    }
+
+    function getCachedPrice() {
+      const raw = localStorage.getItem(`latest-price-${ticker}`);
+      if (!raw) return null;
+      const num = Number(raw);
+      return isFinite(num) - num : null;
+    }
+
+    function parsePriceString(val) {
+      if (!val) return null;
+      const num = Number(String(val).replace(/[^0-9.\-]/g, ""));
+      return isFinite(num) - num : null;
+    }
+
+    function updatePriceDisplay(valueNum, valueText, dayChange) {
+      ensurePriceElements();
+      const lpEl = document.getElementById("lastPrice");
+      const stEl = document.getElementById("status");
+      if (!stEl) {
+        console.debug("price elements missing after ensure", { lpEl, stEl });
+        return;
+      }
+      if (Number.isFinite(valueNum)) {
+        if (lpEl) lpEl.textContent = `$${valueNum.toFixed(2)}`;
+        stEl.innerHTML = `<span class="status-label">Last Close:</span> <span class="status-value">$${valueNum.toFixed(2)}</span> ${formatChange(dayChange)}`;
+        localStorage.setItem(`latest-price-${ticker}`, String(valueNum));
+        console.debug("price applied numeric", valueNum);
+      } else if (valueText) {
+        if (lpEl) lpEl.textContent = valueText;
+        stEl.innerHTML = `<span class="status-label">Last Close:</span> <span class="status-value">${valueText}</span> ${formatChange(dayChange)}`;
+        console.debug("price applied text fallback", valueText);
+      } else {
+        if (lpEl) lpEl.textContent = "";
+        stEl.textContent = "Last Close: --";
+        console.debug("price missing");
+      }
+    }
+
+    function ensurePriceElements() {
+      const titleEl = document.getElementById("title");
+      if (!titleEl) return;
+      // intentionally no longer injecting lastPrice next to ticker
+    }
+
+    function maybePersistBundle(bundle, opts = {}) {
+      if (DISABLE_BUNDLE) return; // presentation mode: skip bundle downloads
+      const { force = false } = opts;
+      try {
+        if (!bundle || !bundle.ticker) return;
+        const stamp = new Date().toISOString().slice(0,10);
+        const key = `bundle-downloaded-${bundle.ticker}-${stamp}`;
+        if (!force && localStorage.getItem(key)) return;
+        const filename = `${bundle.ticker}-bundle-${stamp}.json`;
+        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        localStorage.setItem(key, "1");
+        console.info(`Bundle downloaded for ${bundle.ticker}: ${filename}`);
+      } catch (e) {
+        console.warn("Failed to persist bundle", e);
+      }
+    }
+
+    function formatChange(changePct) {
+      if (!Number.isFinite(changePct)) return "";
+      const arrow = changePct >= 0 - "&uarr;" : "&darr;";
+      const color = changePct >= 0 - "#4ade80" : "#ff6b6b";
+      return `<span style="color:${color}; font-weight:700; margin-left:6px;">${arrow} ${changePct.toFixed(2)}%</span>`;
+    }
+
+    function applyTier(qualityScore) {
+      const tierBadge = document.getElementById("tierBadge");
+      const band = getScoreBand(qualityScore);
+      const labelMap = {
+        danger: "Likely Value Trap",
+        spec: "High-Risk Upside Play",
+        mixed: "Balanced",
+        solid: "Reliable Performer",
+        bullish: "High-Conviction Winner",
+        elite: "Elite Compounder"
+      };
+      const tooltipMap = {
+        danger: "Severe weaknesses. Avoid unless you like gambling.",
+        spec: "Volatile or early-stage. Could run hard  or collapse.",
+        mixed: "Neutral profile  upside exists but not without caveats.",
+        solid: "Steady fundamentals. Good for conservative portfolios.",
+        bullish: "Strong financials & momentum. Attractive long-term setup.",
+        elite: "Top-tier resilience + growth. Long-term compounder potential."
+      };
+      const tier = labelMap[band] || "Analyst";
+      console.debug("tier debug", { qualityScore, band, tier });
+      if (tierBadge) {
+        tierBadge.textContent = tier;
+        tierBadge.title = tooltipMap[band] || "";
+      }
+      const dot = document.getElementById("tierDotTop");
+      if (dot) {
+        dot.classList.remove("bullish","neutral","bearish");
+        if (band === "danger" || band === "spec") dot.classList.add("bearish");
+        else if (band === "mixed") dot.classList.add("neutral");
+        else dot.classList.add("bullish");
+      }
+      const scoreEl = document.getElementById("score");
+      if (scoreEl) { scoreEl.textContent = ""; scoreEl.classList.remove("score-anim"); }
+    }
+    function renderAchievements() {
+      const el = document.getElementById("achievements");
+      if (el) el.innerHTML = "";
+    }
+    function iconForRule(name) {
+      const map = {
+        "Revenue momentum": "&#128200;",
+        "Gross margin quality": "&#129534;",
+        "Operating margin": "&#9881;",
+        "Net margin": "&#10135;",
+        "FCF margin": "&#128181;",
+        "ROE": "&#127941;",
+        "ROIC": "&#127919;",
+        "Debt load": "&#127947;",
+        "Liquidity": "&#128167;",
+        "P/FCF": "&#128184;",
+        "P/E sanity": "&#129504;",
+        "EV/EBITDA": "&#127970;",
+        "Moat quality": "&#127984;",
+        "Altman Z": "&#128679;",
+        "Piotroski F": "&#128202;",
+        "Dilution watch": "&#129720;",
+        "Buyback / issuance quality": "&#128260;",
+        "Total shareholder yield": "&#127873;",
+        "R&D intensity": "&#128300;",
+        "SG&A efficiency": "&#128201;",
+        "EPS vs cash quality": "&#128176;",
+        "Short interest": "&#128059;",
+        "Share count trend (3Y)": "&#128200;",
+        "Small-cap risk": "&#9888;",
+        "FCF trend": "&#127793;",
+        "Gross margin trend": "&#128200;",
+        "Capex intensity": "&#128736;",
+        "Capex Intensity": "&#128736;",
+        "FCF stability": "&#128202;",
+        "FCF Stability": "&#128202;",
+        "Drawdown vs 52 high": "&#128201;",
+        "Drawdown Vs 52 high": "&#128201;",
+        "Drawdown vs 52w high": "&#128201;",
+        "Drawdown Vs 52w High": "&#128201;",
+        "Net Debt vs FCF": "&#128182;",
+        "Cash conversion": "&#128184;",
+        "Cash Conversion": "&#128184;"
+      };
+      return map[name] || "-";
+    }
+
+    function toTitleCase(str = "") {
+      return String(str)
+        .split(" ")
+        .map(word => {
+          if (!word) return word;
+          if (word === word.toUpperCase()) return word;
+          return word.charAt(0).toUpperCase() + word.slice(1);
+        })
+        .join(" ");
+    }
+
+    function getScoreClass(score) {
+      const val = Number(score);
+      if (val >= 4) return "good";
+      if (val >= 0) return "neutral";
+      if (val <= -10) return "risk";
+      if (val < 0) return "risk";
+      return "neutral";
+    }
+
+    function getScoreBand(val) {
+      const v = Number(val) || 0;
+      if (v >= 90) return "elite";
+      if (v >= 75) return "bullish";
+      if (v >= 60) return "solid";
+      if (v >= 45) return "mixed";
+      if (v >= 30) return "spec";
+      return "danger";
+    }
+
+    function colorForBand(val) {
+      const band = getScoreBand(val);
+      switch (band) {
+        case "elite": return "#22c55e";
+        case "bullish": return "#38b972";
+        case "solid": return "#6be48c";
+        case "mixed": return "#d8ad38";
+        case "spec": return "#d65b5b";
+        case "danger": return "#b83232";
+        default: return "#6be48c";
+      }
+    }
+
+    function buildTakeaway(band) {
+      const t = ticker || "This stock";
+      const map = {
+        elite: `${t}: Cash-rich, strong margins, durable moat  elite compounder.`,
+        bullish: `${t}: High quality fundamentals  worth serious attention.`,
+        solid: `${t}: Reliable performer with decent balance and margins.`,
+        mixed: `${t}: Mixed picture  strengths and weaknesses; execution matters.`,
+        spec: `${t}: High-risk upside play  execution must improve to pay off.`,
+        danger: `${t}: Likely value trap  fragile balance sheet or weak cash flows.`
+      };
+      return map[band] || `${t}: Snapshot unavailable.`;
+    }
+
+    function computeRiskSummary(stock = {}) {
+      const f = stock.financialPosition || {};
+      const s = stock.stability || {};
+      const p = stock.priceStats || {};
+      const bullets = [];
+      const ndFcf = f.netDebtToFcfYears;
+      if (ndFcf != null) {
+        if (ndFcf < 1) bullets.push("-- Net debt payoff speed: <1 yr  balance sheet light.");
+        else if (ndFcf < 3) bullets.push(`-- Net debt payoff: ~${ndFcf.toFixed(1)} yrs  manageable if FCF holds.`);
+        else bullets.push(`-- Heavy leverage: ~${ndFcf.toFixed(1)} yrs to clear debt  sensitive to shocks.`);
+      }
+      if (f.interestCoverage != null) {
+        if (f.interestCoverage > 8) bullets.push("-- Interest easily covered by earnings.");
+        else if (f.interestCoverage > 4) bullets.push("-- Interest cover acceptable  monitor if earnings wobble.");
+        else bullets.push("-- Thin interest cover  downturn could stress payments.");
+      }
+      if (s.fcfPositiveYears != null) {
+        if (s.fcfPositiveYears >= 4) bullets.push(`-- Reliable FCF in ${s.fcfPositiveYears}/5 yrs  stability tailwind.`);
+        else if (s.fcfPositiveYears >= 2) bullets.push(`-- Mixed FCF record (${s.fcfPositiveYears}/5 yrs).`);
+        else bullets.push("-- Cash burn risk  FCF consistency weak.");
+      }
+      if (f.debtToEquity != null) {
+        if (f.debtToEquity < 0.6) bullets.push("-- Low leverage vs equity  balance sheet flexibility.");
+        else if (f.debtToEquity > 2.5) bullets.push("-- High leverage vs equity  limited cushion.");
+      }
+      if (p.week52Change != null) {
+        if (p.week52Change < -40) bullets.push("-- Shares well off highs  sentiment/volatility risk.");
+      }
+      const score = bullets.filter(b => b.startsWith("--")).length - bullets.filter(b => b.startsWith("--")).length;
+      let label = "Moderate risk  read factors below.";
+      if (score >= 2) label = "Low risk profile  debt and cash flows look comfortable.";
+      else if (score <= -2) label = "Higher risk  leverage or cash flow fragility.";
+      return { score, label, bullets };
+    }
+
+    function computeValuationSummary(stock = {}) {
+      const v = stock.valuationRatios || {};
+      const p = stock.priceStats || {};
+      const bullets = [];
+      if (v.pfcfRatio != null) {
+        if (v.pfcfRatio < 12) bullets.push("-- P/FCF in value zone  pricing leans cheap.");
+        else if (v.pfcfRatio < 20) bullets.push("-- P/FCF fair for quality.");
+        else bullets.push("-- P/FCF elevated  needs strong execution.");
+      }
+      if (v.fcfYield != null) {
+        if (v.fcfYield > 6) bullets.push(`-- FCF yield ${v.fcfYield.toFixed(1)}%  attractive cash return.`);
+        else if (v.fcfYield > 3) bullets.push(`-- FCF yield ${v.fcfYield.toFixed(1)}%  reasonable.`);
+        else bullets.push(`-- Thin FCF yield ${v.fcfYield.toFixed(1)}%  limited cushion.`);
+      }
+      if (v.evToEbitda != null) {
+        if (v.evToEbitda < 8) bullets.push("-- EV/EBITDA below typical range  value tilt.");
+        else if (v.evToEbitda > 20) bullets.push("-- EV/EBITDA rich vs fundamentals.");
+      }
+      if (p.week52Change != null) {
+        if (p.week52Change < -20) bullets.push(`-- Discounted vs prior high (${p.week52Change.toFixed(1)}% drawdown).`);
+        else if (p.week52Change > -5) bullets.push("-- Trading near highs  needs continued momentum.");
+      }
+      const score = bullets.filter(b => b.startsWith("--")).length - bullets.filter(b => b.startsWith("--")).length;
+      let label = "Fairly priced  see context below.";
+      if (score >= 2) label = "Value-leaning setup  multiples not stretched.";
+      else if (score <= -2) label = "Rich valuation  upside needs strong catalysts.";
+      return { score, label, bullets };
+    }
+
+    function updateSummaries(stock) {
+      const risk = computeRiskSummary(stock);
+      const val = computeValuationSummary(stock);
+      const riskEl = document.getElementById("riskSummary");
+      const valEl = document.getElementById("valSummary");
+      const riskList = document.getElementById("riskReasons");
+      const valList = document.getElementById("valReasons");
+      if (riskEl) riskEl.textContent = risk.label;
+      if (valEl) valEl.textContent = val.label;
+      if (riskList) {
+        const bullets = (risk.bullets || []).slice(0, 6);
+        riskList.innerHTML = bullets.map(b => `<li>${b}</li>`).join("") || "";
+      }
+      if (valList) {
+        const bullets = (val.bullets || []).slice(0, 6);
+        valList.innerHTML = bullets.map(b => `<li>${b}</li>`).join("") || "";
+      }
+    }
+
+    function updatePillars(stock, totalScore) {
+      const { strength, profitability, growth, quality } = computePillarScores(stock, totalScore);
+      applyQuality(quality);
+      applyBar("strengthFill", null, strength);
+      applyBar("profitFill", null, profitability);
+      applyBar("growthFill", null, growth);
+      applyTier(quality);
+    }
+
+    function applyQuality(value) {
+      const dot = document.getElementById("tierDotTop");
+      const text = document.getElementById("qualityTextTop");
+      const gauge = document.getElementById("qualityGaugeFill");
+      const takeawayEl = document.getElementById("ratingTakeaway");
+      const v = Math.max(0, Math.min(100, value || 0));
+      if (text) text.textContent = `${v.toFixed(0)}/100`;
+      const band = getScoreBand(v);
+      if (dot) {
+        dot.classList.remove("bullish","neutral","bearish");
+        if (band === "danger" || band === "spec") dot.classList.add("bearish");
+        else if (band === "mixed") dot.classList.add("neutral");
+        else dot.classList.add("bullish");
+      }
+      if (gauge) {
+        gauge.style.width = `${v}%`;
+        gauge.style.background = colorForBand(v);
+      }
+      if (takeawayEl) takeawayEl.textContent = buildTakeaway(band);
+    }
+
+    function applyBar(fillId, textId, value, isQuality = false) {
+      const fill = document.getElementById(fillId);
+      const text = textId - document.getElementById(textId) : null;
+      const v = Math.max(0, Math.min(100, value || 0));
+      if (fill) {
+        fill.style.width = `${v}%`;
+        fill.style.background = colorForBand(v);
+      }
+      if (text) text.textContent = isQuality - `${v.toFixed(0)}/100` : `${v.toFixed(0)}%`;
+    }
+
+    function computePillarScores(stock, totalScore) {
+      const clamp = (v) => Math.max(0, Math.min(100, v));
+      // Financial Strength
+      const f = stock.financialPosition || {};
+      const s = stock.stability || {};
+      let strength = 50;
+      if (f.netDebtToFcfYears != null) strength += f.netDebtToFcfYears < 2 - 20 : f.netDebtToFcfYears < 4 - 12 : f.netDebtToFcfYears < 6 - 5 : -10;
+      if (f.interestCoverage != null) strength += f.interestCoverage > 12 - 12 : f.interestCoverage > 6 - 8 : f.interestCoverage > 2 - 4 : -10;
+      if (f.currentRatio != null) strength += f.currentRatio > 1.8 - 8 : f.currentRatio > 1.2 - 5 : f.currentRatio > 1 - 2 : -6;
+      if (f.debtToEquity != null) strength += f.debtToEquity < 0.6 - 10 : f.debtToEquity < 1 - 6 : f.debtToEquity < 2 - 0 : -8;
+      if (s.fcfPositiveYears != null) strength += s.fcfPositiveYears >= 4 - 8 : s.fcfPositiveYears >= 2 - 4 : -8;
+
+      // Profitability & Efficiency
+      const p = stock.profitMargins || {};
+      const r = stock.returns || {};
+      const cashConv = stock.cash-.cashConversion -- null;
+      let profitability = 50;
+      if (p.fcfMargin != null) profitability += p.fcfMargin > 20 - 12 : p.fcfMargin > 10 - 8 : p.fcfMargin > 0 - 4 : -10;
+      if (p.grossMargin != null) profitability += p.grossMargin > 60 - 8 : p.grossMargin > 40 - 6 : p.grossMargin > 25 - 3 : -6;
+      if (p.operatingMargin != null) profitability += p.operatingMargin > 20 - 8 : p.operatingMargin > 10 - 5 : p.operatingMargin > 0 - 2 : -6;
+      if (p.profitMargin != null) profitability += p.profitMargin > 20 - 6 : p.profitMargin > 10 - 4 : p.profitMargin > 0 - 2 : -6;
+      if (r.roic != null) profitability += r.roic > 15 - 8 : r.roic > 10 - 5 : r.roic > 5 - 2 : -6;
+      if (r.roe != null) profitability += r.roe > 20 - 8 : r.roe > 12 - 5 : r.roe > 5 - 2 : -6;
+      if (cashConv != null) profitability += cashConv > 1 - 6 : cashConv > 0.8 - 4 : cashConv > 0.6 - 2 : -6;
+
+      // Growth & Momentum (fundamental)
+      const g = stock.growth || {};
+      const m = stock.momentum || {};
+      let growth = 50;
+      if (g.revenueGrowthTTM != null) growth += g.revenueGrowthTTM > 25 - 12 : g.revenueGrowthTTM > 10 - 8 : g.revenueGrowthTTM > 0 - 4 : -6;
+      if (g.profitGrowthTTM != null) growth += g.profitGrowthTTM > 25 - 10 : g.profitGrowthTTM > 10 - 6 : g.profitGrowthTTM > 0 - 3 : -6;
+      if (m.marginTrend != null) growth += m.marginTrend > 3 - 6 : m.marginTrend > 0 - 3 : -4;
+      if (m.fcfTrend != null) growth += m.fcfTrend > 5 - 6 : m.fcfTrend > 0 - 3 : -4;
+      if (g.revenueCagr3y != null) growth += g.revenueCagr3y > 15 - 8 : g.revenueCagr3y > 8 - 5 : g.revenueCagr3y > 0 - 2 : -4;
+      const quality = clamp((strength + profitability + growth) / 3);
+      return { strength: clamp(strength), profitability: clamp(profitability), growth: clamp(growth), quality };
+    }
+
+    function lastBundleDateFromLocal(tick) {
+      const prefix = `bundle-downloaded-${tick}-`;
+      let latest = null;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(prefix)) {
+          const datePart = k.slice(prefix.length);
+          if (!latest || datePart > latest) latest = datePart;
+        }
+      }
+      return latest;
+    }
+
+    async function loadFromBundle(kind) {
+      if (!ticker) return undefined;
+      // Offline hook: prefer prebuilt bundle from stock_data.json
+      if (window.offlineBundle && window.offlineBundle.ticker === ticker) {
+        bundleCache = window.offlineBundle;
+        return bundleCacheForKind(bundleCache, kind);
+      }
+      if (window.offlineMap && window.buildOfflineBundle && window.offlineMap[ticker]) {
+        bundleCache = window.buildOfflineBundle(window.offlineMap[ticker]);
+        window.offlineBundle = bundleCache;
+        return bundleCacheForKind(bundleCache, kind);
+      }
+      if (bundleCache) return bundleCacheForKind(bundleCache, kind);
+      if (!bundlePromise) {
+        bundlePromise = (async () => {
+          const today = new Date().toISOString().slice(0,10);
+          const known = lastBundleDateFromLocal(ticker);
+          const candidates = [`data/${ticker}-bundle-${today}.json`];
+          if (known) candidates.push(`data/${ticker}-bundle-${known}.json`);
+          candidates.push(`data/${ticker}-bundle-latest.json`);
+          for (const path of candidates) {
+            try {
+              const res = await fetch(path);
+              if (res.ok) {
+                const data = await res.json();
+                bundleCache = data;
+                bundleAvailable = true;
+                return data;
+              }
+            } catch (_) {}
+          }
+          return undefined;
+        })();
+      }
+      const b = await bundlePromise;
+      bundleCache = b;
+      return bundleCacheForKind(b, kind);
+    }
+
+    function bundleCacheForKind(bundle, kind) {
+      if (!bundle) return undefined;
+      const sanitized = kind.replace(/-/g, "");
+      const camel = kind.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+      return bundle[kind] -- bundle[sanitized] -- bundle[camel] -- undefined;
+    }
+
+    function renderPriceChart(series) {
+      const canvas = document.getElementById("priceChart");
+      const tooltip = document.getElementById("priceTooltip");
+      if (!canvas || !Array.isArray(series) || !series.length) { if (tooltip) tooltip.style.display = "none"; return; }
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width = canvas.clientWidth || 600;
+      const height = canvas.height = 220;
+      const sorted = [...series].sort((a,b)=> new Date(a.date) - new Date(b.date)); // oldest -> newest
+      const closes = sorted.map(p => Number(p.close || p.price)).filter(v => isFinite(v));
+      const dates = sorted.map(p => new Date(p.date));
+      if (!closes.length) { ctx.clearRect(0,0,width,height); if (tooltip) tooltip.style.display = "none"; return; }
+      const min = Math.min(...closes);
+      const max = Math.max(...closes);
+      const range = max - min || 1;
+      ctx.clearRect(0,0,width,height);
+      // Axes
+      ctx.strokeStyle = "rgba(255,255,255,0.1)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(40, 10);
+      ctx.lineTo(40, height - 25);
+      ctx.lineTo(width - 10, height - 25);
+      ctx.stroke();
+      // Grid labels (min, mid, max)
+      ctx.fillStyle = "rgba(255,255,255,0.6)";
+      ctx.font = "12px Poppins, Segoe UI, sans-serif";
+      ctx.fillText(max.toFixed(2), 4, 18);
+      ctx.fillText(min.toFixed(2), 4, height - 28);
+      const mid = (max + min) / 2;
+      ctx.fillText(mid.toFixed(2), 4, (height - 25) / 2);
+      // Dates: four ticks
+      const tickCount = 4;
+      for (let i = 0; i < tickCount; i++) {
+        const idx = Math.floor((series.length - 1) * (i / (tickCount - 1)));
+        const d = dates[idx];
+        const label = d.toISOString().slice(0,10);
+        const x = 40 + (idx / (series.length - 1 || 1)) * (width - 50);
+        ctx.fillText(label, x - 30, height - 8);
+      }
+      // Line + store points for hover
+      ctx.strokeStyle = "#5dd0ff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      chartPoints = [];
+      sorted.forEach((p, idx) => {
+        const x = 40 + (idx / (sorted.length - 1 || 1)) * (width - 50);
+        const y = height - 25 - ((Number(p.close || p.price) - min) / range) * (height - 40);
+        chartPoints.push({ x, y, date: dates[idx], close: Number(p.close || p.price) });
+        if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      // Hover
+      canvas.onmousemove = (e) => {
+        if (!chartPoints.length || !tooltip) return;
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        let nearest = chartPoints[0];
+        let minDist = Math.abs(mx - nearest.x);
+        for (const pt of chartPoints) {
+          const d = Math.abs(mx - pt.x);
+          if (d < minDist) { minDist = d; nearest = pt; }
+        }
+        tooltip.style.display = "block";
+        tooltip.style.left = `${nearest.x + 10}px`;
+        tooltip.style.top = `${nearest.y - 30}px`;
+        tooltip.innerHTML = `${nearest.date.toISOString().slice(0,10)}<br>$${nearest.close.toFixed(2)}`;
+      };
+      canvas.onmouseleave = () => { if (tooltip) tooltip.style.display = "none"; };
+    }
+
+    function filterSeriesByRange(series, range) {
+      if (!Array.isArray(series)) return [];
+      if (range === "all") return series;
+      const now = new Date(series[0]-.date || Date.now());
+      const daysMap = { "1d": 1, "1w": 7, "3m": 90, "6m": 180, "1y": 365 };
+      const days = daysMap[range] || 99999;
+      const cutoff = new Date(now);
+      cutoff.setDate(cutoff.getDate() - days);
+      return series.filter(s => new Date(s.date) >= cutoff);
+    }
+
+    function nf(val) {
+      if (val === null || val === undefined || isNaN(val)) return "MISS";
+      const num = Number(val);
+      if (Math.abs(num) >= 1e9) return (num/1e9).toFixed(2) + "B";
+      if (Math.abs(num) >= 1e6) return (num/1e6).toFixed(2) + "M";
+      return num.toLocaleString();
+    }
+    function numf(val) {
+      const num = toNumber(val);
+      return num === null - "MISS" : num.toFixed(2);
+    }
+    function pctf(val) {
+      const num = pctFromRatio(val);
+      return num === null - "MISS" : `${num.toFixed(2)}%`;
+    }
+    function pctChange(curr, prev) { if (!isFinite(curr) || !isFinite(prev) || prev === 0) return null; return ((curr - prev) / Math.abs(prev)) * 100; }
+    function calcMargin(num, den) { if (!isFinite(num) || !isFinite(den) || den === 0) return null; return (num / den) * 100; }
+    function calcFcf(r) {
+      if (!r) return null;
+      const cfo = Number(r.netCashProvidedByOperatingActivities -- r.operatingCashFlow);
+      const capex = Number(r.capitalExpenditure);
+      if (!isFinite(cfo) || !isFinite(capex)) return null;
+      return cfo - Math.abs(capex);
+    }
+    function pctFromRatio(val) { const num = percentToNumber(val); if (num === null) return null; return Math.abs(num) <= 1 - num * 100 : num; }
+    function toNumber(val) { const num = percentToNumber(val); return num === null - null : num; }
+    goBtn.addEventListener("click", () => {
+      selectedProvider = providerSelect.value;
+      bundlePromise = null;
+      bundleCache = null;
+      loadAll().catch(handleLoadError);
+    });
+
+    if (saveBundleBtn) {
+      if (DISABLE_BUNDLE) {
+        saveBundleBtn.disabled = true;
+        saveBundleBtn.title = "Bundle downloads are paused for this session.";
+      } else {
+        saveBundleBtn.addEventListener("click", () => {
+          if (CACHE_ONLY) {
+            alert("Saving bundles is paused while running cache-only mode.");
+            return;
+          }
+          if (lastBundlePayload) {
+            maybePersistBundle(lastBundlePayload, { force: true });
+          } else {
+            alert("Load a ticker first to enable bundle download.");
+          }
+        });
+      }
+    }
+
+      loadAll().catch(handleLoadError);
+
+    const setTableState = (btn, open) => {
+      const label = btn.getAttribute("data-label") || "Table";
+      btn.textContent = `${open - "Hide" : "-- Show"} ${label}`;
+      btn.setAttribute("aria-expanded", String(open));
+    };
+    const toggleTablePanel = (btn) => {
+      const targetId = btn.getAttribute("data-panel-target");
+      const panel = document.getElementById(targetId);
+      if (!panel) return;
+      const willOpen = panel.classList.contains("hidden");
+      panel.classList.toggle("hidden");
+      setTableState(btn, willOpen);
+    };
+    tableToggles.forEach(btn => {
+      setTableState(btn, false);
+      const targetId = btn.getAttribute("data-panel-target");
+      const panel = document.getElementById(targetId);
+      if (panel) panel.classList.add("hidden");
+      btn.addEventListener("click", (e) => { e.preventDefault(); toggleTablePanel(btn); });
+    });
+
+    rangeSwitch.addEventListener("click", (e) => {
+      if (e.target.tagName !== "BUTTON") return;
+      [...rangeSwitch.querySelectorAll("button")].forEach(btn => btn.classList.remove("active"));
+      e.target.classList.add("active");
+      selectedRange = e.target.getAttribute("data-range");
+      const filtered = filterSeriesByRange(priceSeriesFull, selectedRange);
+      renderPriceChart(filtered);
+    });
+
+    statusEl.textContent = "Last Close: --";
+
+    // Preload from bundle/cache on first load for current ticker, before provider choice.
+    (async () => {
+      try {
+        // Attempt to load bundle and cached data without API
+        const preloadedIncome = await fetchWithCache("income", "", { noApiWhenMissing: true });
+        const preloadedBalance = await fetchWithCache("balance", "", { noApiWhenMissing: true });
+        const preloadedCash = await fetchWithCache("cash", "", { noApiWhenMissing: true });
+        const preloadedKeyMetrics = await fetchWithCache("key-metrics", "", { noApiWhenMissing: true });
+        const preloadedRatios = await fetchWithCache("ratios", "", { noApiWhenMissing: true });
+        const preloadedKeyMetricsTtm = await fetchWithCache("key-metrics-ttm", "", { noApiWhenMissing: true });
+        const preloadedRatiosTtm = await fetchWithCache("ratios-ttm", "", { noApiWhenMissing: true });
+        const preloadedPriceFull = await fetchWithCache("chart-full", "", { noApiWhenMissing: true });
+        const preloadedPriceLight = await fetchWithCache("chart-light", "", { noApiWhenMissing: true });
+        if (preloadedIncome || preloadedBalance || preloadedCash) {
+          renderTables(preloadedIncome || [], preloadedBalance || [], preloadedCash || [], preloadedKeyMetrics || [], preloadedRatios || [], preloadedKeyMetricsTtm || [], preloadedRatiosTtm || []);
+          const preStock = buildStockFromStatements({
+            income: preloadedIncome || [],
+            balance: preloadedBalance || [],
+            cash: preloadedCash || [],
+            keyMetrics: preloadedKeyMetrics || [],
+            ratios: preloadedRatios || [],
+            keyMetricsTtm: preloadedKeyMetricsTtm || [],
+            ratiosTtm: preloadedRatiosTtm || [],
+            financialScores: [],
+            ownerEarnings: [],
+            incomeGrowth: [],
+            priceFull: preloadedPriceFull || []
+          });
+          renderScoreboard(preStock);
+          const priceInfo = renderPriceBlock(preloadedPriceLight || [], preloadedPriceFull || []);
+          priceSeriesFull = priceInfo.seriesForChart || [];
+          priceSeriesLight = preloadedPriceLight || [];
+          renderPriceChart(filterSeriesByRange(priceSeriesFull, selectedRange));
+          const parsedSnapshotPrice = parsePriceString(priceInfo.lastCloseText);
+          const latestPrice = getLatestPrice(preloadedPriceFull, preloadedPriceLight);
+          const resolvedPrice = latestPrice -- priceInfo.latestPrice -- parsedSnapshotPrice -- getCachedPrice();
+          const resolvedNum = Number(resolvedPrice);
+          if (Number.isFinite(resolvedNum)) {
+            updatePriceDisplay(resolvedNum, priceInfo.lastCloseText, priceInfo.dayChange);
+          } else {
+            const cachedOnly = getCachedPrice();
+            if (Number.isFinite(cachedOnly)) {
+              updatePriceDisplay(cachedOnly, `$${cachedOnly.toFixed(2)}`, null);
+            }
+          }
+          const preResolvedPrice = Number.isFinite(resolvedNum)
+            - resolvedNum
+            : (parsedSnapshotPrice -- getCachedPrice());
+          renderSnapshot(preloadedIncome || [], preloadedBalance || [], preloadedCash || [], preloadedKeyMetrics || [], preloadedKeyMetricsTtm || [], preloadedRatios || [], priceSeriesFull, preResolvedPrice);
+        }
+      } catch (err) {
+        console.debug("preload cache failed", err);
+      }
+    })();
+
+
+
+
+
+
+
+

@@ -1,0 +1,147 @@
+html, body {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* FORCE the Bullish And Foolish background on this page */
+html,
+body {
+  background:
+    linear-gradient(180deg, #5a3a32 0%, #3a1e1a 60%, #210f0e 100%)
+    center top / cover no-repeat fixed !important;
+}
+
+/* Make all layout wrappers transparent so the background shows */
+.page,
+.wrapper,
+.wrapper.style1,
+.wrapper.style2,
+.shell,
+.main,
+.main > .content {
+  background: transparent !important;
+}
+
+/* Ratings container styling */
+.card-ratings {
+  background: rgba(18, 20, 28, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.04) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(8px);
+}
+
+/* Finance cards styling */
+.card-finances {
+  background: rgba(28, 32, 44, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35) !important;
+  color: #E5ECF5;
+}
+
+.card-finances .muted {
+  color: rgba(229, 236, 245, 0.7);
+}
+
+.card-finances .reason-card {
+  background: rgba(28, 32, 44, 0.9);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #E5ECF5;
+}
+
+.card-finances .reason-card .metric {
+  color: rgba(229, 236, 245, 0.7);
+}
+
+.card-finances .reason-card .score-tag {
+  background: transparent !important;
+  border: none !important;
+  text-shadow: none;
+}
+
+/* Heading accents */
+h2#title {
+  color: #c9d5e4;
+  font-size: 2.8rem;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.card h3 {
+  color: #9EC9F5;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Status / last close styling */
+.status-price {
+  color: #fff;
+}
+
+.status-price .status-label {
+  color: #F0B057;
+  font-weight: 700;
+}
+
+.status-price .status-value {
+  color: #fff;
+  font-weight: 800;
+}
+
+/* Tier badge */
+.tier-badge {
+  background: #F0B057 !important;
+  color: #1b1b1b !important;
+  border: none !important;
+}
+
+/* Score badges */
+.score-tag {
+  background: transparent !important;
+  border: none !important;
+  color: inherit;
+  text-shadow: none;
+}
+
+.score-tag.good {
+  color: #6BE48C !important;
+  text-shadow: 0 0 10px rgba(107, 228, 140, 0.4);
+}
+
+.score-tag.risk,
+.score-tag.negative {
+  color: #ff7a7a !important;
+  text-shadow: 0 0 10px rgba(255, 122, 122, 0.35);
+}
+
+.score-tag.neutral {
+  color: #f7c853 !important;
+  text-shadow: none;
+}
+.score-tag.miss {
+  color: #9fb3c8 !important;
+  text-shadow: none;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 8px;
+}
+.reason-card.miss {
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+}
+.value-pill.miss {
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+}
+
+/* Back link */
+.back-link {
+  color: rgba(200, 215, 230, 0.7);
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: #F0B057;
+}

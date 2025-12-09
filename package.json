@@ -1,0 +1,15 @@
+{
+  "name": "stocks-tools",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dump:meta": "node scripts/dumpMetaFacts.js",
+    "edgar:ingest": "node scripts/edgarIngest.js",
+    "edgar:refresh-directory": "node scripts/refreshDirectory.js",
+    "test:prices": "node server/prices/priceFetcher.test.js && node server/prices/priceStore.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.5.0"
+  }
+}

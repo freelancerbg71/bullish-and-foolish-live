@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rules | Bullish And Foolish</title>
+  <style>
+    :root {
+      --bg: #140d0a;
+      --panel: rgba(36, 26, 20, 0.85);
+      --panel-strong: rgba(45, 32, 24, 0.86);
+      --accent: #FFB84D;
+      --muted: #a69b90;
+      --text: #f3e9dc;
+      --border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      background: #140d0a url('assets/css/images/bgtr.svg') top right repeat, url('assets/css/images/bgbl.svg') bottom left repeat;
+      background-size: 1400px auto, 1400px auto;
+      background-attachment: fixed;
+      min-height: 100%;
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Poppins", "Segoe UI", sans-serif;
+      color: var(--text);
+      padding: 32px 18px 48px;
+    }
+
+    .shell {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .brand {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      margin-left: 6px;
+    }
+
+    .brand-mark img {
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+    }
+
+    .nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.18);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0.2px;
+    }
+
+    .subtitle {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .rule-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .rule-row {
+      background: var(--panel-strong);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      gap: 10px;
+    }
+
+    .weight {
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      background: rgba(56, 189, 248, 0.1);
+      font-size: 12px;
+      letter-spacing: 0.4px;
+      color: var(--text);
+    }
+
+    .desc {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .mini-footer {
+      text-align: center;
+      margin-top: 18px;
+      color: #d9cec2;
+    }
+  </style>
+</head>
+
+<body class="app-gradient-bg"
+  style="background: linear-gradient(180deg, #5a3a32 0%, #3a1e1a 60%, #210f0e 100%) center top / cover no-repeat fixed !important; position:relative;">
+  <a href="index.html" class="nav"
+    style="position:fixed; top:12px; left:12px; z-index:10; text-decoration:none; display:inline-block; padding:6px 10px; border:1px solid rgba(255,255,255,0.1); border-radius:8px; background:rgba(0,0,0,0.28); color:#f6f0ea; font-weight:700; font-size:13px;">Back</a>
+  <div class="shell" style="margin-top:12px;">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><img src="assets/images/bull.png" alt="Bull" /></div>
+        <div>Bullish And Foolish</div>
+      </div>
+    </header>
+    <div>
+      <h1>Rulebook</h1>
+      <p class="subtitle">Reference for the current scoring rules. This list is generated directly from the shared rule
+        file used across the app.</p>
+    </div>
+    <div class="rule-list" id="ruleList"></div>
+  </div>
+
+  <script type="module">
+    import { rules as SHARED_RULES, ruleExplainers } from "./scripts/shared-rules.js";
+    const list = document.getElementById("ruleList");
+    const seen = new Set();
+    SHARED_RULES.forEach(rule => {
+      if (seen.has(rule.name)) return;
+      seen.add(rule.name);
+      const explainer = ruleExplainers?.[rule.name] || {};
+      const descText = explainer.pos || rule.description || "Dynamic calculation based on financial thresholds.";
+      let weightText = "See logic";
+      if (typeof rule.weight === "number") {
+        const w = Math.abs(rule.weight);
+        weightText = `+${w} / -${w}`;
+      } else if (rule.weight) {
+        weightText = `${rule.weight}`;
+      }
+      const row = document.createElement("div");
+      row.className = "rule-row";
+      row.innerHTML = `
+        <div class="meta">
+          <div>${rule.name}</div>
+          <div class="weight">${weightText}</div>
+        </div>
+        <div class="desc">${descText}</div>
+      `;
+      list.appendChild(row);
+    });
+
+    // Manual entry for Filing Signals (handled dynamically in backend but relevant for user transparency)
+    const filingRow = document.createElement("div");
+    filingRow.className = "rule-row";
+    filingRow.innerHTML = `
+      <div class="meta">
+        <div>Filing Intelligence (10-K/10-Q Text Analysis)</div>
+        <div class="weight">dynamic</div>
+      </div>
+      <div class="desc">
+        Parses text from SEC filings to detect risks (litigation, going concern warnings, heavy dilution language) or positive signals. 
+        <br><strong>Penalties:</strong> -5 to -20 pts for severe risks. 
+        <br><strong>Bonuses:</strong> +5 to +10 pts for clean/improving language.
+      </div>
+    `;
+    list.appendChild(filingRow);
+  </script>
+
+  <div class='mini-footer'>&copy; 2025 Bullish And Foolish &mdash; independent &amp; always free.</div>
+  <div class='mini-footer'
+    style='font-size:11px; color:#aeb7c4; max-width:960px; margin:4px auto 12px auto; line-height:1.45;'>
+    Disclaimer: The information provided on this website is for educational and informational purposes only and should
+    not be regarded as financial, investment, or trading advice. Markets involve risk, returns are not guaranteed, and
+    capital can be lost. Past performance is not indicative of future results. Please conduct your own due diligence or
+    consult a licensed professional before making investment decisions.
+  </div>
+</body>
+
+</html>
