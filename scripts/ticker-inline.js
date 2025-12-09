@@ -436,8 +436,17 @@ function isPriceStale(vm, maxAgeHours = 36) {
   if (!dateStr) return true;
   const ts = Date.parse(dateStr);
   if (!Number.isFinite(ts)) return true;
-  const ageHours = (Date.now() - ts) / (1000 * 60 * 60);
-  return ageHours > maxAgeHours;
+  
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun, 6=Sat
+  // Relax staleness check during weekends/Monday morning to avoid rejecting Friday's close
+  let allowed = maxAgeHours;
+  if (day === 0) allowed = 72; // Sunday: allow Friday data
+  if (day === 6) allowed = 48; // Saturday: allow Friday data
+  if (day === 1) allowed = 80; // Monday: allow Friday data until market close
+
+  const ageHours = (now.getTime() - ts) / (1000 * 60 * 60);
+  return ageHours > allowed;
 }
 
 async function ensurePriceReady(vm, maxTries = 5, delayMs = 1500) {
@@ -459,7 +468,8 @@ async function ensurePriceReady(vm, maxTries = 5, delayMs = 1500) {
       const data = await res.json();
       const nextVm = data?.data || data;
       latest = nextVm || latest;
-      if (hasPrice(nextVm) || nextVm?.pricePending === false) {
+      // Only return if we have a price AND it's fresh (or if backend says it's done pending)
+      if ((hasPrice(nextVm) && !isPriceStale(nextVm)) || nextVm?.pricePending === false) {
         return nextVm;
       }
     } catch (err) {
