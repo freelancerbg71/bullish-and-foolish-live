@@ -88,6 +88,8 @@ const varTextMuted = "rgba(159,179,200,0.9)";
 const loadingText = loadingOverlay ? loadingOverlay.querySelector("div:nth-child(2)") : null;
 const todayIso = () => new Date().toISOString().slice(0, 10);
 let manualModalShown = false;
+// Leave audit logs in code, but keep them off by default (enable manually when debugging).
+const ENABLE_AUDIT_DUMP = false;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -1169,8 +1171,10 @@ async function loadAll() {
   const subtitleEl = document.getElementById("subtitle");
   if (subtitleEl) subtitleEl.textContent = "";
   hideLoadingOverlay();
-  console.log("[AUDIT DUMP] Final Stock Object:", stock);
-  console.log("[AUDIT DUMP] Combined Reasons:", combinedReasons);
+  if (ENABLE_AUDIT_DUMP) {
+    console.log("[AUDIT DUMP] Final Stock Object:", stock);
+    console.log("[AUDIT DUMP] Combined Reasons:", combinedReasons);
+  }
 }
 
 function renderProjections(vm) {
@@ -2669,9 +2673,11 @@ function updatePriceDisplay(valueNum, valueText, dayChange) {
   const priceDisplay = Number.isFinite(valueNum) ? `$${valueNum.toFixed(2)}` : (valueText || "--");
   if (lpEl) lpEl.textContent = priceDisplay;
 
-  const pending = currentVm?.pricePending === true;
-  const stale = hasPrice(currentVm) && isPriceStale(currentVm);
   const hasPriceVal = Number.isFinite(valueNum);
+  // Only show "pending" if we truly don't have a usable price yet.
+  // The backend may set `pricePending=true` while we are showing a cached/local fallback close.
+  const pending = currentVm?.pricePending === true && !hasPriceVal;
+  const stale = hasPrice(currentVm) && isPriceStale(currentVm);
   // Keep wording stable in the UI: always show "Last Close" as the label.
   const statusLabel = "Last Close";
   const statusNote = pending

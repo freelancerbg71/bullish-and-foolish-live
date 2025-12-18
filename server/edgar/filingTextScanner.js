@@ -1259,6 +1259,11 @@ export async function scanFilingForSignals(ticker, opts = {}) {
                 : 0;
         const title = "Insider Trading Pattern";
         const snippet = `Recent Form 4 activity: ${buys} buy-coded vs ${sells} sell-coded transactions (${recentForm4.length} filings / 180d).`;
+        // Build a link to the most recent Form 4 filing
+        const latestForm4 = recentForm4[0];
+        const form4DocUrl = latestForm4?.cik && latestForm4?.accession
+          ? `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${String(latestForm4.cik).replace(/^0+/, '')}&type=4&dateb=&owner=include&count=40`
+          : null;
         dedupedSignals.set("insider_trading_pattern", {
           id: "insider_trading_pattern",
           title,
@@ -1266,10 +1271,10 @@ export async function scanFilingForSignals(ticker, opts = {}) {
           includeInScore: false,
           snippet,
           form: "4",
-          filed: recentForm4[0]?.filed || null,
-          docUrl: null,
-          accession: recentForm4[0]?.accession || null,
-          cik: recentForm4[0]?.cik || null
+          filed: latestForm4?.filed || null,
+          docUrl: form4DocUrl,
+          accession: latestForm4?.accession || null,
+          cik: latestForm4?.cik || null
         });
       }
     }
