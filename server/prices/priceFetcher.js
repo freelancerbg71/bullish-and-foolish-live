@@ -3,6 +3,7 @@ const YAHOO_CHART_BASE = "https://query2.finance.yahoo.com/v8/finance/chart/";
 const YAHOO_COOKIE_URL = "https://fc.yahoo.com";
 const YAHOO_CRUMB_URL = "https://query1.finance.yahoo.com/v1/test/getcrumb";
 const STOOQ_DAILY_CSV_BASE = "https://stooq.com/q/d/l/?i=d&s=";
+const GOOGLE_FINANCE_BASE = "https://www.google.com/finance/quote/";
 const DEFAULT_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
   "Accept": "*/*",
@@ -181,13 +182,27 @@ async function fetchYahooChart(ticker) {
   if (symbol.includes("-")) variants.push(symbol.replace("-", "."));
   if (symbol.includes(".")) variants.push(symbol.replace(".", "-"));
 
+  // Try WITHOUT cookies first (works for most tickers)
+  for (const variant of variants) {
+    const url = `${YAHOO_CHART_BASE}${encodeURIComponent(variant)}?range=2y&interval=1d`;
+    try {
+      const res = await fetch(url, { headers: DEFAULT_HEADERS });
+      if (res.ok) {
+        const result = await parseYahooChartResponse(res, symbol);
+        if (result) return result;
+      }
+    } catch (_) {
+      // Continue to next variant
+    }
+  }
+
+  // Fallback: Try WITH cookies (for tickers that require auth)
   const session = await getYahooSession();
   if (!session) return null;
   const cookieHeader = session.cookieHeader;
   const crumb = session.crumb;
 
   for (const variant of variants) {
-    // Extended range to 2y for 52w high/low calculation
     const url = `${YAHOO_CHART_BASE}${encodeURIComponent(variant)}?range=2y&interval=1d&crumb=${encodeURIComponent(crumb)}`;
     try {
       const res = await fetch(url, { headers: { ...DEFAULT_HEADERS, Cookie: cookieHeader } });
@@ -196,52 +211,61 @@ async function fetchYahooChart(ticker) {
         noteYahooBlocked(res.status, variant);
         continue;
       }
-      const body = await res.json();
-      const result = body?.chart?.result?.[0];
-      const meta = result?.meta || {};
-      const quotes = result?.indicators?.quote?.[0];
-      const closes = Array.isArray(quotes?.close) ? quotes.close : [];
-      const timestamps = Array.isArray(result?.timestamp) ? result.timestamp : [];
-
-      let close = null;
-      let ts = null;
-      const history = [];
-
-      for (let i = 0; i < closes.length; i++) {
-        const val = Number(closes[i]);
-        const t = timestamps[i];
-        if (Number.isFinite(val) && t) {
-          history.push({
-            date: new Date(t * 1000).toISOString().slice(0, 10),
-            close: val
-          });
-          close = val;
-          ts = t;
-        }
-      }
-
-      if (!Number.isFinite(close) || close <= 0) {
-        console.warn("[priceFetcher] yahoo chart missing/zero close", variant);
-        continue;
-      }
-
-      const date = new Date(ts * 1000).toISOString().slice(0, 10);
-      const currency = meta.currency; // Currency often in meta
-
-      return {
-        ticker: symbol,
-        date,
-        close,
-        history,
-        currency,
-        source: "yahoo-yfinance"
-      };
+      const result = await parseYahooChartResponse(res, symbol);
+      if (result) return result;
     } catch (err) {
       console.error("[priceFetcher] error fetching yahoo chart for", variant, err);
     }
   }
   return null;
 }
+
+async function parseYahooChartResponse(res, symbol) {
+  try {
+    const body = await res.json();
+    const result = body?.chart?.result?.[0];
+    const meta = result?.meta || {};
+    const quotes = result?.indicators?.quote?.[0];
+    const closes = Array.isArray(quotes?.close) ? quotes.close : [];
+    const timestamps = Array.isArray(result?.timestamp) ? result.timestamp : [];
+
+    let close = null;
+    let ts = null;
+    const history = [];
+
+    for (let i = 0; i < closes.length; i++) {
+      const val = Number(closes[i]);
+      const t = timestamps[i];
+      if (Number.isFinite(val) && t) {
+        history.push({
+          date: new Date(t * 1000).toISOString().slice(0, 10),
+          close: val
+        });
+        close = val;
+        ts = t;
+      }
+    }
+
+    if (!Number.isFinite(close) || close <= 0) {
+      return null;
+    }
+
+    const date = new Date(ts * 1000).toISOString().slice(0, 10);
+    const currency = meta.currency;
+
+    return {
+      ticker: symbol,
+      date,
+      close,
+      history,
+      currency,
+      source: "yahoo-yfinance"
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
 
 function stooqVariants(symbol) {
   const s = normalizeTicker(symbol);
@@ -314,6 +338,59 @@ async function fetchStooqDailyCsv(ticker) {
 
   return null;
 }
+// Google Finance fallback - scrapes price from HTML (no official API)
+const GOOGLE_EXCHANGES = ["NASDAQ", "NYSE", "NYSEAMERICAN", "BATS"];
+
+async function fetchGoogleFinancePrice(ticker) {
+  const symbol = normalizeTicker(ticker);
+  if (!symbol) return null;
+
+  for (const exchange of GOOGLE_EXCHANGES) {
+    const url = `${GOOGLE_FINANCE_BASE}${encodeURIComponent(symbol)}:${exchange}`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": DEFAULT_HEADERS["User-Agent"],
+          "Accept": "text/html,*/*",
+          "Accept-Language": "en-US,en;q=0.9"
+        }
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+
+      // Extract price from data-last-price attribute or fallback patterns
+      let price = null;
+      const lastPriceMatch = html.match(/data-last-price="([\d.]+)"/);
+      if (lastPriceMatch) {
+        price = Number(lastPriceMatch[1]);
+      } else {
+        // Fallback: look for price in specific div patterns
+        const priceMatch = html.match(/class="YMlKec fxKbKc">([\d,.]+)</);
+        if (priceMatch) {
+          price = Number(priceMatch[1].replace(/,/g, ""));
+        }
+      }
+
+      if (!Number.isFinite(price) || price <= 0) continue;
+
+      // Extract currency if available
+      const currencyMatch = html.match(/data-currency-code="([A-Z]+)"/);
+      const currency = currencyMatch?.[1] || "USD";
+
+      console.info("[priceFetcher] google finance parsed", { ticker: symbol, exchange, close: price });
+      return {
+        ticker: symbol,
+        date: new Date().toISOString().slice(0, 10),
+        close: price,
+        currency,
+        source: "google-finance"
+      };
+    } catch (err) {
+      console.warn("[priceFetcher] google finance fetch failed", exchange, err?.message);
+    }
+  }
+  return null;
+}
 
 /**
  * Fetch last close using Yahoo endpoints.
@@ -338,17 +415,40 @@ export async function fetchPriceFromPrimarySource(ticker) {
     ({ chartResult, quoteResult } = await fetchYahoo());
   }
 
+  let googleResult = null;
+
   if (PRICE_ALLOW_FALLBACK) {
     const yahooFailed = !chartResult && !quoteResult;
-    if ((PRICE_PRIMARY_SOURCE === "yahoo" && (yahooFailed || isYahooBlocked())) && !stooqResult) {
-      stooqResult = await fetchStooqDailyCsv(ticker).catch(() => null);
+
+    // Fallback chain: Yahoo -> Google Finance -> Stooq
+    if ((PRICE_PRIMARY_SOURCE === "yahoo" && (yahooFailed || isYahooBlocked()))) {
+      // Try Google Finance first
+      googleResult = await fetchGoogleFinancePrice(ticker).catch(() => null);
+
+      // If Google fails, try Stooq
+      if (!googleResult) {
+        stooqResult = await fetchStooqDailyCsv(ticker).catch(() => null);
+      }
     }
     if (PRICE_PRIMARY_SOURCE === "stooq" && !stooqResult && !isYahooBlocked()) {
       ({ chartResult, quoteResult } = await fetchYahoo());
     }
   }
 
-  if (!chartResult && !quoteResult && !stooqResult) return null;
+  if (!chartResult && !quoteResult && !googleResult && !stooqResult) return null;
+
+  // Return Google Finance result if it's the only one
+  if (googleResult && !chartResult && !quoteResult && !stooqResult) {
+    return {
+      ticker: normalizeTicker(ticker),
+      date: googleResult.date,
+      close: googleResult.close,
+      marketCap: null,
+      currency: googleResult.currency,
+      source: googleResult.source,
+      priceSeries: [{ date: googleResult.date, close: googleResult.close }]
+    };
+  }
 
   // Combine data
   // Quote is master for Snapshot (Close, Mcap, Currency)
