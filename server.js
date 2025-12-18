@@ -285,6 +285,32 @@ async function buildEdgarStatusPayload(ticker, { enqueueIfStale = true } = {}) {
   };
 }
 
+function normalizeSnapshotCompleteness(snapshot) {
+  const percent = Number.isFinite(snapshot?.completeness?.percent)
+    ? Math.max(0, Math.min(100, Math.round(snapshot.completeness.percent)))
+    : null;
+  const tier = percent == null ? "low" : percent >= 75 ? "high" : percent >= 50 ? "medium" : "low";
+  return { ...(snapshot?.completeness || {}), percent, tier };
+}
+
+function deriveSnapshotConfidence({ completenessPercent, lastFiledDate, stale }) {
+  const pct = Number.isFinite(completenessPercent) ? completenessPercent : 0;
+  const daysSinceFiled = lastFiledDate ? (Date.now() - Date.parse(lastFiledDate)) / (1000 * 60 * 60 * 24) : null;
+  let score = pct;
+  if (Number.isFinite(daysSinceFiled)) {
+    if (daysSinceFiled > 540) score -= 30;
+    else if (daysSinceFiled > 365) score -= 20;
+    else if (daysSinceFiled > 270) score -= 10;
+    else if (daysSinceFiled <= 180) score += 5;
+  } else {
+    score -= 10;
+  }
+  if (stale) score -= 10;
+  const capped = Math.max(0, Math.min(100, Math.round(score)));
+  const level = capped >= 75 ? "high" : capped >= 45 ? "medium" : "low";
+  return { level, score: capped, freshnessDays: Number.isFinite(daysSinceFiled) ? Math.round(daysSinceFiled) : null };
+}
+
 function buildSnapshotPayload(raw) {
   const snapshot = raw.snapshot || {};
   const notesArr = [];
@@ -298,6 +324,22 @@ function buildSnapshotPayload(raw) {
   if (!raw.inactive && !raw.pending && raw.source === "none") {
     notesArr.push("No fundamentals available yet for this ticker.");
   }
+  const completeness = normalizeSnapshotCompleteness(snapshot);
+  const issuerType = raw?.filingSignals?.meta?.issuerType || "domestic";
+  const filingProfile =
+    raw?.filingSignals?.meta?.filingProfile || { annual: "10-K", interim: "10-Q", current: "8-K" };
+  const latestFiled =
+    snapshot?.latestQuarter?.filedDate ||
+    snapshot?.latestYear?.filedDate ||
+    snapshot?.latestQuarter?.filed ||
+    snapshot?.latestYear?.filed ||
+    raw.updatedAt ||
+    null;
+  const confidenceMeta = deriveSnapshotConfidence({
+    completenessPercent: completeness.percent,
+    lastFiledDate: latestFiled,
+    stale: Boolean(snapshot.notes?.stale)
+  });
   const status = raw.inactive && !raw.snapshot ? "none" : raw.pending ? "pending" : raw.snapshot ? "ok" : "none";
   return {
     ticker: raw.ticker,
@@ -311,7 +353,12 @@ function buildSnapshotPayload(raw) {
     lastUpdated: raw.updatedAt || null,
     source: raw.source,
     data: raw.data || null,
-    filingSignals: raw.filingSignals || null
+    filingSignals: raw.filingSignals || null,
+    issuerType,
+    filingProfile,
+    dataCompleteness: completeness,
+    confidence: confidenceMeta.level,
+    confidenceMeta
   };
 }
 

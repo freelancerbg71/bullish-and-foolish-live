@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { fetchCompanyFundamentals } from "./edgarFundamentals.js";
+import { fetchCompanyFundamentals, lookupCompanyByTicker, normalizeEdgarCik } from "./edgarFundamentals.js";
 import { upsertFundamentals } from "./fundamentalsStore.js";
 import {
   fetchRecentFilingsMeta,
@@ -32,8 +32,8 @@ export function hasFundamentalsCache(ticker) {
   }
 }
 
-export async function fetchLatestRelevantFiling(ticker) {
-  const rows = await fetchRecentFilingsMeta(ticker, RELEVANT_FORMS, 1);
+export async function fetchLatestRelevantFiling(ticker, opts = {}) {
+  const rows = await fetchRecentFilingsMeta(ticker, RELEVANT_FORMS, 1, opts);
   return rows?.[0] || null;
 }
 
@@ -48,16 +48,19 @@ function isAfter(dateA, dateB) {
 export async function processFilingForTicker(ticker, filingMeta = null, { createEvent = true } = {}) {
   if (!ticker) throw new Error("ticker is required");
   const tickerKey = ticker.toUpperCase();
-  const existing = await getEdgarTicker(tickerKey);
   const nowIso = new Date().toISOString();
-  const latestFiling = filingMeta || (await fetchLatestRelevantFiling(tickerKey));
+  const company = await lookupCompanyByTicker(tickerKey);
+  const cik = normalizeEdgarCik(company?.cik);
+  if (!cik) throw new Error("CIK not found for ticker");
+  const existing = await getEdgarTicker(tickerKey);
+  const latestFiling = filingMeta || (await fetchLatestRelevantFiling(tickerKey, { company, cik }));
 
-  const fundamentals = await fetchCompanyFundamentals(tickerKey);
+  const fundamentals = await fetchCompanyFundamentals(tickerKey, { company, cik });
   await upsertFundamentals(fundamentals);
 
   let filingSignals = null;
   try {
-    filingSignals = await scanFilingForSignals(tickerKey);
+    filingSignals = await scanFilingForSignals(tickerKey, { company, cik });
   } catch (err) {
     console.warn("[filingWorkflow] filing signal scan failed", tickerKey, err?.message || err);
   }
@@ -65,8 +68,6 @@ export async function processFilingForTicker(ticker, filingMeta = null, { create
   const filingDate = latestFiling?.filed || filingSignals?.meta?.latestFiled || null;
   const filingType = latestFiling?.form || filingSignals?.meta?.latestForm || null;
   const accession = latestFiling?.accession || filingSignals?.meta?.latestAccession || null;
-  const cik =
-    fundamentals?.[0]?.cik || latestFiling?.cik || existing?.cik || filingSignals?.meta?.cik || null;
 
   await upsertEdgarTicker({
     ticker: tickerKey,

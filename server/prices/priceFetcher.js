@@ -1,6 +1,11 @@
-const YAHOO_QUOTE_JSON_BASE = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=";
-const YAHOO_CHART_BASE = "https://query1.finance.yahoo.com/v8/finance/chart/";
-const DEFAULT_HEADERS = { "User-Agent": "stocks-tools/0.1 (+price-fetcher)" };
+const YAHOO_QUOTE_JSON_BASE = "https://query2.finance.yahoo.com/v7/finance/quote?symbols=";
+const YAHOO_CHART_BASE = "https://query2.finance.yahoo.com/v8/finance/chart/";
+const DEFAULT_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+  "Accept": "*/*",
+  "Origin": "https://finance.yahoo.com",
+  "Referer": "https://finance.yahoo.com"
+};
 
 function normalizeTicker(ticker) {
   return ticker ? String(ticker).trim().toUpperCase() : "";
@@ -25,6 +30,9 @@ async function fetchYahooQuoteJson(ticker) {
       const result = body?.quoteResponse?.result?.[0];
       const price = Number(result?.regularMarketPreviousClose);
       const ts = Number(result?.regularMarketTime);
+      const marketCap = Number(result?.marketCap);
+      const currency = result?.currency;
+
       if (!Number.isFinite(price)) {
         console.warn("[priceFetcher] yahoo JSON missing price", variant);
         continue;
@@ -32,8 +40,16 @@ async function fetchYahooQuoteJson(ticker) {
       const date = Number.isFinite(ts)
         ? new Date(ts * 1000).toISOString().slice(0, 10)
         : new Date().toISOString().slice(0, 10);
-      console.info("[priceFetcher] yahoo JSON price parsed", { ticker: symbol, variant, close: price, date });
-      return { ticker: symbol, date, close: price, source: "yahoo-json" };
+
+      console.info("[priceFetcher] yahoo JSON parsed", { ticker: symbol, close: price, marketCap, currency });
+      return {
+        ticker: symbol,
+        date,
+        close: price,
+        marketCap: Number.isFinite(marketCap) ? marketCap : null,
+        currency,
+        source: "yahoo-json"
+      };
     } catch (err) {
       console.error("[priceFetcher] error fetching yahoo JSON for", variant, err);
     }
@@ -41,10 +57,6 @@ async function fetchYahooQuoteJson(ticker) {
   return null;
 }
 
-/**
- * Fetch via the Yahoo Finance chart endpoint (same backing API yfinance uses).
- * Pulls the most recent close from the returned candles.
- */
 async function fetchYahooChart(ticker) {
   const symbol = normalizeTicker(ticker);
   if (!symbol) return null;
@@ -53,7 +65,8 @@ async function fetchYahooChart(ticker) {
   if (symbol.includes(".")) variants.push(symbol.replace(".", "-"));
 
   for (const variant of variants) {
-    const url = `${YAHOO_CHART_BASE}${encodeURIComponent(variant)}?range=5d&interval=1d`;
+    // Extended range to 2y for 52w high/low calculation
+    const url = `${YAHOO_CHART_BASE}${encodeURIComponent(variant)}?range=2y&interval=1d`;
     try {
       const res = await fetch(url, { headers: DEFAULT_HEADERS });
       if (!res.ok) {
@@ -62,27 +75,44 @@ async function fetchYahooChart(ticker) {
       }
       const body = await res.json();
       const result = body?.chart?.result?.[0];
+      const meta = result?.meta || {};
       const quotes = result?.indicators?.quote?.[0];
       const closes = Array.isArray(quotes?.close) ? quotes.close : [];
       const timestamps = Array.isArray(result?.timestamp) ? result.timestamp : [];
-      // pick the last non-null close
+
       let close = null;
       let ts = null;
-      for (let i = closes.length - 1; i >= 0; i--) {
+      const history = [];
+
+      for (let i = 0; i < closes.length; i++) {
         const val = Number(closes[i]);
-        if (Number.isFinite(val)) {
+        const t = timestamps[i];
+        if (Number.isFinite(val) && t) {
+          history.push({
+            date: new Date(t * 1000).toISOString().slice(0, 10),
+            close: val
+          });
           close = val;
-          ts = timestamps[i] ? Number(timestamps[i]) * 1000 : Date.now();
-          break;
+          ts = t;
         }
       }
-      if (!Number.isFinite(close)) {
-        console.warn("[priceFetcher] yahoo chart missing close", variant);
+
+      if (!Number.isFinite(close) || close <= 0) {
+        console.warn("[priceFetcher] yahoo chart missing/zero close", variant);
         continue;
       }
-      const date = new Date(ts || Date.now()).toISOString().slice(0, 10);
-      console.info("[priceFetcher] yahoo chart price parsed", { ticker: symbol, variant, close, date });
-      return { ticker: symbol, date, close, source: "yfinance-chart" };
+
+      const date = new Date(ts * 1000).toISOString().slice(0, 10);
+      const currency = meta.currency; // Currency often in meta
+
+      return {
+        ticker: symbol,
+        date,
+        close,
+        history,
+        currency,
+        source: "yfinance-chart"
+      };
     } catch (err) {
       console.error("[priceFetcher] error fetching yahoo chart for", variant, err);
     }
@@ -91,12 +121,30 @@ async function fetchYahooChart(ticker) {
 }
 
 /**
- * Fetch last close using Yahoo endpoints (chart first, quote JSON as backup).
+ * Fetch last close using Yahoo endpoints.
+ * Merges Quote (Market Cap, Currency) with Chart (History).
  */
 export async function fetchPriceFromPrimarySource(ticker) {
-  const chartQuote = await fetchYahooChart(ticker);
-  if (chartQuote) return chartQuote;
-  const jsonQuote = await fetchYahooQuoteJson(ticker);
-  if (jsonQuote) return jsonQuote;
-  return null;
+  // Parallel fetch request
+  const [chartResult, quoteResult] = await Promise.all([
+    fetchYahooChart(ticker).catch(e => null),
+    fetchYahooQuoteJson(ticker).catch(e => null)
+  ]);
+
+  if (!chartResult && !quoteResult) return null;
+
+  // Combine data
+  // Quote is master for Snapshot (Close, Mcap, Currency)
+  // Chart is master for History
+  const combined = {
+    ticker: normalizeTicker(ticker),
+    date: quoteResult?.date || chartResult?.date,
+    close: quoteResult?.close ?? chartResult?.close,
+    marketCap: quoteResult?.marketCap ?? null,
+    currency: quoteResult?.currency || chartResult?.currency,
+    source: chartResult ? "yfinance-chart+json" : "yahoo-json",
+    priceSeries: chartResult?.history || (quoteResult ? [{ date: quoteResult.date, close: quoteResult.close }] : [])
+  };
+
+  return combined;
 }

@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, "..", "..");
 const EDGAR_DIR = path.join(ROOT, "data", "edgar");
-export const RELEVANT_FORMS = ["10-K", "10-Q", "8-K", "DEF 14A", "DEF14A"];
+export const RELEVANT_FORMS = ["10-K", "10-Q", "8-K", "6-K", "20-F", "DEF 14A", "DEF14A"];
 
 function fundamentalsPath(ticker) {
   return path.join(EDGAR_DIR, `${ticker.toUpperCase()}-fundamentals.json`);
