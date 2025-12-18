@@ -1,6 +1,6 @@
 import { fetchPriceFromPrimarySource } from "./priceFetcher.js";
 import { ensurePriceJobForTicker, getPriceJobStatus, inFlight, queue } from "./priceQueue.js";
-import { upsertCachedPrice, getLatestCachedPrice } from "./priceStore.js";
+import { upsertCachedPrice, upsertCachedPriceSeries, getLatestCachedPrice } from "./priceStore.js";
 
 const PRICE_REQUEST_SPACING_MS = 2000;
 const MAX_JUMP_FACTOR = 12; // reject prices that are >12x or <1/12x the last cached
@@ -27,7 +27,12 @@ async function processNextPriceJob() {
     const lastCached = await getLatestCachedPrice(ticker);
     const price = await fetchPriceFromPrimarySource(ticker);
     if (price && isPlausiblePrice(price.close, lastCached?.close)) {
-      await upsertCachedPrice(price.ticker, price.date, price.close, price.source, price.marketCap, price.currency);
+      const series = Array.isArray(price.priceSeries) ? price.priceSeries : [];
+      if (series.length >= 50) {
+        await upsertCachedPriceSeries(price.ticker, series, price.source, price.marketCap, price.currency);
+      } else {
+        await upsertCachedPrice(price.ticker, price.date, price.close, price.source, price.marketCap, price.currency);
+      }
       console.info("[priceWorker] success", ticker, {
         close: price.close,
         date: price.date,

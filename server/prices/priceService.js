@@ -2,6 +2,7 @@ import { ensurePriceJobForTicker, getPriceJobStatus } from "./priceQueue.js";
 import { getLatestCachedPrice, getRecentPrices } from "./priceStore.js";
 
 const FRESHNESS_WINDOW_HOURS = 24;
+const DEFAULT_SERIES_LIMIT = Number(process.env.PRICE_SERIES_LIMIT) || 260; // ~1y trading days + buffer
 const inflightPrice = new Map();
 
 function hoursToMs(hours) {
@@ -21,7 +22,7 @@ export async function getOrFetchLatestPrice(ticker) {
   if (inflightPrice.has(key)) return inflightPrice.get(key);
 
   const run = (async () => {
-    const recent = await getRecentPrices(key, 2);
+    const recent = await getRecentPrices(key, DEFAULT_SERIES_LIMIT);
     const latest = recent[0] || (await getLatestCachedPrice(key));
     if (latest && isFresh(latest.updatedAt, FRESHNESS_WINDOW_HOURS)) {
       const series = recent.length ? recent : [latest];

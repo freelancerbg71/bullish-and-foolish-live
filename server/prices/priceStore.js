@@ -111,6 +111,61 @@ export async function upsertCachedPrice(ticker, date, close, source, marketCap =
   console.info("[priceStore] upserted price", { ticker: key, date, close: Number(close), marketCap, currency, source, file: path.join(PRICE_FILE_DIR, `${key}.json`) });
 }
 
+export async function upsertCachedPriceSeries(ticker, series = [], source, marketCap = null, currency = null) {
+  const key = normalizeTicker(ticker);
+  const arr = Array.isArray(series) ? series : [];
+  if (!key || !arr.length || !source) return;
+
+  const normalized = arr
+    .map((p) => ({ date: String(p?.date || ""), close: Number(p?.close) }))
+    .filter((p) => p.date && Number.isFinite(p.close) && p.close > 0)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (!normalized.length) return;
+
+  const latestDate = normalized[normalized.length - 1].date;
+  const db = await initDb();
+  const now = new Date().toISOString();
+
+  const stmt = db.prepare(
+    `INSERT INTO prices_eod (ticker, date, close, source, marketCap, currency, createdAt, updatedAt)
+     VALUES (@ticker, @date, @close, @source, @marketCap, @currency, @createdAt, @updatedAt)
+     ON CONFLICT(ticker, date) DO UPDATE SET
+       close=excluded.close,
+       source=excluded.source,
+       marketCap=excluded.marketCap,
+       currency=excluded.currency,
+       updatedAt=excluded.updatedAt`
+  );
+
+  const tx = db.transaction((rows) => {
+    for (const r of rows) {
+      const isLatest = r.date === latestDate;
+      stmt.run({
+        ticker: key,
+        date: r.date,
+        close: r.close,
+        source,
+        marketCap: isLatest && Number.isFinite(marketCap) ? Number(marketCap) : null,
+        currency: isLatest ? (currency || null) : null,
+        createdAt: now,
+        updatedAt: now
+      });
+    }
+  });
+
+  tx(normalized);
+  await pruneOldPrices(key, 400);
+  await writePriceFile(key, db);
+  console.info("[priceStore] upserted price series", {
+    ticker: key,
+    points: normalized.length,
+    latestDate,
+    latestClose: normalized[normalized.length - 1].close,
+    source,
+    file: path.join(PRICE_FILE_DIR, `${key}.json`)
+  });
+}
+
 export async function getRecentPrices(ticker, limit = 2) {
   const key = normalizeTicker(ticker);
   if (!key) return [];
