@@ -470,6 +470,22 @@ export const rules = [
       const g = revenueGrowth(stock);
       const bucket = resolveSectorBucket(stock?.sector || stock?.sectorBucket);
       if (g === null) return missing("No revenue growth data");
+
+      // Skip for new entities (post-merger/IPO) with <8 quarters - YoY comparisons are distorted
+      const quarterCount = stock?.dataQuality?.quarterCount ?? stock?.quarterCount ?? 16;
+      if (quarterCount < 8 && Math.abs(g) > 50) {
+        // Extreme YoY swing with limited history = likely merger/spinoff distortion
+        return { score: 0, message: `${fmtPct(g)} (New entity; YoY distorted)`, notApplicable: true };
+      }
+
+      // Also catch merger distortion when CAGR strongly disagrees with YoY
+      // (e.g., CAGR is +40% but YoY is -27% due to merger accounting)
+      const cagr = percentToNumber(stock?.growth?.revenueCagr3y);
+      if (g < -20 && cagr != null && cagr > 20) {
+        // YoY is negative but long-term growth is strong = merger/restatement distortion
+        return { score: 0, message: `${fmtPct(g)} (CAGR ${fmtPct(cagr)}; one-time distortion)`, notApplicable: true };
+      }
+
       if (bucket === "Tech/Internet") {
         const score = bandScore(g, [
           { min: 30, score: 10 },
@@ -1251,8 +1267,19 @@ export const rules = [
     evaluate(stock) {
       const bucket = resolveSectorBucket(stock?.sector || stock?.sectorBucket);
       if (bucket === "Financials") return missing("Not applicable", true);
+
+      // Skip when equity is negative - ROIC becomes meaningless (can give false +600% etc)
+      const equity = stock?.financialPosition?.totalEquity;
+      if (Number.isFinite(equity) && equity < 0) {
+        return missing("Not applicable (negative equity)", true);
+      }
+
       const v = roic(stock);
       if (v === null) return missing("No ROIC data");
+
+      // Also skip if ROIC is absurdly high (>200%) - likely data distortion
+      if (v > 200) return missing("Not applicable (distorted calculation)", true);
+
       const score = bandScore(v, [
         { min: 25, score: 8 },  // Elite
         { min: 15, score: 4 },  // Good
@@ -1335,6 +1362,18 @@ export const rules = [
         return missing("Data unavailable");
       }
       if (ic === Infinity || ic > 1e6) return { score: 10, message: "Debt-Free", missing: true, notApplicable: true };
+
+      // Soften penalty for foreign issuers with positive FCF (IFRS amortization can distort operating income)
+      const isForeign = stock?.issuerType === "foreign";
+      const fcfMargin = percentToNumber(stock?.profitMargins?.fcfMargin);
+      const fcfPositive = Number.isFinite(fcfMargin) && fcfMargin > 5;
+
+      if (isForeign && fcfPositive && ic < 3) {
+        // Foreign issuer with strong FCF but weak GAAP coverage - likely accounting distortion
+        const softenedScore = ic < 1 ? -2 : 0;
+        return { score: softenedScore, message: `${ic.toFixed(1)}x (FCF positive; IFRS distortion likely)` };
+      }
+
       const score = bandScore(ic, [
         { min: 12, score: 8 },
         { min: 6, score: 4 },
@@ -1427,6 +1466,11 @@ export const rules = [
 
       const rdPct = percentToNumber(stock?.expenses?.rdToRevenueTTM ?? stock?.expenses?.rdToRevenue);
       if (rdPct === null) return missing("No R&D data");
+
+      // If R&D exceeds revenue, this is a burn signal, not an innovation signal
+      if (rdPct > 100) {
+        return { score: 0, message: `${fmtPct(rdPct)} (R&D exceeds revenue; burn mode)`, notApplicable: true };
+      }
 
       if (bucket === "Tech/Internet") {
         const score = bandScore(rdPct, [

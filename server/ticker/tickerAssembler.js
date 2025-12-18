@@ -1082,6 +1082,9 @@ function buildStockForRules(vm) {
     sicDescription: vm.sicDescription ?? vm.snapshot?.sicDescription,
     marketCap,
     sectorBucket: resolveSectorBucket(vm.sector),
+    issuerType: vm.issuerType ?? vm.snapshot?.issuerType ?? null,
+    quarterCount: quartersDesc.length,
+    ttm: vm.ttm ?? null,  // Pass through TTM for EPS checks in valuation rules
     growth: {
       // Store growth fields as percent (not ratios), to align with the rest of the model and UI thresholds.
       revenueGrowthTTM: (() => {
@@ -1521,7 +1524,8 @@ function computeRuleRating({
     snapshot,
     ttm,
     priceSummary,
-    growth
+    growth,
+    issuerType
   });
   const sectorBucket = resolveSectorBucket(stock.sector);
   const lastClose = Number(stock.priceStats?.lastClose ?? priceSummary?.lastClose);
@@ -2813,7 +2817,7 @@ export async function buildTickerViewModel(ticker) {
     console.log("[tickerAssembler] price state", priceState?.state, "for", ticker);
     let priceSummary = emptyPriceSummary();
     let priceHistory = [];
-    const pricePending = priceState?.state === "pending";
+    let pricePending = priceState?.state === "pending";
     let externalMarketCap = null;
     let externalCurrency = null;
 
@@ -2847,10 +2851,15 @@ export async function buildTickerViewModel(ticker) {
         priceSummary = fallbackPieces.priceSummary;
         priceHistory = fallbackPieces.priceHistory;
         logPriceOnce("local-fallback", ticker, `[tickerAssembler] using local price fallback for ${ticker}`);
+        // If we have a usable local close, don't show "pending" in the UI.
+        if (Number.isFinite(priceSummary?.lastClose) && !isPriceStale(priceSummary?.lastCloseDate, 7)) {
+          pricePending = false;
+        }
       } else if (isPriceStale(priceSummary.lastCloseDate, 5)) {
         // stale and no fallback; mark pending and clear price to avoid showing ghost values
         priceSummary = emptyPriceSummary();
         priceHistory = [];
+        pricePending = true;
         logPriceOnce("stale-no-fallback", ticker, `[tickerAssembler] price stale and no fallback for ${ticker}`);
       }
     }
@@ -3450,7 +3459,19 @@ export async function buildTickerViewModel(ticker) {
       }
       // For SMALL/MID CAPS: Use burn language where appropriate
       else {
-        if (trends.burnTrend > 0.15 && fcfMargin < 0) {
+        // SEVERE BURN: FCF margin below -100% = burning through cash at alarming rate
+        if (fcfMargin < -100) {
+          parts.push(
+            pick("efficiency.smallcap.severeBurn", [
+              "Burning cash rapidly; operating losses are severe.",
+              "Burning through cash at a high rate; near-term funding risk is elevated.",
+              "Cash burn is severe; sustainability depends on external financing.",
+              "Burning cash rapidly; survival hinges on funding access."
+            ])
+          );
+        }
+        // BURN NARROWING (only if not severe)
+        else if (trends.burnTrend > 0.15 && fcfMargin < 0 && fcfMargin > -100) {
           parts.push(
             pick("efficiency.smallcap.burnNarrowing", [
               "Cash burn is narrowing, indicating improved operational efficiency.",
