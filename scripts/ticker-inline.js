@@ -2678,15 +2678,12 @@ function updatePriceDisplay(valueNum, valueText, dayChange) {
   // The backend may set `pricePending=true` while we are showing a cached/local fallback close.
   const pending = currentVm?.pricePending === true && !hasPriceVal;
   const stale = hasPrice(currentVm) && isPriceStale(currentVm);
-  // Keep wording stable in the UI: always show "Last Close" as the label.
   const statusLabel = "Last Close";
   const statusNote = pending
     ? "Waiting for official end-of-day pricing."
-    : stale
-      ? `Showing cached close from ${dateStr}; refresh once new close posts.`
-      : hasPriceVal
-        ? "Official end-of-day pricing."
-        : "No valid price returned; chart is hidden until pricing loads.";
+    : hasPriceVal
+      ? ""
+      : "No valid price returned; chart is hidden until pricing loads.";
 
   stEl.innerHTML = `
     <div class="price-main-row">
@@ -2697,8 +2694,8 @@ function updatePriceDisplay(valueNum, valueText, dayChange) {
       <div style="font-size:10px; color:#9fb3c8; margin-bottom:2px; opacity:0.8;">
         ${pending ? "Price timestamp pending" : `Price last updated: ${dateStr}`} &middot; End-of-Day
       </div>
-      <div style="font-size:9px; color:#5da4b4; opacity:0.6; margin-top:0;">
-        ${statusNote}<br>Bullish And Foolish uses official end-of-day pricing; intraday updates are not provided.
+      <div style="font-size:9px; color:#5da4b4; opacity:0.6; margin-top:0; line-height:1.2;">
+        ${statusNote ? `${statusNote}<br>` : ""}Bullish And Foolish uses official end-of-day pricing;<br>intraday updates are not provided.
       </div>
     </div>
   `;
