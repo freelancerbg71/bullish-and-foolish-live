@@ -284,6 +284,60 @@
       flex-wrap: wrap;
     }
 
+    .finance-card {
+      flex: 1 1 230px;
+      min-width: 230px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.035);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-sizing: border-box;
+    }
+
+    .finance-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .finance-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(93, 208, 255, 0.12);
+      border: 1px solid rgba(93, 208, 255, 0.25);
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    .finance-title {
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .finance-lines {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text);
+      opacity: 0.92;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .finance-note {
+      margin-top: 6px;
+      font-size: 11px;
+      opacity: 0.7;
+      line-height: 1.35;
+    }
+
     .badge {
       padding: 6px 10px;
       border-radius: 10px;
@@ -656,14 +710,14 @@
     .completeness-row {
       display: flex;
       justify-content: flex-end;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
     .completeness-flag {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
+      gap: 6px;
+      padding: 4px 8px;
       border-radius: 999px;
       border: 1px solid rgba(250, 204, 21, 0.25);
       background: rgba(250, 204, 21, 0.08);
@@ -687,12 +741,32 @@
     }
 
     .completeness-icon {
-      font-size: 14px;
+      font-size: 12px;
     }
 
     .pct-condensed {
-      font-size: 13px;
+      font-size: 12px;
       letter-spacing: 0.01em;
+    }
+
+    /* Tighten Confidence pill + tooltip line spacing */
+    #completenessText {
+      line-height: 1.15;
+    }
+
+    #completenessText span {
+      display: block;
+      line-height: 1.15;
+      margin-top: 1px;
+    }
+
+    #completenessTooltip {
+      line-height: 1.2;
+    }
+
+    #completenessTooltip p,
+    #completenessTooltip div {
+      margin: 0;
     }
 
     .takeaway {
@@ -1709,7 +1783,7 @@
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
       min-height: 120px;
       position: relative;
     }
@@ -1717,17 +1791,18 @@
     .filing-card .score {
       font-weight: 800;
       font-size: 16px;
+      line-height: 1.15;
     }
 
     .filing-card .title {
       font-weight: 700;
       font-size: 14px;
-      line-height: 1.2;
+      line-height: 1.15;
     }
 
     .filing-card .snippet {
       font-size: 12px;
-      line-height: 1.4;
+      line-height: 1.3;
       color: #f3e7d7;
       flex: 1;
     }
@@ -1834,7 +1909,7 @@
       background: rgba(24, 16, 6, 0.6);
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
 
     .bio-chip .label {
@@ -1842,18 +1917,20 @@
       letter-spacing: 0.04em;
       color: #f7d7a5;
       text-transform: uppercase;
+      line-height: 1.15;
     }
 
     .bio-chip .value {
       font-size: 14px;
       font-weight: 700;
       color: #fff5e5;
+      line-height: 1.15;
     }
 
     .bio-chip .note {
       font-size: 12px;
       color: #e9ddcc;
-      line-height: 1.3;
+      line-height: 1.25;
     }
 
     .bio-chip.good {
@@ -1995,6 +2072,17 @@
               Enjoying these ratings?<br>
               <a href="about.html#support" style="color:#5dd0ff; text-decoration:none;">Support the project</a>
             </div>
+            <div class="completeness-row" style="justify-content:flex-start; margin-top:10px;">
+              <div id="completenessPill" class="completeness-flag dim">
+                <span id="completenessIcon" class="completeness-icon">i</span>
+                <div style="display:flex; flex-direction:column; gap:2px; line-height:1.2;">
+                  <div id="completenessText" style="font-size:12px;">Confidence: n/a</div>
+                  <div class="score-bar" style="width:110px; height:6px;">
+                    <div id="completenessFill" class="fill"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2135,6 +2223,24 @@
       </div>
     </div>
   </div>
+  <div class="modal-backdrop" id="missingTickerModal" style="display:none;">
+    <div class="modal">
+      <button class="close-btn" id="missingTickerClose" aria-label="Close missing ticker modal">&times;</button>
+      <div class="modal-header">
+        <div class="modal-icon" aria-hidden="true">?</div>
+        <div>
+          <p class="modal-eyebrow">Ticker not found</p>
+          <h3>We couldn't find this symbol</h3>
+        </div>
+      </div>
+      <p id="missingTickerMessage">We couldn't find EDGAR fundamentals for this ticker. It may be mistyped or
+        unsupported.</p>
+      <div class="actions">
+        <button class="primary" id="missingTickerBack">Back to search</button>
+        <button class="secondary" id="missingTickerDismiss">Close</button>
+      </div>
+    </div>
+  </div>
   <div class="modal-backdrop manual-price-modal" id="manualPriceModal">
     <div class="modal">
       <button class="close-btn" id="manualPriceClose" aria-label="Close manual price modal">&times;</button>
@@ -2155,7 +2261,7 @@
       <div class="note" id="manualPriceNote"></div>
     </div>
   </div>
-  <script type="module" src="./scripts/ticker-inline.js"></script>
+  <script type="module" src="./scripts/ticker-inline.js?v=25"></script>
   <div style="border-top:1px solid var(--border); padding-top:10px; text-align:center; margin-top:16px;"
     class="mini-footer">2025 Bullish And Foolish &mdash; independent & always free.</div>
   <div class="mini-footer"

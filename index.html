@@ -39,14 +39,189 @@
       text-align: center;
     }
 
+    /* Side updates menu */
+    /* Ensure hero content stays above decorative layers */
+    #header,
+    #header header,
+    #header footer {
+      position: relative;
+      z-index: 4;
+    }
+
+    /* Hero layout + changelog card */
+    .hero-stage {
+      position: relative;
+      width: 100%;
+      padding: 0 12px;
+      z-index: 5;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin: 0 auto;
+      padding: 0 12px;
+      max-width: 720px;
+      position: relative;
+      z-index: 6;
+    }
+
+    .search-panel {
+      display: grid;
+      gap: 10px;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .changelog-card {
+      background: rgba(26, 18, 15, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 10px 10px 8px 10px;
+      color: #f3f1ed;
+      box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+      z-index: 6;
+      margin-top: 0;
+      position: absolute;
+      top: 0;
+      left: 12px;
+      width: 240px;
+    }
+
+    .changelog-card h3 {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.02em;
+      text-align: left;
+    }
+
+    .changelog-subtitle {
+      margin-top: 2px;
+      font-size: 0.82rem;
+      color: rgba(243, 241, 237, 0.7);
+    }
+
+    .changelog-card ul {
+      margin: 8px 0 0 18px;
+      padding: 0;
+      font-size: 0.88rem;
+      line-height: 1.35;
+      color: rgba(243, 241, 237, 0.86);
+    }
+
+    .changelog-card li {
+      margin: 6px 0;
+    }
+
+    /* Not-found modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 9, 12, 0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 16px;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-card {
+      background: linear-gradient(180deg, #1d1612 0%, #0f0e11 100%);
+      color: #f3f1ed;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+      max-width: 420px;
+      width: 100%;
+      padding: 18px;
+      position: relative;
+    }
+
+    .modal-card h3 {
+      margin: 0 0 8px 0;
+      font-size: 1.2rem;
+      letter-spacing: 0.02em;
+    }
+
+    .modal-card p {
+      margin: 0 0 12px 0;
+      color: rgba(243, 241, 237, 0.85);
+      line-height: 1.45;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .modal-actions button {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: #ffb84d;
+      color: #1a120d;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 0 14px rgba(255, 184, 77, 0.35);
+    }
+
+    .modal-actions button.secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f3f1ed;
+      box-shadow: none;
+    }
+
     @media screen and (max-width: 736px) {
       .people-header {
         margin-top: 40px !important;
       }
-      
+
       /* Push the logo down on mobile to keep it in bounds */
       #header header img {
         margin-top: -5vh !important;
+      }
+
+      .side-menu {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        width: calc(100% - 24px);
+        margin: 12px auto;
+        box-shadow: none;
+        max-height: none;
+      }
+
+      .hero-stage {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .hero-grid {
+        order: 1;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .changelog-card {
+        order: 2;
+        position: relative;
+        top: auto;
+        left: auto;
+        width: calc(100% - 24px);
+        margin: 12px auto;
       }
     }
   </style>
@@ -64,23 +239,41 @@
       <div
         style="max-width:580px; margin:0 auto 10px auto; text-align:center; font-size:0.85rem; color:rgba(255,255,255,0.7); line-height:1.4;">
         <strong style="color:#dca578;">Bullish And Foolish is currently in open beta.</strong><br>
-        We’re actively refining the rating engine, expanding sector coverage, and improving data interpretation.
+        We're actively refining the rating engine, expanding sector coverage, and improving data interpretation.
         If you spot anything that looks off or have suggestions, feel free to <a
           href="https://forms.gle/Vf6ZCvUe4AhBErhC6" target="_blank"
-          style="color:#dca578; text-decoration:underline;">share your feedback</a> — it helps us make the platform
+          style="color:#dca578; text-decoration:underline;">share your feedback</a> - it helps us make the platform
         sharper, clearer, and more reliable.
       </div>
-      <div
-        style="display:grid; gap:12px; grid-template-columns: 1fr auto; max-width:560px; margin:0 auto 0 auto; padding:0 12px;">
-        <input id="inlineTicker" type="text" placeholder="e.g. AAPL, META, SOFI"
-          style="padding:12px; border-radius:10px; border:1px solid rgba(255,200,160,0.20); background:rgba(35,20,15,0.5); color:#f3f1ed; caret-color:#f3f1ed; font-weight:600;" />
-        <button id="inlineGo"
-          style="padding:12px 20px; border-radius:10px; border:none; background:#FFB84D; color:#2a1a08; font-weight:800; cursor:pointer; box-shadow:0 0 15px rgba(255, 184, 77, 0.4); text-transform:uppercase; letter-spacing:0.05em;">Go</button>
-      </div>
-      <div style="margin-top:32px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-        <!-- <a href="screener.html" class="button">Stock Screener</a> -->
-        <a href="about.html" class="button">About</a>
-        <a href="rules.html" class="button">How The Ratings Work</a>
+      <div class="hero-stage">
+        <div class="changelog-card" aria-label="Recent updates">
+          <h3>v1.1</h3>
+          <div class="changelog-subtitle">Changelog</div>
+          <ul>
+            <li>Improved foreign ticker handling (annual-mode logic + clearer confidence cues).</li>
+            <li>Improved biotech handling (pre-revenue context + financing/dilution signals).</li>
+            <li>Improved mid-cap / growth handling (growth-phase scoring tuned to reinvestment cycles).</li>
+            <li>Ratings optimized and bugs fixed (including missing profitability cases like AAPL).</li>
+          </ul>
+        </div>
+        <div class="hero-grid">
+          <div class="search-panel">
+            <div
+              style="display:grid; gap:12px; grid-template-columns: 1fr auto; max-width:560px; margin:0 auto 0 auto; width:100%;">
+              <input id="inlineTicker" type="text" placeholder="e.g. AAPL, META, SOFI"
+                style="padding:12px; border-radius:10px; border:1px solid rgba(255,200,160,0.20); background:#1a120d; color:#ffffff; caret-color:#ffffff; font-weight:600;" />
+              <button id="inlineGo"
+                style="padding:12px 20px; border-radius:10px; border:none; background:#FFB84D; color:#2a1a08; font-weight:800; cursor:pointer; box-shadow:0 0 15px rgba(255, 184, 77, 0.4); text-transform:uppercase; letter-spacing:0.05em;">Go</button>
+            </div>
+            <div id="inlineStatus" class="muted" aria-live="polite"
+              style="min-height:18px; text-align:center; color:rgba(255,255,255,0.8);"></div>
+            <div class="cta-buttons" style="margin-top:12px;">
+              <!-- <a href="screener.html" class="button">Stock Screener</a> -->
+              <a href="about.html" class="button">About</a>
+              <a href="rules.html" class="button">How The Ratings Work</a>
+            </div>
+          </div>
+        </div>
       </div>
     </footer>
   </section>
@@ -99,10 +292,10 @@
         </div>
         <div style="max-width:820px; margin:0 auto; text-align:left; line-height:1.65; color:#444;">
           <p style="margin-bottom:16px; font-size:1.05rem; color:#444;">
-            <strong style="display:block; font-size:1.18rem; font-weight:700; color:#222;">Investing shouldn’t feel like
+            <strong style="display:block; font-size:1.18rem; font-weight:700; color:#222;">Investing shouldn't feel like
               reading an income statement in Latin.</strong>
             Bullish And Foolish cuts through the noise, condenses the mountain of financial data, and shows you the
-            signal — fast.
+            signal - fast.
           </p>
           <p style="margin-bottom:16px; font-size:1.05rem; color:#444;">
             <strong style="display:block; font-weight:600; color:#333;">The market can be chaotic, emotional, euphoric
@@ -112,15 +305,15 @@
           </p>
           <p style="margin-bottom:16px; font-size:1.05rem; color:#444;">
             <strong style="display:block; font-weight:600; color:#333;">Many people start their investing journey in
-              penny-stock land — convinced that the next CRKN will be the one.</strong>
-            Some even believe the analysts assigning TNXP a $40+ future — without checking the fine print, dilution, or
+              penny-stock land - convinced that the next CRKN will be the one.</strong>
+            Some even believe the analysts assigning TNXP a $40+ future - without checking the fine print, dilution, or
             reverse splits along the way.
           </p>
           <p style="margin-bottom:16px; font-size:1.05rem; color:#444;">
-            <strong style="display:block; font-weight:600; color:#333;">This isn’t about hype or hero forecasts — just
+            <strong style="display:block; font-weight:600; color:#333;">This isn't about hype or hero forecasts - just
               signal over noise.</strong>
             Put SOFI and META next to each other and the story shifts. Growth vs. maturity. Potential vs. proven engine.
-            Neither right or wrong — just clearer.
+            Neither right or wrong - just clearer.
           </p>
           <p style="margin-bottom:0; font-size:1.05rem; color:#666;">
             If you find value in this project, the best support is simply using the site, learning from it, and thinking
@@ -144,10 +337,10 @@
                   signal.</p>
               </header>
               <div style="display:grid; gap:8px; font-size:0.98rem; justify-items:center;">
-                <div>🔍 Fast signal over noise</div>
-                <div>🧠 Clear explanations, not jargon</div>
-                <div>📊 Ratings built from fundamentals — no hype</div>
-                <div>🪟 Transparency over prediction — <em>you remain in control</em></div>
+                <div>- Fast signal over noise</div>
+                <div>- Clear explanations, not jargon</div>
+                <div>- Ratings built from fundamentals - no hype</div>
+                <div>- Transparency over prediction - <em>you remain in control</em></div>
               </div>
             </section>
           </div>
@@ -209,10 +402,10 @@
               </header>
               <div
                 style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:8px; justify-items:center;">
-                <div>☑ Financial fundamentals</div>
-                <div>☑ Growth + efficiency signals</div>
-                <div>☑ Balance sheet strength</div>
-                <div>☑ Risk + volatility profile</div>
+                <div>- Financial fundamentals</div>
+                <div>- Growth + efficiency signals</div>
+                <div>- Balance sheet strength</div>
+                <div>- Risk + volatility profile</div>
               </div>
             </section>
           </div>
@@ -233,7 +426,7 @@
       <div class="container">
         <div class="card"
           style="background:rgba(16,18,22,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:16px;">
-          <div id="filingNewsStatus" class="muted" style="margin-bottom:10px;">Loading filings…</div>
+          <div id="filingNewsStatus" class="muted" style="margin-bottom:10px;">Loading filings...</div>
           <div id="filingNewsList" style="display:grid; gap:12px;"></div>
         </div>
       </div>
@@ -245,7 +438,7 @@
     <header>
       <div class="container">
         <h2>How I Became Financially Responsible</h2>
-        <p>I didn’t start out knowing how to invest — I learned it slowly, from people much smarter than me.<br>These
+        <p>I didn't start out knowing how to invest - I learned it slowly, from people much smarter than me.<br>These
           are the voices that helped me think clearly about money, risk, and long-term investing.</p>
       </div>
     </header>
@@ -258,22 +451,22 @@
           <div class="col-6 col-12-narrow">
             <section class="card"
               style="height:100%; background:rgba(16,18,22,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
-              <h3 style="margin-bottom:6px;"><strong>Investing Simplified – Professor G</strong></h3>
+              <h3 style="margin-bottom:6px;"><strong>Investing Simplified - Professor G</strong></h3>
               <p style="margin-bottom:12px;">Clear, patient lessons on investing fundamentals. His breakdowns helped me
                 understand companies, not just tickers. <em>He shares the reasoning behind his choices, which is the
-                  real value — not the picks themselves.</em></p>
+                  real value - not the picks themselves.</em></p>
               <a class="button small" style="align-self:center;" href="https://www.youtube.com/@NolanGouveia"
-                target="_blank" rel="noopener">🔗 YouTube</a>
+                target="_blank" rel="noopener"> YouTube</a>
             </section>
           </div>
           <div class="col-6 col-12-narrow">
             <section class="card"
               style="height:100%; background:rgba(16,18,22,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
               <h3 style="margin-bottom:6px;"><strong>Damien Talks Money</strong></h3>
-              <p style="margin-bottom:12px;">Personal finance but made human — humour, storytelling, and episodes that
-                flow end-to-end. Helped me see the “why” behind financial behaviour.</p>
+              <p style="margin-bottom:12px;">Personal finance but made human - humour, storytelling, and episodes that
+                flow end-to-end. Helped me see the "why" behind financial behaviour.</p>
               <a class="button small" style="align-self:center;" href="https://www.youtube.com/@DamienTalksMoney"
-                target="_blank" rel="noopener">🔗 YouTube</a>
+                target="_blank" rel="noopener"> YouTube</a>
             </section>
           </div>
           <div class="col-6 col-12-narrow">
@@ -283,17 +476,17 @@
               <p style="margin-bottom:12px;">Accountability in its rawest form. Watching people confront spending habits
                 and debt problems made me reflect on my own decisions. Hard lessons that stick.</p>
               <a class="button small" style="align-self:center;" href="https://www.youtube.com/@CalebHammer"
-                target="_blank" rel="noopener">🔗 YouTube</a>
+                target="_blank" rel="noopener"> YouTube</a>
             </section>
           </div>
           <div class="col-6 col-12-narrow">
             <section class="card"
               style="height:100%; background:rgba(16,18,22,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:16px; text-align:center; display:flex; flex-direction:column; justify-content:space-between;">
               <h3 style="margin-bottom:6px;"><strong>The Plain Bagel</strong></h3>
-              <p style="margin-bottom:12px;">Gave me the calm long-term view — risk literacy, fundamentals, valuation
+              <p style="margin-bottom:12px;">Gave me the calm long-term view - risk literacy, fundamentals, valuation
                 basics, thinking with patience instead of emotion. A grounding voice in a loud world.</p>
               <a class="button small" style="align-self:center;" href="https://www.youtube.com/@ThePlainBagel"
-                target="_blank" rel="noopener">🔗 YouTube</a>
+                target="_blank" rel="noopener"> YouTube</a>
             </section>
           </div>
         </div>
@@ -316,6 +509,17 @@
     </div>
   </section>
 
+  <div class="modal-overlay" id="tickerNotFoundModal" role="dialog" aria-modal="true" aria-labelledby="notFoundTitle">
+    <div class="modal-card">
+      <h3 id="notFoundTitle">Ticker not found</h3>
+      <p id="notFoundMsg">We couldn't find data for this ticker.</p>
+      <div class="modal-actions">
+        <button class="secondary" id="notFoundClose">Close</button>
+        <button id="notFoundContinue">Go anyway</button>
+      </div>
+    </div>
+  </div>
+
   <script src="assets/js/jquery.min.js"></script>
   <script src="assets/js/jquery.scrolly.min.js"></script>
   <script src="assets/js/browser.min.js"></script>
@@ -323,58 +527,83 @@
   <script src="assets/js/util.js"></script>
   <script src="assets/js/main.js"></script>
   <script>
-    const API_KEY = "zyFh2r7REyTAWDhDJmxUSARqiSNppY9B";
     (() => {
       const input = document.getElementById("inlineTicker");
       const goBtn = document.getElementById("inlineGo");
       const status = document.getElementById("inlineStatus");
-      const offlineTickers = new Set();
-      let offlineLoaded = false;
-      const loadOfflineTickers = async () => {
-        if (offlineLoaded) return offlineTickers;
-        try {
-          const res = await fetch("stock_data.json", { cache: "no-store" });
-          if (res.ok) {
-            const data = await res.json();
-            if (Array.isArray(data)) data.forEach(r => { if (r?.ticker) offlineTickers.add(String(r.ticker).toUpperCase()); });
-          }
-        } catch (_) { }
-        offlineLoaded = true;
-        return offlineTickers;
-      };
-      const hasLocalData = async (sym) => {
-        const today = new Date().toISOString().slice(0, 10);
-        const candidates = [
-          `data/${sym}-bundle-${today}.json`,
-          `data/${sym}-bundle-latest.json`,
-        ];
-        for (const path of candidates) {
-          try {
-            const res = await fetch(path, { cache: "no-store" });
-            if (res.ok) return true;
-          } catch (_) { }
+      const modal = document.getElementById("tickerNotFoundModal");
+      const modalMsg = document.getElementById("notFoundMsg");
+      const modalClose = document.getElementById("notFoundClose");
+      const modalContinue = document.getElementById("notFoundContinue");
+      let pendingTicker = null;
+
+      const showNotFoundModal = (ticker) => {
+        pendingTicker = ticker;
+        if (modalMsg) {
+          modalMsg.textContent = `We couldn't find data for ${ticker}. It might be a mistype or an unsupported foreign listing.`;
         }
-        const offline = await loadOfflineTickers();
-        return offline.has(sym);
+        if (modal) modal.classList.add("show");
       };
+
+      const closeNotFoundModal = () => {
+        if (modal) modal.classList.remove("show");
+        pendingTicker = null;
+      };
+
+      const proceedAnyway = () => {
+        if (!pendingTicker) return closeNotFoundModal();
+        window.location.href = `ticker.html?ticker=${encodeURIComponent(pendingTicker)}`;
+      };
+      const redirectToTicker = (t) => {
+        window.location.href = `ticker.html?ticker=${encodeURIComponent(t)}`;
+      };
+
       const submit = async () => {
         const ticker = (input?.value || "").trim().toUpperCase();
         if (!ticker) {
           if (status) status.textContent = "Enter a ticker to search.";
           return;
         }
-        if (status) status.textContent = "";
+        if (status) status.textContent = "Checking ticker...";
         goBtn?.setAttribute("disabled", "disabled");
-        const found = await hasLocalData(ticker);
-        goBtn?.removeAttribute("disabled");
-        // if (!found) {
-        //   const proceed = confirm(`No cached data found for ${ticker}. Continue anyway? (Live data may fail if offline.)`);
-        //   if (!proceed) return;
-        // }
-        window.location.href = `ticker.html?ticker=${encodeURIComponent(ticker)}`;
+        try {
+          const res = await fetch(`/api/search?query=${encodeURIComponent(ticker)}`);
+          if (!res.ok) throw new Error(`search failed ${res.status}`);
+          const payload = await res.json();
+          const list = Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.data)
+              ? payload.data
+              : [];
+          const found = list.some((e) => {
+            const sym = (e?.symbol || e?.ticker || "").toUpperCase();
+            return sym === ticker;
+          });
+          if (found || list.length === 0) {
+            // empty list: provider returned nothing but still allow navigation
+            if (status) status.textContent = "";
+            redirectToTicker(ticker);
+            return;
+          }
+          showNotFoundModal(ticker);
+          if (status) status.textContent = "Ticker not found. Check the symbol or continue anyway.";
+        } catch (_) {
+          // On failure, fall back to direct navigation so we don't block users
+          if (status) status.textContent = "";
+          redirectToTicker(ticker);
+        } finally {
+          goBtn?.removeAttribute("disabled");
+        }
       };
       if (goBtn) goBtn.addEventListener("click", submit);
       if (input) input.addEventListener("keyup", (e) => { if (e.key === "Enter") submit(); });
+
+      modalClose?.addEventListener("click", closeNotFoundModal);
+      modalContinue?.addEventListener("click", proceedAnyway);
+      modal?.addEventListener("click", (e) => { if (e.target === modal) closeNotFoundModal(); });
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeNotFoundModal();
+      });
     })();
     (() => {
       const listEl = document.getElementById("filingNewsList");
@@ -406,7 +635,7 @@
                   <div>
                     <div style="font-weight:800; letter-spacing:0.02em; color:#f3f1ed;">${e.ticker || ""}</div>
                     <div style="color:#c9d1d9; font-size:0.93rem;">${title}</div>
-                    <div class="muted" style="font-size:0.85rem;">Filed ${fmtDate(e.filingDate)} ${e.companyName ? "· " + e.companyName : ""}</div>
+                    <div class="muted" style="font-size:0.85rem;">Filed ${fmtDate(e.filingDate)} ${e.companyName ? "- " + e.companyName : ""}</div>
                   </div>
                   <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                     ${badge}

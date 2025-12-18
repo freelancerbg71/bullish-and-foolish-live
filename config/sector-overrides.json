@@ -3,5 +3,8 @@
   "GMGI": "Consumer & Services",
   "IOVA": "Biotech/Pharma",
   "ATYR": "Biotech/Pharma",
-  "META": "Tech/Internet"
+  "META": "Tech/Internet",
+  "AAPL": "Tech/Internet",
+  "JNJ": "Healthcare",
+  "ASML": "Industrial/Cyclical"
 }

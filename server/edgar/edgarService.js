@@ -79,6 +79,23 @@ function computeSnapshot(rows) {
   if (snapshot.ttmIncomplete) {
     snapshot.notes.ttm = DATA_STATUS_MESSAGES.ttmIncomplete(snapshot.ttmSourceCount);
   }
+  const criticalFields = [
+    "revenue",
+    "grossProfit",
+    "operatingIncome",
+    "netIncome",
+    "totalAssets",
+    "totalLiabilities",
+    "operatingCashFlow",
+    "capex"
+  ];
+  const baseForCompleteness = latestQuarter || latestYear || {};
+  const available = criticalFields.filter((f) => baseForCompleteness[f] != null).length;
+  snapshot.completeness = {
+    available,
+    total: criticalFields.length,
+    percent: criticalFields.length ? (available / criticalFields.length) * 100 : null
+  };
 
   const base = latestYear || latestQuarter || {};
   if (base.revenue) {

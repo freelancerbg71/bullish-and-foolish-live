@@ -36,11 +36,22 @@ async function initDb() {
         date TEXT NOT NULL,
         close REAL NOT NULL,
         source TEXT NOT NULL,
+        marketCap REAL,
+        currency TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         UNIQUE (ticker, date)
       );
     `);
+
+    // Auto-migration for existing tables
+    try {
+      db.prepare("ALTER TABLE prices_eod ADD COLUMN marketCap REAL").run();
+    } catch (err) { /* ignore if exists */ }
+    try {
+      db.prepare("ALTER TABLE prices_eod ADD COLUMN currency TEXT").run();
+    } catch (err) { /* ignore if exists */ }
+
     return db;
   })();
   return dbPromise;
@@ -52,7 +63,7 @@ export async function getLatestCachedPrice(ticker) {
   const db = await initDb();
   const row = db
     .prepare(
-      `SELECT ticker, date, close, source, updatedAt
+      `SELECT ticker, date, close, source, marketCap, currency, updatedAt
        FROM prices_eod
        WHERE ticker = @ticker
        ORDER BY date DESC
@@ -64,34 +75,40 @@ export async function getLatestCachedPrice(ticker) {
     ticker: row.ticker,
     date: row.date,
     close: Number(row.close),
+    marketCap: row.marketCap ? Number(row.marketCap) : null,
+    currency: row.currency || null,
     source: row.source,
     updatedAt: row.updatedAt
   };
 }
 
-export async function upsertCachedPrice(ticker, date, close, source) {
+export async function upsertCachedPrice(ticker, date, close, source, marketCap = null, currency = null) {
   const key = normalizeTicker(ticker);
   if (!key || !date || !Number.isFinite(Number(close)) || !source) return;
   const db = await initDb();
   const now = new Date().toISOString();
   db.prepare(
-    `INSERT INTO prices_eod (ticker, date, close, source, createdAt, updatedAt)
-     VALUES (@ticker, @date, @close, @source, @createdAt, @updatedAt)
+    `INSERT INTO prices_eod (ticker, date, close, source, marketCap, currency, createdAt, updatedAt)
+     VALUES (@ticker, @date, @close, @source, @marketCap, @currency, @createdAt, @updatedAt)
      ON CONFLICT(ticker, date) DO UPDATE SET
        close=excluded.close,
        source=excluded.source,
-      updatedAt=excluded.updatedAt`
+       marketCap=excluded.marketCap,
+       currency=excluded.currency,
+       updatedAt=excluded.updatedAt`
   ).run({
     ticker: key,
     date,
     close: Number(close),
     source,
+    marketCap: Number.isFinite(marketCap) ? marketCap : null,
+    currency: currency || null,
     createdAt: now,
     updatedAt: now
   });
   await pruneOldPrices(key, 400);
   await writePriceFile(key, db);
-  console.info("[priceStore] upserted price", { ticker: key, date, close: Number(close), source, file: path.join(PRICE_FILE_DIR, `${key}.json`) });
+  console.info("[priceStore] upserted price", { ticker: key, date, close: Number(close), marketCap, currency, source, file: path.join(PRICE_FILE_DIR, `${key}.json`) });
 }
 
 export async function getRecentPrices(ticker, limit = 2) {

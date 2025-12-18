@@ -1,4 +1,4 @@
-
+﻿
 import { ruleExplainers, percentToNumber, resolveSectorBucket } from "./shared-rules.js";
 const API_ROOT = window.API_ROOT || localStorage.getItem("apiRoot") || "/api";
 const API_BASE = `${API_ROOT}/ticker`;
@@ -25,6 +25,11 @@ const manualPriceClear = document.getElementById("manualPriceClear");
 const manualPriceNote = document.getElementById("manualPriceNote");
 const manualPriceModal = document.getElementById("manualPriceModal");
 const manualPriceClose = document.getElementById("manualPriceClose");
+const missingTickerModal = document.getElementById("missingTickerModal");
+const missingTickerMessage = document.getElementById("missingTickerMessage");
+const missingTickerBack = document.getElementById("missingTickerBack");
+const missingTickerDismiss = document.getElementById("missingTickerDismiss");
+const missingTickerClose = document.getElementById("missingTickerClose");
 // Wire donation modal trigger if present (shared with about/support modal)
 const supportLink = document.querySelector(".rating-meta a[href*='about.html#support']");
 if (supportLink) {
@@ -57,6 +62,12 @@ const edgarNotesEl = document.getElementById("edgarNotes");
 function cacheKey(kind) { const day = new Date().toISOString().slice(0, 10); return `edgar-${kind}-${ticker}-${day}`; }
 function latestKey(kind) { return `edgar-${kind}-${ticker}-latest`; }
 const EXCLUDED_FILING_REASON_IDS = new Set(["going_concern", "reverse_split"]);
+
+const isBiotechSector = (val) => {
+  const bucket = resolveSectorBucket(val || "");
+  const normalized = String(bucket || "").toLowerCase();
+  return normalized.startsWith("biotech");
+};
 
 let selectedProvider = "edgar";
 let edgarFundamentals = null;
@@ -115,10 +126,67 @@ function saveManualPrice(price, date) {
   }
 }
 
+function showMissingTickerModal(msg) {
+  hideLoadingOverlay();
+  if (missingTickerMessage && msg) missingTickerMessage.textContent = msg;
+  if (missingTickerModal) missingTickerModal.style.display = "flex";
+}
+
+function closeMissingTickerModal() {
+  if (missingTickerModal) missingTickerModal.style.display = "none";
+}
+
 function clearManualPrice() {
   localStorage.removeItem(manualPriceKey);
   if (manualPriceNote) manualPriceNote.textContent = "";
   if (manualPriceInput) manualPriceInput.value = "";
+}
+
+function uniqueRiskFactors(vm) {
+  const suppressedReasons = new Set([
+    "operating margin",
+    "operating margin (health)",
+    "operating margin (industrial)",
+    "interest coverage"
+  ]);
+  const reasonList = Array.isArray(vm?.ratingReasons)
+    ? vm.ratingReasons
+      .filter((r) => r && r.score < 0 && !r.missing && !r.notApplicable) // Show all negatives, not just <= -5
+      .filter((r) => !suppressedReasons.has(String(r?.name || "").toLowerCase()))
+      .sort((a, b) => (a.score || 0) - (b.score || 0)) // Ascending (most negative first)
+    : [];
+
+  // Take top 6 risks (most negative)
+  const topRisks = reasonList.slice(0, 6).map((r) => r.message ? `${r.name}: ${r.message}` : r.name);
+
+  const list = topRisks.length
+    ? topRisks
+    : Array.isArray(vm?.riskFactors)
+      ? vm.riskFactors.filter(Boolean)
+      : [];
+
+  const narrative = (vm?.narrative || "").trim().toLowerCase();
+  const seen = new Set();
+  const deduped = [];
+  list.forEach((item) => {
+    const key = String(item).trim().toLowerCase();
+    if (!key) return;
+    // Dedup against narrative (exact or substring match)
+    if (narrative && (key === narrative || narrative.includes(key) || key.includes(narrative))) return;
+    if (seen.has(key)) return;
+    seen.add(key);
+    deduped.push(item);
+  });
+  return deduped;
+}
+
+function escapeHtml(str = "") {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function applyManualPriceToVm(vm) {
@@ -229,7 +297,7 @@ function renderEdgarNotes() {
   if (edgarNotesEl) edgarNotesEl.innerHTML = "";
 }
 
-function renderFilingSignals(signals = []) {
+function renderFilingSignals(stock, signals = []) {
   const row = document.getElementById("filingSignalsRow");
   const grid = document.getElementById("filingSignalsGrid");
   const bioRow = document.getElementById("bioIntelRow");
@@ -249,12 +317,20 @@ function renderFilingSignals(signals = []) {
   grid.innerHTML = "";
   list
     .slice()
+    .filter(sig => {
+      if (sig.id === "going_concern") {
+        // Suppress for established companies OR foreign filers (who often lack market cap data but are large)
+        const isEstablished = stock.ratingTierLabel === "solid" || stock.ratingTierLabel === "bullish" || stock.ratingTierLabel === "elite" || (stock.marketCap && stock.marketCap > 10000000000) || stock.issuerType === "foreign";
+        if (isEstablished) return false;
+      }
+      return true;
+    })
     .sort((a, b) => Math.abs(Number(b.score) || 0) - Math.abs(Number(a.score) || 0))
     .forEach((sig) => {
       const score = Number(sig.score) || 0;
       const tone = score > 0 ? "tone-good" : score < 0 ? "tone-risk" : "";
       const scoreText = score > 0 ? `+${score}` : `${score}`;
-      const snippet = (sig.snippet || "").slice(0, 220) + ((sig.snippet || "").length > 220 ? "…" : "");
+      const snippet = (sig.snippet || "").slice(0, 220) + ((sig.snippet || "").length > 220 ? "..." : "");
       const card = document.createElement("div");
       card.className = `filing-card ${tone}`.trim();
       card.innerHTML = `
@@ -262,7 +338,7 @@ function renderFilingSignals(signals = []) {
           <div class="tag">${scoreText}</div>
           <div class="score">${sig.title || "Filing signal"}</div>
         </div>
-        <div class="title">${sig.form || ""}${sig.filed ? ` · ${sig.filed}` : ""}</div>
+        <div class="title">${sig.form || ""}${sig.filed ? ` - ${sig.filed}` : ""}</div>
         <div class="snippet">${snippet || "Language detected in latest filing."}</div>
         <div class="foot">
           ${sig.docUrl ? `<a class="link" href="${sig.docUrl}" target="_blank" rel="noopener">Open filing &nearr;</a>` : ""}
@@ -298,7 +374,7 @@ function renderBiotechIntel(signals, bioRow, bioGrid) {
   if (!bioRow || !bioGrid) return;
   const vm = currentVm;
   const bucket = resolveSectorBucket(vm?.sector || vm?.sectorBucket);
-  const isBio = bucket === "Biotech/Pharma" ||
+  const isBio = isBiotechSector(bucket) ||
     (vm?.sicDescription && /pharm|bio|drug|device/i.test(vm?.sicDescription)) ||
     (vm?.companyName && /therapeutics|pharm|bio|sciences|medicine/i.test(vm?.companyName));
 
@@ -388,10 +464,10 @@ async function runBatched(taskFns, batchSize = 5, delayMs = 1000) {
       chunk.map(async (fn, idx) => {
         try {
           const r = await fn();
-          console.debug(`  ✓ chunk item ${idx + 1} ok`);
+          console.debug(`   chunk item ${idx + 1} ok`);
           return r;
         } catch (err) {
-          console.warn(`  ✗ chunk item ${idx + 1} failed: ${err.message || err}`);
+          console.warn(`   chunk item ${idx + 1} failed: ${err.message || err}`);
           throw err;
         }
       })
@@ -436,7 +512,7 @@ function isPriceStale(vm, maxAgeHours = 36) {
   if (!dateStr) return true;
   const ts = Date.parse(dateStr);
   if (!Number.isFinite(ts)) return true;
-  
+
   const now = new Date();
   const day = now.getDay(); // 0=Sun, 6=Sat
   // Relax staleness check during weekends/Monday morning to avoid rejecting Friday's close
@@ -449,18 +525,39 @@ function isPriceStale(vm, maxAgeHours = 36) {
   return ageHours > allowed;
 }
 
-async function ensurePriceReady(vm, maxTries = 5, delayMs = 1500) {
+function priceAgeHours(vm) {
+  if (!vm) return null;
+  const dateStr =
+    vm.priceSummary?.lastCloseDate ||
+    (Array.isArray(vm.priceHistory) && vm.priceHistory.length ? vm.priceHistory.map((p) => p.date).filter(Boolean).sort().slice(-1)[0] : null);
+  if (!dateStr) return null;
+  const ts = Date.parse(dateStr);
+  if (!Number.isFinite(ts)) return null;
+  return (Date.now() - ts) / (1000 * 60 * 60);
+}
+
+async function ensurePriceReady(vm, maxTries = 3) {
   const manual = readManualPrice();
   if (manual) {
     const withManual = applyManualPriceToVm(vm);
     updatePriceDisplay(manual.price, `$${manual.price.toFixed(2)}`, null);
     return withManual;
   }
-  if (hasPrice(vm) && !isPriceStale(vm) && vm?.pricePending === false) return vm;
+  // If we already have a reasonably fresh price (<24h), show it and avoid polling
+  if (hasPrice(vm) && vm?.pricePending === false) {
+    if (!isPriceStale(vm)) return vm;
+    const age = priceAgeHours(vm);
+    if (age !== null && age <= 24) {
+      const asOf = vm.priceSummary?.lastCloseDate || "recently";
+      statusEl.textContent = `Last close as of ${asOf} (showing cached price)`;
+      return vm;
+    }
+  }
   let latest = vm;
-  const tries = Math.max(10, maxTries); // wait longer before giving up
-  for (let i = 0; i < tries; i++) {
-    await sleep(delayMs);
+  const delays = [0, 1500, 5000].slice(0, Math.max(1, Math.min(3, maxTries)));
+  for (let i = 0; i < delays.length; i++) {
+    const wait = delays[i];
+    if (wait) await sleep(wait);
     try {
       const res = await fetch(`${API_ROOT}/ticker/${encodeURIComponent(ticker)}`, {
         headers: { Accept: "application/json" }
@@ -469,7 +566,15 @@ async function ensurePriceReady(vm, maxTries = 5, delayMs = 1500) {
       const nextVm = data?.data || data;
       latest = nextVm || latest;
       // Only return if we have a price AND it's fresh (or if backend says it's done pending)
-      if ((hasPrice(nextVm) && !isPriceStale(nextVm)) || nextVm?.pricePending === false) {
+      if (nextVm?.pricePending === false) {
+        return nextVm;
+      }
+      if (hasPrice(nextVm) && !isPriceStale(nextVm)) {
+        return nextVm;
+      }
+      const age = priceAgeHours(nextVm);
+      if (hasPrice(nextVm) && age !== null && age <= 24) {
+        statusEl.textContent = `Last close as of ${nextVm.priceSummary?.lastCloseDate || "recently"} (cached)`;
         return nextVm;
       }
     } catch (err) {
@@ -483,15 +588,30 @@ async function ensurePriceReady(vm, maxTries = 5, delayMs = 1500) {
 async function waitForTickerReady(maxTries = 10, delayMs = 1500) {
   let lastPayload = null;
   let lastStatus = null;
+  let notFound = false;
   for (let i = 0; i < maxTries; i++) {
     try {
       const res = await fetch(`${API_ROOT}/ticker/${encodeURIComponent(ticker)}`, {
         headers: { Accept: "application/json" }
       });
+      if (res.status === 404) {
+        notFound = true;
+        break;
+      }
       const data = await res.json();
       lastPayload = data;
       lastStatus = data?.status || data?.data?.status || null;
       const vm = data?.data || data;
+      const message = data?.message || vm?.message || "";
+      const explicitNotFound =
+        vm?.notFound === true ||
+        lastStatus === "not_found" ||
+        lastStatus === "missing" ||
+        /not found/i.test(message);
+      if (explicitNotFound) {
+        notFound = true;
+        break;
+      }
       if (!lastStatus || lastStatus === "ready") return vm;
       if (lastStatus === "error") {
         throw new Error(data?.message || "Ticker failed to load");
@@ -505,9 +625,9 @@ async function waitForTickerReady(maxTries = 10, delayMs = 1500) {
     }
     await sleep(delayMs);
   }
-  if (statusEl) statusEl.textContent = "Still preparing EDGAR data... try again shortly.";
-  hideLoadingOverlay();
-  return lastPayload?.data || lastPayload || null;
+  if (notFound) return { notFound: true };
+  const timedOutPayload = lastPayload?.data || lastPayload || null;
+  return { timedOut: true, lastStatus, data: timedOutPayload };
 }
 
 function cacheEntryFresh(entry) {
@@ -597,7 +717,7 @@ async function fetchWithCache(kind, url, options = {}) {
     const res = await fetch(requestUrl);
     if (res.status === 429) {
       showRateLimitNotice();
-      if (cached !== undefined) return cached;
+      if (cachedPayload !== undefined && cachedPayload !== null) return cachedPayload;
       const rateErr = new Error("Rate limited");
       rateErr.rateLimited = true;
       throw rateErr;
@@ -660,19 +780,54 @@ async function loadAll() {
     statusEl.innerHTML = `<span style="color:var(--muted); font-weight:600;">Last Close</span> <span style="font-weight:800; color:var(--text);">--</span>`;
     showLoadingOverlay("Loading EDGAR data...");
     try {
+      let initialNotFound = false;
       const res = await fetch(`${API_ROOT}/ticker/${encodeURIComponent(ticker)}`, {
         headers: { Accept: "application/json" }
       });
       if (res.status === 404) {
-        showDeadTickerState();
+        // Allow backend pipeline to finish its checks before showing a hard not-found state.
+        initialNotFound = true;
+      } else {
+        const data = await res.json();
+        const status = data?.status;
+        const msg = data?.message || data?.data?.message || "";
+        const explicitNotFound = data?.data?.notFound === true || /not found/i.test(msg);
+        if (status && status !== "ready") {
+          vmPayload = await waitForTickerReady();
+        } else {
+          vmPayload = data?.data || data;
+        }
+        if (explicitNotFound) {
+          vmPayload = { notFound: true };
+        }
+      }
+      if (initialNotFound) {
+        const awaited = await waitForTickerReady();
+        if (awaited?.notFound) {
+          showMissingTickerModal(`We couldn't find EDGAR fundamentals for ${ticker}. It may be mistyped or unsupported.`);
+          return;
+        }
+        if (awaited?.timedOut || awaited?.lastStatus === "pending" || awaited?.lastStatus === "processing") {
+          showMissingTickerModal(`We couldn't find EDGAR fundamentals for ${ticker} after checking filings. It may be mistyped or unsupported.`);
+          return;
+        }
+        vmPayload = awaited?.data || awaited || null;
+      }
+      const pendingLike =
+        vmPayload?.timedOut === true ||
+        vmPayload?.lastStatus === "running" ||
+        vmPayload?.lastStatus === "pending" ||
+        vmPayload?.lastStatus === "processing" ||
+        vmPayload?.status === "running" ||
+        vmPayload?.status === "pending" ||
+        vmPayload?.status === "processing";
+      if (vmPayload?.notFound) {
+        showMissingTickerModal(`We couldn't find EDGAR fundamentals for ${ticker}. It may be mistyped or unsupported.`);
         return;
       }
-      const data = await res.json();
-      const status = data?.status;
-      if (status && status !== "ready") {
-        vmPayload = await waitForTickerReady();
-      } else {
-        vmPayload = data?.data || data;
+      if (pendingLike || !vmPayload) {
+        showMissingTickerModal(`We couldn't find EDGAR fundamentals for ${ticker} after checking filings. It may be mistyped or unsupported.`);
+        return;
       }
     } catch (err) {
       console.error("Failed to fetch ticker view model", err);
@@ -697,10 +852,10 @@ async function loadAll() {
     msgContainer.style.cssText = "display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:60vh; text-align:center; padding:20px; color:#e8f0ff;";
 
     msgContainer.innerHTML = `
-    <div style="font-size:48px; margin-bottom:16px;">👻</div>
+    <div style="font-size:48px; margin-bottom:16px;">:(</div>
     <h2 style="font-size:24px; margin-bottom:12px; font-weight:700;">Ticker Not Found</h2>
     <p style="font-size:16px; color:#9fb3c8; max-width:400px; line-height:1.5;">
-      We couldn’t find usable EDGAR filings for <strong>${ticker}</strong>.
+      We couldn't find usable EDGAR filings for <strong>${ticker}</strong>.
       <br><br>
       Check the symbol or try a US-listed stock.
     </p>
@@ -727,7 +882,7 @@ async function loadAll() {
       const fresh = await fetchEdgarSnapshot({ cacheBust: true });
       if (Array.isArray(fresh?.filingSignals?.signals)) {
         filingSignals = fresh.filingSignals.signals;
-        renderFilingSignals(filingSignals);
+        renderFilingSignals(currentVm, filingSignals);
       }
     } catch (err) {
       console.warn("Filing signals refresh failed", err?.message || err);
@@ -742,10 +897,11 @@ async function loadAll() {
     edgarNotes.push(...vmPayload.ratingNotes);
     renderEdgarNotes();
   }
-  renderFilingSignals(filingSignals);
+  renderFilingSignals(currentVm, filingSignals);
 
   // Map view model -> legacy shapes for renderers
-  const quartersDesc = (vmPayload.quarterlySeries || [])
+  const financialSeries = (vmPayload.quarterlySeries && vmPayload.quarterlySeries.length ? vmPayload.quarterlySeries : vmPayload.annualSeries || []);
+  const quartersDesc = financialSeries
     .slice()
     .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd));
   const income = quartersDesc.map((q) => ({
@@ -765,6 +921,8 @@ async function loadAll() {
     totalStockholdersEquity: q.totalEquity,
     totalAssets: q.totalAssets,
     totalLiabilities: q.totalLiabilities,
+    deferredRevenue: q.deferredRevenue ?? q.contractWithCustomerLiability ?? null,
+    contractWithCustomerLiability: q.contractWithCustomerLiability ?? q.deferredRevenue ?? null,
     commonStockSharesOutstanding: q.sharesOutstanding,
     shortTermInvestments: q.shortTermInvestments
   }));
@@ -773,6 +931,7 @@ async function loadAll() {
     netCashProvidedByOperatingActivities: q.operatingCashFlow,
     operatingCashFlow: q.operatingCashFlow,
     capitalExpenditure: q.capex,
+    depreciationDepletionAndAmortization: q.depreciationDepletionAndAmortization ?? null,
     fcfComputed:
       q.freeCashFlow != null
         ? q.freeCashFlow
@@ -907,11 +1066,7 @@ async function loadAll() {
       debtEquityRatio: safeDivide(q.totalDebt, q.totalEquity)
     }))
   ];
-  const debugTag = `[${ticker}-debug]`;
-  console.debug(`${debugTag} quartersDesc head`, quartersDesc.slice(0, 3));
-  console.debug(`${debugTag} price summary`, vmPayload.priceSummary, "price fallback", priceCloseFallback, "prev", pricePrevFallback);
-  console.debug(`${debugTag} keyMetrics rows`, keyMetrics);
-  console.debug(`${debugTag} ratios rows`, ratios);
+
 
   // Price mapping
   let priceFull = (vmPayload.priceHistory || []).map((p) => ({
@@ -962,6 +1117,7 @@ async function loadAll() {
     currentVm = { ...vmPayload, priceHistory: priceSeriesFull };
   }
 
+  const baseReasons = Array.isArray(vmPayload.ratingReasons) ? vmPayload.ratingReasons : [];
   renderTables(income, balance, cash, keyMetrics, ratios, [], []);
   const stock = buildStockFromStatements({
     income,
@@ -978,9 +1134,17 @@ async function loadAll() {
     priceSummary: vmPayload.priceSummary,
     sector: vmPayload.sector || vmPayload.sectorBucket || null,
     runwayYears,
-    narrative: vmPayload.narrative
+    narrative: vmPayload.narrative,
+    filingProfile: vmPayload.filingProfile
   });
-  const baseReasons = Array.isArray(vmPayload.ratingReasons) ? vmPayload.ratingReasons : [];
+
+  // FIX: Explicitly attach metadata that buildStockFromStatements ignores
+  stock.ratingReasons = baseReasons;
+  stock.ratingTierLabel = ratingMeta?.tierLabel || "neutral";
+  stock.issuerType = vmPayload.issuerType;
+  stock.filingProfile = vmPayload.filingProfile;
+  stock.keyMetrics = vmPayload.keyMetrics;
+
   // Keep filing intelligence out of the finance cards; those show in the filing section.
   const combinedReasons = baseReasons.filter(
     (reason) =>
@@ -988,7 +1152,7 @@ async function loadAll() {
       !String(reason?.name || "").toLowerCase().startsWith("filing")
   );
   renderScoreboard(combinedReasons, stock, ratingMeta, vmPayload.ratingCompleteness);
-  renderFilingSignals(filingSignals);
+  renderFilingSignals(stock, filingSignals);
   const effectivePrice = Number.isFinite(latestPrice)
     ? latestPrice
     : parsePriceString(priceInfo.lastCloseText) ?? getCachedPrice();
@@ -1005,6 +1169,8 @@ async function loadAll() {
   const subtitleEl = document.getElementById("subtitle");
   if (subtitleEl) subtitleEl.textContent = "";
   hideLoadingOverlay();
+  console.log("[AUDIT DUMP] Final Stock Object:", stock);
+  console.log("[AUDIT DUMP] Combined Reasons:", combinedReasons);
 }
 
 function renderProjections(vm) {
@@ -1012,6 +1178,9 @@ function renderProjections(vm) {
   const grid = document.getElementById("futureGrid");
   if (!wrap || !grid) return;
   const proj = vm.projections || {};
+  const strategic = vm.strategicOutlook || {};
+  const opOutlook = strategic.operationalMomentum || {};
+  const trajOutlook = strategic.trajectory || {};
   const snapshot = vm.snapshot || {};
   const keyMetrics = vm.keyMetrics || {};
 
@@ -1041,14 +1210,20 @@ function renderProjections(vm) {
     if (lower.includes("improv") || lower.includes("up")) return "Improving";
     return "Stable";
   };
-  const growthScore = clampScore(proj.growthContinuationScore ?? proj.futureGrowthScore);
+  const growthScore = clampScore(
+    opOutlook.score01 ?? proj.operationalMomentumScore ?? proj.growthContinuationScore ?? proj.futureGrowthScore
+  );
   const dilutionScore = clampScore(proj.dilutionRiskScore ?? proj.dilutionRisk);
   const rawBankruptcyScore = clampScore(proj.bankruptcyRiskScore);
   const businessTrend = normalizeTrend(proj.businessTrendLabel ?? proj.deteriorationLabel);
+  const trajectoryTitle = trajOutlook.label ?? proj.trajectoryLabel ?? businessTrend;
   const marketCap = Number(keyMetrics.marketCap ?? keyMetrics.marketCapTTM);
   const interestCoverSnap = toNumber(snapshot.interestCoverage);
-  const netDebtYears = toNumber(snapshot.netDebtToFCFYears);
+  const netDebtYears = toNumber(snapshot.netDebtToFcfYears ?? snapshot.netDebtToFCFYears);
   const largeCap = Number.isFinite(marketCap) && marketCap >= 5e10;
+  const revenueSlope = toNumber(proj.revenueSlope);
+  const marginSlope = toNumber(proj.marginSlope);
+  const ocfSlope = toNumber(proj.ocfTrendSlope);
   let bankruptcyScore = rawBankruptcyScore;
   if (largeCap && bankruptcyScore !== null) {
     const strongCover = Number.isFinite(interestCoverSnap) && interestCoverSnap > 8;
@@ -1058,21 +1233,31 @@ function renderProjections(vm) {
   }
 
   const growthMeta = classifyGrowth(growthScore);
-  // Override label if server provided a specific momentum label
-  if (proj.growthContinuationLabel) {
-    growthMeta.label = proj.growthContinuationLabel;
-  }
+  // Override label if server provided a specific momentum label (new or legacy)
+  if (opOutlook.label) growthMeta.label = opOutlook.label;
+  else if (proj.operationalMomentumLabel) growthMeta.label = proj.operationalMomentumLabel;
+  else if (proj.growthContinuationLabel) growthMeta.label = proj.growthContinuationLabel;
   const dilutionMeta = classifyRisk(dilutionScore);
   const bankruptcyMeta = classifyRisk(bankruptcyScore, " Risk");
 
   const trajectoryCopy =
-    businessTrend === "Improving"
+    trajOutlook.narrative ||
+    (businessTrend === "Improving"
       ? "Revenue and FCF slopes are strengthening."
       : businessTrend === "Worsening"
         ? "Key profitability or cash metrics are deteriorating."
-        : "Core metrics are moving sideways.";
+        : "Core metrics are moving sideways.");
+  const trajectoryRegime = String(trajOutlook.regime || "").toLowerCase();
   const trajectoryColor =
-    businessTrend === "Improving" ? "#5ce0c2" : businessTrend === "Worsening" ? "#ff9b9b" : "#e0e8f5";
+    trajectoryRegime === "grow"
+      ? "#5ce0c2"
+      : trajectoryRegime === "fade"
+        ? "#ff9b9b"
+        : trajectoryTitle === "Improving"
+          ? "#5ce0c2"
+          : trajectoryTitle === "Worsening"
+            ? "#ff9b9b"
+            : "#e0e8f5";
   const ocfTrend =
     snapshot.operatingCashFlowTrend4Q === "up"
       ? "up"
@@ -1087,7 +1272,21 @@ function renderProjections(vm) {
       : businessTrend === "Worsening"
         ? "Growth momentum may be fading."
         : "Signals are balanced; momentum is steady.";
+  const driverText = (() => {
+    const MIN_DRIVER_WEIGHT = 0.01;
+    const candidates = [];
+    if (Number.isFinite(revenueSlope)) candidates.push({ label: revenueSlope >= 0 ? "revenue improving" : "revenue softening", weight: Math.abs(revenueSlope) });
+    if (Number.isFinite(marginSlope)) candidates.push({ label: marginSlope >= 0 ? "margins improving" : "margins deteriorating", weight: Math.abs(marginSlope) });
+    if (Number.isFinite(ocfSlope)) candidates.push({ label: ocfSlope >= 0 ? "OCF strengthening" : "OCF weakening", weight: Math.abs(ocfSlope) });
+    candidates.sort((a, b) => (b.weight || 0) - (a.weight || 0));
+    const top = candidates[0];
+    if (!top || top.weight < MIN_DRIVER_WEIGHT) return "Drivers: mixed / no clear trend.";
+    const second = candidates[1];
+    if (second && second.weight >= MIN_DRIVER_WEIGHT) return `Driven by ${top.label} and ${second.label}.`;
+    return `Driven by ${top.label}.`;
+  })();
   const momentumMicro = `Revenue CAGR (3Y): ${pctf(snapshot.revenueCAGR3Y)} | OCF trend: ${ocfTrend}`;
+  const momentumSource = "Source: Strategic Outlook (fundamentals + filings)";
 
   // Removed barWidth calculation as bars are being removed/hidden or just decorative
   const barWidth = (score) => `${(clampScore(score) ?? 0) * 100}%`;
@@ -1098,17 +1297,17 @@ function renderProjections(vm) {
   grid.style.gridTemplateColumns = "1fr 1fr"; // Force 2 columns
   grid.innerHTML = `
         <div class="future-card">
-          <div class="future-label">Upside Momentum</div>
+          <div class="future-label">Operational momentum</div>
           <div class="future-value-row">
             <div class="future-value" style="font-size:1.3em;">${growthMeta.label}</div>
           </div>
           <div class="future-bar"><div class="fill" style="width:${barWidth(growthScore)}; background:${growthMeta.color};"></div></div>
-          <div class="future-footnote">Trend Strength</div>
-          <div class="future-note">${growthContext}</div>
+          <div class="future-footnote">Momentum (model-based)</div>
+          <div class="future-note">${momentumSource}${growthContext ? ` ${growthContext}` : ""}${driverText ? ` ${driverText}` : ""}</div>
         </div>
         <div class="future-card">
           <div class="future-label">Trajectory</div>
-          <div class="trajectory-title" style="color:${trajectoryColor};">${businessTrend || "Pending"}</div>
+          <div class="trajectory-title" style="color:${trajectoryColor};">${trajectoryTitle || "Pending"}</div>
           <div class="trajectory-narrative">${trajectoryCopy}</div>
           <div class="chip-row">
             <div class="mini-chip">Net Margin (TTM): ${pctf(snapshot.netMarginTTM)}</div>
@@ -1166,20 +1365,33 @@ function buildStockFromStatements(all) {
   const fcfTrend = pctChange(fcfMarginLatest, prevFcfMargin);
   const positiveEbitdaQuarters = inc.slice(0, 4).filter((q) => toNumber(q.operatingIncome) > 0).length;
   const fcfYears = (fcf && toNumber(curBal.totalDebt) && fcf > 0) ? (toNumber(curBal.totalDebt) / (fcf * 4)) : null;
-  const debtReported = hasDebtField(curBal);
-  const cashReported = hasCashField(curBal);
   const debtBal = toNumber(
     curBal.totalDebt ??
+    curBal.financialDebt ??
     curBal.longTermDebt ??
     curBal.longTermDebtNoncurrent ??
     curBal.shortLongTermDebtTotal ??
-    curBal.shortTermDebt
+    curBal.shortTermDebt ??
+    curBal.totalDebtAndCapitalLeaseObligation
   );
+  const debtReported = hasDebtField(curBal) || Number.isFinite(debtBal);
+  const cashBal = toNumber(
+    curBal.cashAndCashEquivalents ??
+    curBal.cashAndCashEquivalentsAtCarryingValue ??
+    curBal.cashAndCashEquivalentsAndShortTermInvestments ??
+    curBal.cashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents ??
+    curBal.cashAndShortTermInvestments ??
+    curBal.cash
+  );
+  const cashReported = hasCashField(curBal) || Number.isFinite(cashBal);
   const debtIsZero = debtReported && debtBal === 0;
-  const cashBal = toNumber(curBal.cashAndCashEquivalents ?? curBal.cash);
   const stiBal = toNumber(curBal.shortTermInvestments);
   const netDebt = (() => {
     if (!Number.isFinite(debtBal)) return null;
+    if (!Number.isFinite(cashBal) && !Number.isFinite(stiBal)) {
+      if (debtBal === 0) return 0; // Debt is zero, so Net Debt is at least <= 0
+      return null; // Both missing, can't compute
+    }
     const cashTotal = (Number.isFinite(cashBal) ? cashBal : 0) + (Number.isFinite(stiBal) ? stiBal : 0);
     return debtBal - cashTotal;
   })();
@@ -1204,6 +1416,21 @@ function buildStockFromStatements(all) {
     ?? keyT.returnOnInvestedCapital
   );
   const capexToRev = calcMargin(toNumber(curCf.capitalExpenditure), toNumber(curInc.revenue));
+  const sbc = toNumber(
+    curCf.shareBasedCompensation ??
+    curCf.shareBasedCompensationExpense ??
+    curCf.stockBasedCompensation ??
+    curCf.stockBasedCompensationExpense ??
+    curInc.shareBasedCompensation ??
+    curInc.shareBasedCompensationExpense ??
+    curInc.stockBasedCompensation ??
+    curInc.stockBasedCompensationExpense
+  );
+  const sbcToRevenue = (() => {
+    const rev = toNumber(curInc.revenue);
+    if (!Number.isFinite(sbc) || !Number.isFinite(rev) || rev <= 0) return null;
+    return (sbc / rev) * 100;
+  })();
   const grossMargin = pctFromRatio(ratiosLatest.grossProfitMargin) ?? calcMargin(toNumber(curInc.grossProfit), toNumber(curInc.revenue));
   const prevGrossMargin = calcMargin(toNumber(prevInc.grossProfit), toNumber(prevInc.revenue));
   const opMargin = pctFromRatio(ratiosLatest.operatingProfitMargin) ?? calcMargin(toNumber(curInc.operatingIncome), toNumber(curInc.revenue));
@@ -1303,9 +1530,12 @@ function buildStockFromStatements(all) {
     },
     returns: { roe, roic },
     cash: { cashConversion: fcf != null && toNumber(curInc.netIncome) ? fcf / toNumber(curInc.netIncome) : null, capexToRevenue: capexToRev },
-    shareStats: { sharesOutstanding: curBal.commonStockSharesOutstanding, sharesChangeYoY, sharesChangeQoQ: sharesChange, insiderOwnership: null, institutionOwnership: null, float: null },
+    shareStats: { sharesOutstanding: curBal.commonStockSharesOutstanding, sharesChangeYoY, sharesChangeQoQ: sharesChange, likelySplit: !!currentVm?.snapshot?.splitSignal, insiderOwnership: toNumber(currentVm?.snapshot?.heldPercentInsiders), institutionOwnership: null, float: null },
     valuationRatios: { peRatio, forwardPE: toNumber(keyLatest.forwardPE), psRatio, forwardPS: toNumber(keyLatest.forwardPS), pbRatio, pfcfRatio, pegRatio: toNumber(keyLatest.pegRatio), evToEbitda, fcfYield },
-    expenses: { rdToRevenue: pctFromRatio(curInc.researchAndDevelopmentExpenses && curInc.revenue ? curInc.researchAndDevelopmentExpenses / curInc.revenue * 100 : null) },
+    expenses: {
+      rdToRevenue: pctFromRatio(curInc.researchAndDevelopmentExpenses && curInc.revenue ? curInc.researchAndDevelopmentExpenses / curInc.revenue * 100 : null),
+      sbcToRevenue
+    },
     capitalReturns: { shareholderYield: pctFromRatio(keyLatest.shareholderYieldTTM), totalYield: pctFromRatio(keyLatest.shareholderYieldTTM) },
     dividends: { payoutToFcf: pctFromRatio(ratiosLatest.dividendPayoutRatio ?? ratiosT.dividendPayoutRatio), growthYears: toNumber(keyLatest.dividendGrowthYears) },
     priceStats,
@@ -1319,9 +1549,15 @@ function buildStockFromStatements(all) {
 
 function computeRunwayYears(vm) {
   if (!vm) return null;
-  const latestQuarter = (vm.quarterlySeries || []).slice(-1)[0] || {};
-  const cash = toNumber(latestQuarter.cash ?? latestQuarter.cashAndCashEquivalents);
-  const sti = toNumber(latestQuarter.shortTermInvestments);
+  const sectorBucket = resolveSectorBucket(vm?.sector || vm?.sectorBucket);
+  if (sectorBucket === "Financials") return null; // Lending cash flows distort runway math
+  const series = (vm.quarterlySeries && vm.quarterlySeries.length ? vm.quarterlySeries : vm.annualSeries || []);
+  const latestQuarter = [...series].sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0] || {};
+  const rawCash = latestQuarter.cash ?? latestQuarter.cashAndCashEquivalents;
+  const rawSti = latestQuarter.shortTermInvestments;
+  const cash = toNumber(rawCash);
+  const sti = toNumber(rawSti);
+  if (rawCash == null && rawSti == null) return null; // don't assume zero cash when it's unreported
   const cashTotal = (Number.isFinite(cash) ? cash : 0) + (Number.isFinite(sti) ? sti : 0);
   const fcfTtm = toNumber(vm.snapshot?.freeCashFlowTTM ?? vm.ttm?.freeCashFlow);
   if (!Number.isFinite(cashTotal) || !Number.isFinite(fcfTtm)) return null;
@@ -1334,7 +1570,7 @@ function isPennyStockVm(vm = currentVm, stock = {}) {
   if (vm?.pennyStock) return true;
 
   const bucket = resolveSectorBucket(vm?.sector || vm?.sectorBucket);
-  const isBio = bucket === "Biotech/Pharma" ||
+  const isBio = isBiotechSector(bucket) ||
     (vm?.sicDescription && /pharm|bio|drug|device/i.test(vm?.sicDescription)) ||
     (vm?.companyName && /therapeutics|pharm|bio|sciences|medicine/i.test(vm?.companyName));
 
@@ -1396,7 +1632,8 @@ function computeGamificationSignals(vm = {}, stock = {}) {
     red: {
       bankruptcyRisk: bankruptcyRisk != null && bankruptcyRisk > 0.5,
       runwayShort: runwayYears != null && runwayYears < 1,
-      dilutionHigh: dilutionYoY != null && dilutionYoY > 0.2,
+      // Dilution is expressed as percentage points (e.g., 25 = +25% YoY).
+      dilutionHigh: dilutionYoY != null && dilutionYoY > 20,
       fcfMarginDeep: fcfMargin != null && fcfMargin < -80,
       operationalRiskHigh
     },
@@ -1411,7 +1648,7 @@ function computeGamificationSignals(vm = {}, stock = {}) {
       growthGood:
         (growthContinuation != null && growthContinuation >= 0.6) ||
         (revenueCagrPct != null && revenueCagrPct > 10),
-      lowDilution: dilutionYoY != null && dilutionYoY <= 0.02 && (!dilutionRiskScore || dilutionRiskScore < 0.3)
+      lowDilution: dilutionYoY != null && dilutionYoY <= 2 && (!dilutionRiskScore || dilutionRiskScore < 0.3)
     },
     runwayYears,
     fcfMargin
@@ -1471,11 +1708,144 @@ function renderScoreboard(reasonList = [], stock = {}, ratingMeta = null, comple
   if (missingToggle) missingToggle.style.display = "none"; // hide toggle in prod
   scoreReasonsEl.innerHTML = "";
   missingReasonsEl.innerHTML = "";
+  const achievementsEl = document.getElementById("achievements");
+  if (achievementsEl) {
+    achievementsEl.innerHTML = "";
+    achievementsEl.style.display = "none";
+  }
+
+  const friendlyReasonName = (name) => {
+    const peRegex = /\b(p\/?e|price\s*\/\s*earnings|price\s*to\s*earnings)\b/i;
+    const deRegex = /\bdebt\s*(\/|to)\s*equity\b|\bd\s*\/\s*e\b/i;
+    const n = String(name || "").toLowerCase();
+    if (/capital return/.test(n)) return "Capital Return";
+    if (/innovation investment/.test(n)) return "Innovation Investment";
+    if (/working capital/.test(n)) return "Working Capital";
+    if (/effective tax rate/.test(n)) return "Effective Tax Rate";
+    if (/price\s*\/\s*sales|p\/?s/.test(n)) return "Price vs Sales";
+    if (/price\s*\/\s*book|p\/?b/.test(n)) return "Price vs Book Value";
+    if (peRegex.test(n)) return "Price vs Earnings";
+    if (/net debt.*fcf/.test(n)) return "Debt Payback Time";
+    if (/debt maturity runway/.test(n)) return "Debt Maturity Mix";
+    if (deRegex.test(n)) return "Debt Level (D/E)";
+    if (/interest coverage/i.test(n)) return "Interest Coverage";
+    if (/fcf margin/i.test(n)) return "Cash Profit Margin";
+    if (/cash runway/i.test(n)) return "Cash Remaining (Runway)";
+    if (/dilution/i.test(n)) return "Share Count Change";
+    if (/share buybacks|buybacks/.test(n)) return "Share Buybacks";
+    if (/drawdown/i.test(n)) return "Drop from Highs";
+    if (/gross margin/i.test(n)) return "Gross Profit Margin";
+    if (/operating leverage/i.test(n)) return "Operating Leverage";
+    if (/roe/.test(n)) return "Return on Equity";
+    if (/roic/.test(n)) return "Return on Invested Capital";
+    if (/cagr/i.test(n)) return "Growth Trend (3Y)";
+    if (/50d.*200d|moving average|trend/i.test(n)) return "Price Trend";
+    if (/rd intensity|r&d/.test(n)) return "R&D Investment";
+    if (/capex intensity/.test(n)) return "Reinvestment Rate";
+    if (/revenue growth/i.test(n)) return "Revenue Growth";
+    return null;
+  };
+
+  const friendlyReasonMessage = (message) => {
+    const msg = String(message || "").trim();
+    if (/No P\/S data/i.test(msg)) return "Missing Price vs Sales data";
+    if (/No P\/B data/i.test(msg)) return "Missing Price vs Book data";
+    const hasLastClose = Number.isFinite(currentVm?.priceSummary?.lastClose);
+    if (/No price data/i.test(msg)) {
+      return hasLastClose ? "Price history unavailable; using last close only." : "Price data missing";
+    }
+    if (/No moving average data/i.test(msg)) {
+      return hasLastClose ? "Price history too thin for moving averages." : "Moving average data missing";
+    }
+    if (/No gross margin data/i.test(msg)) return "Margin data missing";
+    if (/No ROIC data/i.test(msg)) return "ROIC data missing";
+    if (/No EPS CAGR data/i.test(msg)) return "EPS growth data missing";
+    if (/No CAGR data/i.test(msg)) return "Growth data missing";
+    if (/No dividend payout data/i.test(msg)) return "Dividend data missing";
+    if (/Not applicable/i.test(msg)) return msg; // keep explicit NA
+    return msg;
+  };
+
   const reasons = Array.isArray(reasonList) ? reasonList.slice() : [];
   const missing = reasons.filter(r => r.missing);
-  // Filter out Neutral (0 score) items from the main display to reduce noise
-  const applicable = reasons.filter(r => !r.missing && r.score !== 0);
+  // Filter out Neutral (0 score) items and explicitly N/A items to reduce nose
+  const applicable = reasons.filter(r => !r.missing && !r.notApplicable && r.score !== 0);
   applicable.sort((a, b) => Math.abs(b.score) - Math.abs(a.score) || b.score - a.score);
+  const dilutionYoY = toNumber(
+    stock?.shareStats?.sharesChangeYoY ??
+    currentVm?.snapshot?.sharesOutChangeYoY ??
+    currentVm?.snapshot?.sharesOutChangeYoYRaw
+  );
+  const hasGoingConcernReason = reasons.some(
+    (r) => /going.?concern/i.test(r?.name || "") || /going.?concern/i.test(r?.message || "")
+  );
+  const hasGoingConcernSignal =
+    Array.isArray(filingSignals) &&
+    filingSignals.some(
+      (sig) =>
+        sig?.id === "going_concern" ||
+        /going.?concern/i.test(sig?.title || "") ||
+        /going.?concern/i.test(sig?.snippet || "")
+    );
+  const netIncomeTrend =
+    percentToNumber(stock?.profitGrowthTTM) ??
+    percentToNumber(currentVm?.snapshot?.netIncomeTrend) ??
+    percentToNumber(currentVm?.snapshot?.profitGrowthTTM) ??
+    (() => {
+      const inc = currentVm?.income || currentVm?.incomeStatements;
+      return Array.isArray(inc) ? yoyChange(inc, "netIncome") : null;
+    })();
+  const hasGoingConcernFlag =
+    hasGoingConcernSignal ||
+    hasGoingConcernReason ||
+    currentVm?.snapshot?.goingConcern === true ||
+    currentVm?.snapshot?.goingConcernFlag === true ||
+    currentVm?.snapshot?.warnings?.includes?.("going concern") ||
+    currentVm?.projections?.goingConcern === true ||
+    currentVm?.flags?.goingConcern === true ||
+    currentVm?.ratingMeta?.goingConcern === true ||
+    currentVm?.ratingMeta?.flags?.goingConcern === true;
+  // More nuanced distressed detection - only flag truly troubled companies
+  const marketCap = toNumber(
+    currentVm?.keyMetrics?.marketCap ?? currentVm?.snapshot?.marketCap ?? stock?.marketCap
+  );
+  const fcfMargin = computeFcfMargin(currentVm);
+  const runwayYears = computeRunwayYears(currentVm);
+  const bankruptcyRisk = toNumber(currentVm?.projections?.bankruptcyRiskScore);
+  const netMargin = toNumber(currentVm?.snapshot?.netMarginTTM ?? stock?.profitMargins?.profitMargin);
+  const isEstablished = Number.isFinite(marketCap) && marketCap > 10_000_000_000; // >$10B = established
+  const isProfitable = Number.isFinite(netMargin) && netMargin > 0;
+  const hasPositiveCashFlow = Number.isFinite(fcfMargin) && fcfMargin > 0;
+
+  const isDistressed =
+    !!hasGoingConcernFlag ||
+    (Number.isFinite(dilutionYoY) && dilutionYoY > 50) ||
+    (Number.isFinite(netIncomeTrend) && netIncomeTrend < -40) ||
+    (Number.isFinite(runwayYears) && runwayYears < 1) ||
+    (Number.isFinite(bankruptcyRisk) && bankruptcyRisk > 0.5);
+
+  // Only apply caution messages to truly troubled companies, not profitable established ones
+  const shouldShowCautions = isDistressed && !isEstablished && (!isProfitable || !hasPositiveCashFlow);
+  const psCautions = [
+    "Price is low because the market expects trouble, not because it's cheap.",
+    "Cheap price might mean investors are worried about survival.",
+    "Low price likely reflects fear about running out of cash.",
+    "Low price suggests financial distress, not a bargain.",
+    "Cheap valuations can signal a broken business, not a hidden gem."
+  ];
+  const deCautions = [
+    "Low debt is due to selling more shares, not business strength.",
+    "Debt looks low only because they sold so much stock.",
+    "Debt seems low, but it's likely due to share dilution.",
+    "Low debt/equity ratio is misleading due to dilution.",
+    "Selling stock distorts the debt ratio; don't assume it's safe."
+  ];
+  const pickVariant = (arr, seed = 1) => {
+    if (!arr.length) return "";
+    const s = Math.abs(Math.floor(seed)) || 1;
+    return arr[s % arr.length];
+  };
+  const tickerSeed = (stock?.ticker || ticker || "").split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) || 1;
   const iconPool = [
     "&#128200;", // chart rising
     "&#128202;", // bar chart
@@ -1493,17 +1863,131 @@ function renderScoreboard(reasonList = [], stock = {}, ratingMeta = null, comple
   const usedIcons = new Set();
   applicable.forEach(reason => {
     const div = document.createElement("div");
-    const badgeClass = getScoreClass(reason.score);
+    const highlight = /^(Capital Return|Innovation Investment|Working Capital|Effective Tax Rate)$/.test(String(reason?.name || ""));
+    const numericForBadge = Number(reason.score) || 0;
+    const badgeClass = highlight
+      ? (numericForBadge > 0 ? "good" : numericForBadge < 0 ? "risk" : "neutral")
+      : getScoreClass(reason.score);
     div.className = "reason-card".trim();
     const explainer = ruleExplainers[reason.name] || {};
     const posText = explainer.pos || "Positive scores mean the metric meets or beats the target, reinforcing quality/valuation strength.";
     const negText = explainer.neg || "Negative scores mean the metric falls short, signaling risk, dilution, or overvaluation.";
-    const explainerText = reason.score >= 0 ? posText : negText;
-    const titleText = toTitleCase(reason.name);
-    const numericScore = Number(reason.score) || 0;
+    let numericScore = numericForBadge;
+    let explainerText = numericScore >= 0 ? posText : negText;
+    const reasonName = String(reason.name || "");
+    const peRegex = /\b(p\/?e|price\s*\/\s*earnings|price\s*to\s*earnings)\b/i;
+    const isPs = /p\/?s|price.?\/.?sales|price.?to.?sales/i.test(reasonName);
+    const isDe = /\bdebt\s*(\/|to)\s*equity\b|\bd\s*\/\s*e\b/i.test(reasonName);
+    const isValuation =
+      isPs ||
+      isDe ||
+      peRegex.test(reasonName) ||
+      /price.?to.?book|p\/?b|ev.?\/.?ebitda|price.?to.?fcf/i.test(reasonName);
+    const isMargin = /margin|profit/i.test(reasonName);
+    const isBiotech =
+      resolveSectorBucket(stock?.sector || stock?.sectorBucket) === "Biotech/Pharma" ||
+      (/pharm|bio|therapeutic|sciences|medicine/i.test(stock?.sicDescription || "") ||
+        /pharm|bio|therapeutic|sciences|medicine/i.test(stock?.companyName || ""));
+    const preRevenueBiotech = isBiotech && (!Number.isFinite(stock?.revenueLatest) || Math.abs(stock?.revenueLatest) < 1_000_000);
+    // Only apply caution overlays and score caps for genuinely distressed companies
+    if (shouldShowCautions && isValuation && numericScore > 2) {
+      // Cap upside for distressed names but keep the message unchanged for users.
+      numericScore = 2;
+    }
+    if (shouldShowCautions && numericScore > 0) {
+      if (isPs) {
+        explainerText = pickVariant(psCautions, tickerSeed + numericScore);
+      } else if (isDe && Number.isFinite(dilutionYoY) && dilutionYoY > 10) {
+        // Only show debt distortion warning if dilution is actually significant (>10%)
+        explainerText = pickVariant(deCautions, tickerSeed + numericScore * 2);
+      }
+    }
+    if (preRevenueBiotech && (isPs || isMargin)) {
+      explainerText = "Pre-revenue biotech: focus on runway, dilution, and trial milestones; valuation/margins are less meaningful.";
+    }
+    let titleText = friendlyReasonName(reason.name) || toTitleCase(reason.name);
+    // Custom Card Titles
+    if (reason.name === "Debt / Equity" && reason.message.includes("Net Cash")) titleText = "Strong Balance Sheet";
+    if (reason.name === "Shares dilution YoY") {
+      const pctVal = percentToNumber(reason.message);
+      const collapseRaw = percentToNumber(
+        currentVm?.snapshot?.sharesOutChangeYoYRaw ??
+        currentVm?.snapshot?.sharesOutChangeYoY ??
+        reason.message
+      );
+      const collapsePct = Number.isFinite(collapseRaw) && Math.abs(collapseRaw) <= 1
+        ? collapseRaw * 100
+        : collapseRaw;
+      const likelyReverseSplit =
+        currentVm?.snapshot?.shareChangeLikelyReverseSplit ||
+        currentVm?.shareStats?.likelyReverseSplit ||
+        stock?.shareStats?.likelyReverseSplit ||
+        (Number.isFinite(collapsePct) && collapsePct < -40);
+      // Show extra precision for tiny moves so "-0.0%" becomes clearer (e.g., -0.04%)
+      if (Number.isFinite(pctVal) && Math.abs(pctVal) < 0.1) {
+        reason.message = `${pctVal.toFixed(2)}%`;
+      }
+      // Distinguish true buybacks from effectively flat share counts
+      if (likelyReverseSplit) {
+        titleText = "Reverse Split / Share Collapse";
+        explainerText = "Share count collapsed; likely a reverse split. Treat this as dilution risk, not a buyback.";
+        if (Number.isFinite(collapsePct)) {
+          reason.message = `${collapsePct.toFixed(1)}%`;
+        }
+      } else if (Number.isFinite(pctVal) && pctVal < -0.1) {
+        titleText = "Share Buybacks";
+      } else if (Number.isFinite(pctVal) && pctVal > 2) {
+        titleText = pctVal >= 20 ? "Heavy Dilution" : "Share Dilution";
+      } else {
+        titleText = "Share Count";
+      }
+    }
     const scoreText = numericScore > 0 ? `+${numericScore}` : (numericScore < 0 ? `${numericScore}` : "0");
-    const displayValue = reason.message || "N/A";
+    const displayValue = escapeHtml(friendlyReasonMessage(reason.message) || "N/A").replace(/\n/g, "<br>");
     const icon = iconForRule(reason.name, usedIcons, iconPool);
+    const timeBasis = reason?.timeBasis ? String(reason.timeBasis) : null;
+    const sourcePeriods = Array.isArray(reason?.sourcePeriods) ? reason.sourcePeriods : [];
+    const sourcesText = sourcePeriods.length
+      ? sourcePeriods
+        .map((p) => {
+          const field = p?.field ? String(p.field) : "unknown";
+          const basis = p?.basis ? String(p.basis) : "unknown";
+          const end = p?.periodEnd ? String(p.periodEnd) : "";
+          return end ? `${field} (${basis}@${end})` : `${field} (${basis})`;
+        })
+        .join(" | ")
+      : null;
+    const normalizationApplied = reason?.normalizationApplied ? String(reason.normalizationApplied) : null;
+
+    // Data Quality Badges
+    const dqDefaults = currentVm?.dataQuality?.defaultsUsed || [];
+    const dqMismatches = currentVm?.dataQuality?.materialMismatches || [];
+    let badgeHtml = "";
+
+    // 1. Net Debt Default Assumption
+    if (/Debt|Leverage/i.test(reason.name) && dqDefaults.some(d => d.field === "netDebt")) {
+      badgeHtml += `<div style="display:inline-block; margin-top:4px; padding:2px 5px; background:rgba(255,165,0,0.15); color:#d97706; border-radius:4px; font-size:10px; font-weight:600;">⚠️ Assumed Net Debt 0</div>`;
+    }
+
+    // 2. Period Mismatch (affects mixed-statement ratios: ROE, ROIC, Asset Turnover, Debt/Equity if using Net Debt vs EBITDA etc)
+    const isMixedRatio = /ROE|ROIC|Asset Efficiency|Debt|Turnover/i.test(reason.name);
+    if (isMixedRatio && dqMismatches.some(m => m.issue === "Statement Mismatch")) {
+      badgeHtml += `<div style="display:inline-block; margin-top:4px; margin-right:4px; padding:2px 5px; background:rgba(255,165,0,0.15); color:#d97706; border-radius:4px; font-size:10px; font-weight:600;">⚠️ Period Mismatch</div>`;
+    }
+
+    // 3. Stale Data (affects everything really, but flag core financials)
+    if (dqMismatches.some(m => m.issue === "Stale Data")) {
+      badgeHtml += `<div style="display:inline-block; margin-top:4px; margin-right:4px; padding:2px 5px; background:rgba(255,165,0,0.15); color:#d97706; border-radius:4px; font-size:10px; font-weight:600;">⚠️ Stale Data (>180d)</div>`;
+    }
+
+    const basisMetaHtml = (timeBasis)
+      ? `
+          <div style="font-size:11px; line-height:1.35; margin-top:auto; padding-top:6px; font-weight:600; color:var(--text-main); opacity:0.85;">
+            Basis: ${escapeHtml(timeBasis)}
+          </div>
+        `
+      : `<div style="margin-top:auto;"></div>`; // Spacer to ensure alignment if basis is missing
+    div.style.cssText = "display: flex; flex-direction: column; height: 100%;";
     div.innerHTML = `
           <div class="header">
             <div class="icon">${icon}</div>
@@ -1511,7 +1995,9 @@ function renderScoreboard(reasonList = [], stock = {}, ratingMeta = null, comple
             <div class="score-tag ${badgeClass}">${scoreText}</div>
           </div>
           <div class="value-pill ${badgeClass} whitespace-normal leading-tight" style="margin-top:4px;">${displayValue}</div>
-          <div class="muted" style="font-size:12px; line-height:1.35;">${explainerText}</div>
+          ${badgeHtml ? `<div style="margin-top:2px;">${badgeHtml}</div>` : ""}
+          <div class="muted" style="font-size:12px; line-height:1.35; margin-bottom: 4px;">${explainerText}</div>
+          ${basisMetaHtml}
         `;
     if (window.matchMedia("(pointer: coarse)").matches) {
       div.addEventListener("click", () => div.classList.toggle("expanded"));
@@ -1525,15 +2011,37 @@ function renderScoreboard(reasonList = [], stock = {}, ratingMeta = null, comple
     if (completeness && Number.isFinite(completeness.percent)) return completeness;
     if (reasons.length) {
       const missingCount = reasons.filter(r => r.missing).length;
-      const pct = Math.max(0, Math.min(100, ((reasons.length - missingCount) / reasons.length) * 100));
-      return { missing: missingCount, applicable: reasons.length - missingCount, percent: pct };
+      const rawPct = ((reasons.length - missingCount) / reasons.length) * 100;
+      // Normalize: scaled such that ~80% looks like 100%, 50% like 50%.
+      // We assume <20% is trash (0), 20%->80% maps to 0->100
+      const pct = Math.max(0, Math.min(100, (rawPct - 20) * 1.6));
+      return { missing: missingCount, applicable: reasons.length - missingCount, percent: pct, rawPercent: rawPct };
     }
     return null;
   })();
   updateSummaries(stock);
   updatePillars(stock, ratingMeta);
   applyCompleteness(resolvedCompleteness);
-  renderAchievements();
+}
+
+// Tooltip for Completeness
+const completenessPill = document.getElementById("completenessPill");
+if (completenessPill) {
+  const tooltip = document.createElement("div");
+  tooltip.id = "completenessTooltip";
+  tooltip.style.cssText = "position:absolute; background:rgba(15,23,42,0.95); color:#fff; padding:8px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); font-size:12px; max-width:220px; display:none; z-index:100; pointer-events:none; box-shadow:0 10px 25px -5px rgba(0,0,0,0.5);";
+  tooltip.textContent = "Confidence Score: Indicates data completeness. Higher score means fewer missing metrics in the analysis.";
+  document.body.appendChild(tooltip);
+
+  completenessPill.addEventListener("mouseenter", () => {
+    const rect = completenessPill.getBoundingClientRect();
+    tooltip.style.left = `${rect.left}px`;
+    tooltip.style.top = `${rect.bottom + 8}px`;
+    tooltip.style.display = "block";
+  });
+  completenessPill.addEventListener("mouseleave", () => {
+    tooltip.style.display = "none";
+  });
 }
 
 function renderSnapshot(income, balance, cash, keyMetrics, keyMetricsTtm, ratios, priceSeries, latestPrice) {
@@ -1721,17 +2229,17 @@ function renderTables(income, balance, cash, keyMetrics, ratios, keyMetricsTtm, 
     { key: "freeCashFlowPerShareTTM", label: "FCF/Share", formatter: nf, tone: "", noTone: true },
     { key: "revenuePerShareTTM", label: "Revenue/Share", formatter: nf, tone: "", noTone: true },
     { key: "bookValuePerShareTTM", label: "Book Value/Share", formatter: nf, tone: "", noTone: true },
-    { key: "pfcfRatio", alt: "priceToFreeCashFlowsRatio", label: "P/FCF", formatter: numf, tone: "", noTone: true },
-    { key: "peRatio", label: "P/E", formatter: numf, tone: "", noTone: true },
-    { key: "priceToSalesRatio", label: "P/S", formatter: numf, tone: "", noTone: true },
-    { key: "priceToBookRatio", label: "P/B", formatter: numf, tone: "", noTone: true }
+    { key: "pfcfRatio", alt: "priceToFreeCashFlowsRatio", label: "P/FCF", formatter: formatValuation, tone: "", noTone: true },
+    { key: "peRatio", label: "P/E", formatter: formatValuation, tone: "", noTone: true },
+    { key: "priceToSalesRatio", label: "P/S", formatter: formatValuation, tone: "", noTone: true },
+    { key: "priceToBookRatio", label: "P/B", formatter: formatValuation, tone: "", noTone: true }
   ], kmsTtmEntry);
 
   renderTransposed(document.getElementById("ratiosTable"), ratios, [
     { key: "currentRatio", label: "Current Ratio", formatter: numf, tone: "", noTone: true },
     { key: "quickRatio", label: "Quick Ratio", formatter: numf, tone: "", noTone: true },
     { key: "debtEquityRatio", alt: "debtToEquity", label: "Debt/Equity", formatter: numf, tone: "", noTone: true },
-    { key: "interestCoverage", label: "Interest Coverage (TTM)", formatter: numf, tone: "", noTone: true },
+    { key: "interestCoverage", label: "Interest Coverage (TTM)", formatter: formatCoverage, tone: "", noTone: true },
     { key: "grossProfitMargin", label: "Gross Margin %", formatter: pctf, tone: "", noTone: true },
     { key: "operatingProfitMargin", label: "Operating Margin %", formatter: pctf, tone: "", noTone: true },
     { key: "netProfitMargin", label: "Net Margin %", formatter: pctf, tone: "", noTone: true },
@@ -1915,7 +2423,7 @@ function computeRangeInfo(series = [], latestPrice = null) {
     if (position >= 0.33) return "Middle";
     return "Near low";
   })();
-  return { rangeText: `${formatPrice(low)}  ${formatPrice(high)}`, label, positionLabel, position, low, high, price };
+  return { rangeText: `${formatPrice(low)} - ${formatPrice(high)}`, label, positionLabel, position, low, high, price };
 }
 
 function renderPriceBlock(light, full) {
@@ -2161,17 +2669,30 @@ function updatePriceDisplay(valueNum, valueText, dayChange) {
   const priceDisplay = Number.isFinite(valueNum) ? `$${valueNum.toFixed(2)}` : (valueText || "--");
   if (lpEl) lpEl.textContent = priceDisplay;
 
+  const pending = currentVm?.pricePending === true;
+  const stale = hasPrice(currentVm) && isPriceStale(currentVm);
+  const hasPriceVal = Number.isFinite(valueNum);
+  // Keep wording stable in the UI: always show "Last Close" as the label.
+  const statusLabel = "Last Close";
+  const statusNote = pending
+    ? "Waiting for official end-of-day pricing."
+    : stale
+      ? `Showing cached close from ${dateStr}; refresh once new close posts.`
+      : hasPriceVal
+        ? "Official end-of-day pricing."
+        : "No valid price returned; chart is hidden until pricing loads.";
+
   stEl.innerHTML = `
     <div class="price-main-row">
-      <span class="status-label">Last Close</span> 
+      <span class="status-label">${statusLabel}</span> 
       <span class="status-value">${priceDisplay}</span>
     </div>
-    <div style="display:flex; flex-direction:column; line-height:1.2; margin-top:4px; align-items:flex-end; text-align:right;">
+    <div style="display:flex; flex-direction:column; line-height:1.25; margin-top:4px; align-items:flex-end; text-align:right;">
       <div style="font-size:10px; color:#9fb3c8; margin-bottom:2px; opacity:0.8;">
-        Price last updated: ${dateStr} &middot; End-of-Day
+        ${pending ? "Price timestamp pending" : `Price last updated: ${dateStr}`} &middot; End-of-Day
       </div>
       <div style="font-size:9px; color:#5da4b4; opacity:0.6; margin-top:0;">
-        (Bullish And Foolish uses official end-of-day pricing; intraday updates are not provided.)
+        ${statusNote}<br>Bullish And Foolish uses official end-of-day pricing; intraday updates are not provided.
       </div>
     </div>
   `;
@@ -2193,10 +2714,46 @@ function applyTier(qualityScore, { tierLabel = null } = {}) {
   const band = (tierLabel || getScoreBand(qualityScore)).toLowerCase();
   const isPenny = isPennyStockVm(currentVm);
   let customLabel = null;
-  if (isPenny && Number.isFinite(qualityScore)) {
+  let customTooltip = null;
+
+  // Check if this is a biotech/pharma company
+  const isBiotechSector = (() => {
+    const sector = String(currentVm?.sectorBucket || currentVm?.sector || "").toLowerCase();
+    const sicDesc = String(currentVm?.sicDescription || "").toLowerCase();
+    const name = String(currentVm?.companyName || "").toLowerCase();
+    return sector.includes("biotech") ||
+      sector.includes("pharma") ||
+      sicDesc.includes("pharmaceutical") ||
+      sicDesc.includes("biological") ||
+      sicDesc.includes("medicinal") ||
+      /\b(therapeutics|biopharma|oncology|biosciences)\b/i.test(name);
+  })();
+
+  // Distinguish clinical-stage (pre-revenue) from established pharma (LLY, AMGN, etc.)
+  const isEstablishedPharma = (() => {
+    if (!isBiotechSector) return false;
+    const revenueTTM = Number(currentVm?.snapshot?.revenueTTM ?? currentVm?.keyMetrics?.revenueTTM ?? 0);
+    const netIncome = Number(currentVm?.snapshot?.netIncomeTTM ?? currentVm?.keyMetrics?.netIncome ?? 0);
+    const marketCap = Number(currentVm?.marketCap ?? currentVm?.keyMetrics?.marketCap ?? 0);
+    // Established if: revenue > $2B OR (revenue > $500M AND profitable) OR mega-cap
+    return revenueTTM > 2_000_000_000 ||
+      (revenueTTM > 500_000_000 && netIncome > 0) ||
+      marketCap > 50_000_000_000;
+  })();
+
+  const isClinicalStageBiotech = isBiotechSector && !isEstablishedPharma;
+
+  // Only apply "Trial Dependent" to clinical-stage biotechs, not established pharma
+  if (isClinicalStageBiotech) {
+    customLabel = "Trial Dependent";
+    customTooltip = "Pre-revenue biotech – investment thesis depends on clinical trial outcomes. Traditional financial metrics have limited relevance.";
+  } else if (isPenny && Number.isFinite(qualityScore)) {
     if (qualityScore < 15) customLabel = "Severe Risk";
-    else if (qualityScore < 30) customLabel = "Likely Value Trap";
+    else if (qualityScore < 30) {
+      customLabel = "Likely Value Trap";
+    }
   }
+
   const labelMap = {
     incomplete: "Data Incomplete",
     danger: "Likely Value Trap",
@@ -2209,31 +2766,40 @@ function applyTier(qualityScore, { tierLabel = null } = {}) {
   const tooltipMap = {
     incomplete: "Critical financial data is missing. Rating suspended.",
     danger: "Severe weaknesses. Avoid unless you like gambling.",
-    spec: "Volatile or early-stage. Could run hard — or collapse.",
-    mixed: "Neutral profile — upside exists but not without caveats.",
+    spec: "Volatile or early-stage. Could run hard - or collapse.",
+    mixed: "Neutral profile - upside exists but not without caveats.",
     solid: "Steady fundamentals. Good for conservative portfolios.",
     bullish: "Strong financials & momentum. Attractive long-term setup.",
     elite: "Top-tier resilience + growth. Long-term compounder potential."
   };
+
   const tier = customLabel || labelMap[band] || "Analyst";
-  console.debug("tier debug", { qualityScore, band, tier });
   if (tierBadge) {
     tierBadge.textContent = tier;
-    tierBadge.title = customLabel || tooltipMap[band] || "";
+    tierBadge.title = customTooltip || tooltipMap[band] || "";
     if (band === "incomplete") {
       tierBadge.style.background = "#e2e8f0";
       tierBadge.style.color = "#64748b";
+    } else if (isClinicalStageBiotech) {
+      // Special purple styling for clinical-stage biotechs
+      tierBadge.style.background = "rgba(147, 51, 234, 0.15)";
+      tierBadge.style.color = "#c084fc";
     } else {
       tierBadge.style.background = ""; // reset
       tierBadge.style.color = "";
     }
   }
+
   const dot = document.getElementById("tierDotTop");
   if (dot) {
     dot.classList.remove("bullish", "neutral", "bearish", "incomplete");
     if (band === "incomplete") {
       dot.classList.add("neutral"); // grey
       dot.style.background = "#cbd5e1";
+    } else if (isClinicalStageBiotech) {
+      // Clinical-stage biotechs always show neutral bull - it's 50/50
+      dot.classList.add("neutral");
+      dot.style.background = "";
     } else {
       dot.style.background = "";
       if (band === "danger" || band === "spec") dot.classList.add("bearish");
@@ -2264,20 +2830,22 @@ function applyCompleteness(completeness) {
   if (!Number.isFinite(pct)) {
     fill.style.width = "0%";
     fill.style.background = colorForBand(0);
-    text.textContent = "Data completeness: n/a";
+    text.textContent = "Confidence: n/a";
     if (pill) pill.classList.add("dim");
-    if (icon) icon.textContent = "⚠️";
+    if (icon) icon.textContent = "!";
     return;
   }
   const clamped = Math.max(0, Math.min(100, pct));
-  fill.style.width = `${clamped.toFixed(0)}% `;
+  const level = clamped >= 90 ? "High" : clamped >= 75 ? "Medium" : "Low";
+  fill.style.width = `${clamped.toFixed(0)}%`;
   fill.style.background = colorForBand(clamped);
-  text.textContent = `Data: ${clamped.toFixed(0)}% of key fields`;
+  text.innerHTML = `Confidence: ${level}<br><span style="opacity:0.75;">(${clamped.toFixed(0)}% data coverage)</span>`;
   if (pill) {
     pill.classList.remove("good", "dim");
     if (clamped >= 90) pill.classList.add("good");
+    else if (clamped < 60) pill.classList.add("dim");
   }
-  if (icon) icon.textContent = clamped < 70 ? "⚠️" : "ℹ️";
+  if (icon) icon.textContent = clamped < 60 ? "!" : level === "Medium" ? "i" : "";
 }
 
 function getScoreBand(val) {
@@ -2287,8 +2855,7 @@ function getScoreBand(val) {
   if (v >= 90) return "elite";
   if (v >= 75) return "bullish";
   if (v >= 60) return "solid";
-  if (v >= 45) return "mixed";
-  if (v >= 30) return "spec";
+  if (v >= 40) return "mixed";
   return "danger";
 }
 
@@ -2308,13 +2875,86 @@ function colorForBand(val) {
 
 function renderAchievements() {
   const el = document.getElementById("achievements");
-  if (el) el.innerHTML = "";
+  if (!el) return;
+  el.innerHTML = "";
+
+  const highlightNames = [
+    "Capital Return",
+    "Innovation Investment",
+    "Working Capital",
+    "Effective Tax Rate"
+  ];
+
+  const friendlyReasonName = (name) => {
+    const n = String(name || "").toLowerCase();
+    if (/capital return/.test(n)) return "Capital Return";
+    if (/innovation investment/.test(n)) return "Innovation Investment";
+    if (/working capital/.test(n)) return "Working Capital";
+    if (/effective tax rate/.test(n)) return "Effective Tax Rate";
+    return null;
+  };
+
+  const friendlyReasonMessage = (message) => String(message || "").trim();
+
+  const reasons = Array.isArray(currentVm?.ratingReasons)
+    ? currentVm.ratingReasons
+    : Array.isArray(currentVm?.rating?.reasons)
+      ? currentVm.rating.reasons
+      : [];
+
+  const byName = new Map(reasons.map((r) => [r?.name, r]).filter(([k]) => k));
+  const iconPool = ["&#128176;", "&#128640;", "&#128184;", "&#129514;", "&#128202;", "&#128200;"];
+  const usedIcons = new Set();
+
+  highlightNames
+    .map((name) => byName.get(name))
+    .filter(Boolean)
+    .forEach((reason) => {
+      const unavailable = !!reason.missing || !!reason.notApplicable;
+      const numericScore = unavailable ? 0 : (Number(reason.score) || 0);
+      const badgeClass = numericScore > 0 ? "good" : numericScore < 0 ? "risk" : "neutral";
+      const scoreText = numericScore > 0 ? `+${numericScore}` : (numericScore < 0 ? `${numericScore}` : "0");
+      const titleText = friendlyReasonName(reason.name) || toTitleCase(reason.name);
+      const displayValue = friendlyReasonMessage(reason.message) || "N/A";
+      const displayHtml = escapeHtml(displayValue).replace(/\n/g, "<br>");
+      const explainer = ruleExplainers[reason.name] || {};
+      const posText = explainer.pos || "Positive scores mean the metric meets the target.";
+      const negText = explainer.neg || "Negative scores mean the metric falls short of the target.";
+      const explainerText = numericScore >= 0 ? posText : negText;
+      const icon = iconForRule(reason.name, usedIcons, iconPool);
+      const timeBasis = reason?.timeBasis ? String(reason.timeBasis) : null;
+      const basisMetaHtml = (timeBasis)
+        ? `
+            <div style="font-size:11px; line-height:1.35; margin-top:auto; padding-top:6px; font-weight:600; color:var(--text-main); opacity:0.85;">
+              Basis: ${escapeHtml(timeBasis)}
+            </div>
+          `
+        : `<div style="margin-top:auto;"></div>`;
+
+      const div = document.createElement("div");
+      div.className = "reason-card".trim();
+      div.style.cssText = "display: flex; flex-direction: column; height: 100%;";
+      div.innerHTML = `
+        <div class="header">
+          <div class="icon">${icon}</div>
+          <div class="title whitespace-normal leading-tight">${escapeHtml(titleText)}</div>
+          <div class="score-tag ${badgeClass}">${scoreText}</div>
+        </div>
+        <div class="value-pill ${badgeClass} whitespace-normal leading-tight" style="margin-top:4px;">${displayHtml}</div>
+        <div class="muted" style="font-size:12px; line-height:1.35; margin-bottom: 4px;">${escapeHtml(explainerText)}</div>
+        ${basisMetaHtml}
+      `;
+      if (window.matchMedia("(pointer: coarse)").matches) {
+        div.addEventListener("click", () => div.classList.toggle("expanded"));
+      }
+      el.appendChild(div);
+    });
 }
 function iconForRule(name, usedIcons = null, pool = []) {
   const map = {
     "Revenue momentum": "&#128200;",
     "Gross margin quality": "&#129534;",
-    "Operating margin": "&#128736;",
+    "Operating leverage": "&#128736;",
     "Net margin": "&#10135;",
     "FCF margin": "&#128181;",
     "ROE": "&#127942;",
@@ -2329,6 +2969,11 @@ function iconForRule(name, usedIcons = null, pool = []) {
     "Piotroski F": "&#128200;",
     "Dilution watch": "&#129720;",
     "Buyback / issuance quality": "&#128260;",
+    "Share buybacks (TTM)": "&#128176;",
+    "Capital Return": "&#128176;",
+    "Innovation Investment": "&#128640;",
+    "Working Capital": "&#128184;",
+    "Effective Tax Rate": "&#129514;",
     "Total shareholder yield": "&#127873;",
     "R&D intensity": "&#128300;",
     "SG&A efficiency": "&#128201;",
@@ -2396,15 +3041,15 @@ function getScoreClass(score) {
 function buildTakeaway(band) {
   const t = ticker || "This stock";
   if (isPennyStockVm(currentVm)) {
-    let sayings = [
+    const sayings = [
       "Penny-stock profile: fragile balance sheet; financing risk is high.",
       "Speculative setup; dilution and cash burn drive the story.",
       "Tiny-cap risk zone; treat any upside as optionality, not certainty."
     ];
-    if (currentVm?.riskFactors && Array.isArray(currentVm.riskFactors) && currentVm.riskFactors.length) {
-      sayings = [...sayings, ...currentVm.riskFactors];
-    }
-    return sayings[Math.floor(Math.random() * sayings.length)];
+    const seed = (ticker || "")
+      .split("")
+      .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+    return sayings[Math.abs(seed) % sayings.length];
   }
   const base = {
     elite: `Cash - rich, strong margins, durable moat; looks elite.`,
@@ -2454,179 +3099,929 @@ const makeBullet = (kind, text) => `${BULLET_PREFIX[kind] || BULLET_PREFIX.note}
 
 function computeRiskSummary(stock = {}) {
   const f = stock.financialPosition || {};
-  const s = stock.stability || {};
-  const p = stock.priceStats || {};
   const proj = currentVm?.projections || {};
   const isPenny = isPennyStockVm(currentVm, stock);
-  const isBio = stock.sectorBucket === "biotech";
+  const sectorBucket = resolveSectorBucket(stock?.sectorBucket || stock?.sector);
+  const isEstablished =
+    stock?.ratingTierLabel === "solid" ||
+    stock?.ratingTierLabel === "bullish" ||
+    stock?.ratingTierLabel === "elite" ||
+    (stock?.keyMetrics?.marketCap && stock.keyMetrics.marketCap > 10_000_000_000);
+
+  const hasCards = Array.isArray(stock.ratingReasons) && stock.ratingReasons.length > 0;
   const bullets = [];
   const grouped = { solvency: [], quality: [], valuation: [] };
   const seenTags = new Set();
-  const push = (cat, kind, text) => {
-    // Deduplication logic
-    let tag = text;
-    if (text.includes("runway")) tag = "runway";
-    else if (text.includes("burn") || text.includes("FCF margin")) tag = "burn";
-    else if (text.includes("dilution") || text.includes("Share count")) tag = "dilution";
+  const baseBasis = (currentVm?.ratingBasis === "annual" || currentVm?.annualMode === true) ? "Annual" : "TTM";
+  const basisFor = (kind) => {
+    if (kind === "mixed") return "Mixed";
+    if (kind === "ttm") return "TTM";
+    if (kind === "annual") return "Annual";
+    return baseBasis;
+  };
 
-    // User preference: keep "Short cash runway", suppress "going-concern" if runway already flagged
-    if (seenTags.has(tag)) return;
+  const getReason = (re) =>
+    (Array.isArray(stock.ratingReasons) ? stock.ratingReasons : []).find((r) => re.test(String(r?.name || "")));
+  const getReasonScore = (re) => {
+    const r = getReason(re);
+    const n = Number(r?.score);
+    return Number.isFinite(n) ? n : null;
+  };
 
-    seenTags.add(tag);
+  const fmtPct0 = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "n/a";
+    const r = Math.round(n);
+    return `${r === 0 ? 0 : r}%`;
+  };
+  const fmtPct1 = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "n/a";
+    const r = Math.round(n * 10) / 10;
+    return `${r === 0 ? 0 : r}%`;
+  };
+  const fmtYears1 = (v) => `${Number(v).toFixed(1)}y`;
+  const fmtX1 = (v) => `${Number(v).toFixed(1)}x`;
 
-    const bullet = makeBullet(kind, text);
-    bullets.push(bullet);
-    // Updated warning icon to emoji style ⚠️
+  const stableHash32 = (str) => {
+    let h = 2166136261;
+    const s = String(str || "");
+    for (let i = 0; i < s.length; i += 1) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  };
+  const pick = (tag, variants) => {
+    const arr = Array.isArray(variants) ? variants.filter(Boolean) : [];
+    if (!arr.length) return null;
+    const seedKey = String(currentVm?.ticker || ticker || stock?.ticker || "");
+    const idx = stableHash32(`${seedKey}:${tag}`) % arr.length;
+    return arr[idx];
+  };
+
+  const describeDilution = (pctYoY) => {
+    const v = Number(pctYoY);
+    if (!Number.isFinite(v)) return null;
+    if (v >= 80) return "share count jumped a lot";
+    if (v >= 40) return "share count rose sharply";
+    if (v >= 20) return "share count rose meaningfully";
+    if (v >= 8) return "share count rose modestly";
+    if (v <= -8) return "share count fell (buybacks)";
+    return "share count was roughly flat";
+  };
+
+  const describeCashBurn = (fcfMarginPct) => {
+    const v = Number(fcfMarginPct);
+    if (!Number.isFinite(v)) return null;
+    if (v >= 10) return "generating cash";
+    if (v >= 0) return "roughly cash-neutral";
+    if (v <= -200) return "burning cash very heavily";
+    if (v <= -50) return "burning cash heavily";
+    if (v <= -10) return "burning cash";
+    return "slightly cash-flow negative";
+  };
+
+  const revenueTtm = toNumber(stock?.revenueTtm ?? stock?.revenueLatest);
+  const isPreRevenueBiotech =
+    sectorBucket === "Biotech/Pharma" && (!Number.isFinite(revenueTtm) || revenueTtm < 50_000_000);
+
+  const add = (cat, kind, text, { severity = null, tag = null, basis = null } = {}) => {
+    if (!text) return;
+    const resolvedSeverity =
+      severity != null
+        ? severity
+        : kind === "risk"
+          ? 3
+          : kind === "note"
+            ? 2
+            : 1;
+    const resolvedTag = tag || text;
+    if (seenTags.has(resolvedTag)) return;
+    seenTags.add(resolvedTag);
+    bullets.push(makeBullet(kind, text));
     const icon = kind === "good" ? "&#9989;" : kind === "risk" ? "&#10060;" : "&#9888;&#65039;";
     if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push({ level: kind, text, label: `${icon} ${text} ` });
+    const basisLabel = basisFor(basis || "mixed");
+    const basisHtml = ` <span style="opacity:0.75; font-size:11px;">Basis: ${basisLabel}</span>`;
+    grouped[cat].push({ level: kind, text, label: `${icon} ${text}${basisHtml} `, severity: resolvedSeverity, basis: basisLabel });
   };
-  if (f.debtIsZero) {
-    push("solvency", "good", "Debt-free balance sheet.");
-  } else if (f.netCash) {
-    push("solvency", "good", "Net cash position; no net debt.");
-  }
-  const ndFcf = f.netDebtToFcfYears;
-  if (ndFcf != null) {
-    if (ndFcf < 1 && Number.isFinite(f.netDebt) && f.netDebt > 0) {
-      push("solvency", "good", "Net debt under ~1 year of FCF; light leverage.");
-    } else if (ndFcf < 3) {
-      push("solvency", "good", `Net debt payoff about ${ndFcf.toFixed(1)} yrs; manageable if FCF holds.`);
-    } else if (ndFcf < 6) {
-      push("solvency", "note", `Net debt / FCF ~${ndFcf.toFixed(1)} yrs; watch leverage.`);
-    } else {
-      push("solvency", "risk", `Heavy leverage: ~${ndFcf.toFixed(1)} yrs to clear debt; sensitive to shocks.`);
-    }
-  }
-  const runwayYears = f.runwayYears;
-  if (runwayYears != null) {
-    if (runwayYears === Infinity) {
-      push("solvency", "good", "Runway: Self-funded (FCF positive).");
-    } else if (runwayYears < 1) {
-      if (isBio) push("solvency", "risk", "Short cash runway; financing risk elevated.");
-      else push("solvency", "risk", "Short cash runway; financing risk elevated.");
 
-      if (runwayYears < 0.75) push("solvency", "risk", "Possible going-concern risk; cash runway under 9 months.");
-    } else if (runwayYears < 2) {
-      push("solvency", "note", `Cash runway ~${runwayYears.toFixed(1)} years; monitor burn vs catalysts.`);
-    }
-  }
+  const runwayYears = toNumber(f.runwayYears);
   const fcfMargin = percentToNumber(stock.profitMargins?.fcfMargin);
-  if (fcfMargin != null) {
-    if (fcfMargin < -50) {
-      if (isBio) {
-        const burnRatio = Math.abs(fcfMargin / 100).toFixed(1);
-        push("quality", "risk", `Cash Burn: ~$${burnRatio} per $1 of revenue — normal for early - stage biotech.Key factor is runway.`);
-      } else {
-        push("quality", "risk", "Deeply negative FCF margin; burn is heavy.");
-      }
-    }
-    else if (fcfMargin < -10) push("quality", "note", "Negative FCF margin; needs funding or improvements.");
-    if (isPenny && fcfMargin < 0) {
-      // push("quality", "risk", "Deep negative free cash flow; burn rate elevated."); // deduplicated
-    }
-  }
+  const opMargin = percentToNumber(stock.profitMargins?.operatingMargin);
+  const revGrowth = (() => {
+    const fromRule = percentToNumber(getReason(/revenue growth yoy/i)?.message);
+    if (Number.isFinite(fromRule)) return fromRule;
+    return percentToNumber(stock?.growth?.revenueGrowthTTM);
+  })();
+  const marginTrend = toNumber(stock?.momentum?.marginTrend);
+  const fcfTrend = toNumber(stock?.momentum?.fcfTrend);
+  const dilutionYoY = percentToNumber(
+    stock?.shareStats?.sharesChangeYoY ??
+    currentVm?.snapshot?.sharesOutChangeYoY ??
+    currentVm?.snapshot?.sharesOutChangeYoYRaw
+  );
+  const dilutionQoQ = percentToNumber(stock?.shareStats?.sharesChangeQoQ);
   const bankruptcyRisk = toNumber(proj.bankruptcyRiskScore);
-  if (bankruptcyRisk != null && bankruptcyRisk > 0.5) {
-    push("solvency", "risk", "Model flags elevated bankruptcy risk; balance sheet is fragile.");
-  }
   const dilutionRisk = toNumber(proj.dilutionRiskScore);
+  const ndFcfYears = toNumber(f.netDebtToFcfYears);
+  const interestCoverage = toNumber(f.interestCoverage);
+
+  const hasNegativeEquity = (stock.ratingReasons || []).some(
+    (r) => /negative equity/i.test(r?.message || "") || /negative equity/i.test(r?.name || "")
+  );
+
+  const hasFilingSignals = Array.isArray(filingSignals) && filingSignals.length > 0;
+  const hasGoingConcernSignal =
+    hasFilingSignals &&
+    filingSignals.some(
+      (sig) =>
+        sig?.id === "going_concern" ||
+        /going.?concern/i.test(sig?.title || "") ||
+        /going.?concern/i.test(sig?.snippet || "")
+    );
+
+  const debtScore = getReasonScore(/debt\s*\/\s*equity/i);
+  const psScore = getReasonScore(/price\s*\/\s*sales|p\/?s/i);
+  const peScore = getReasonScore(/price\s*\/\s*earnings|p\/?e/i);
+  const pfcfScore = getReasonScore(/price\s*\/\s*fcf|p\/?fcf/i);
+  const valuationOverstretched =
+    [psScore, peScore, pfcfScore].some((v) => Number.isFinite(v) && v < 0);
+  const valuationCheapish =
+    [psScore, peScore, pfcfScore].some((v) => Number.isFinite(v) && v >= 4);
+
+  const runwayShort = Number.isFinite(runwayYears) && runwayYears < 1;
+  const runwayTight = Number.isFinite(runwayYears) && runwayYears >= 1 && runwayYears < 2;
+  const deepBurn = Number.isFinite(fcfMargin) && fcfMargin < -50;
+  const burn = Number.isFinite(fcfMargin) && fcfMargin < 0;
+  const marginsCompressing = Number.isFinite(marginTrend) && marginTrend < -5;
+  const cashImproving = Number.isFinite(fcfTrend) && fcfTrend > 10;
+  const cashWorsening = Number.isFinite(fcfTrend) && fcfTrend < -10;
+  const dilutionHigh = Number.isFinite(dilutionYoY) && dilutionYoY > 25;
+  const dilutionPersistent = Number.isFinite(dilutionQoQ) && dilutionQoQ > 5 && !proj?.dilutionOneOff;
+  const growthStrong = Number.isFinite(revGrowth) && revGrowth > 25;
+  const growthWeak = Number.isFinite(revGrowth) && revGrowth < 0;
+  const profitStrong = Number.isFinite(opMargin) && opMargin > 15;
+  const profitWeak = Number.isFinite(opMargin) && opMargin < 0;
+
+  if (isPreRevenueBiotech) {
+    add(
+      "quality",
+      "note",
+      pick("bio_context", [
+        "Pre-revenue biotech: focus on cash runway, dilution, and trial milestones; margins and valuation multiples are less informative.",
+        "Biotech context: before steady product revenue, runway and dilution usually matter more than margins or traditional valuation ratios.",
+        "Early-stage biotech often runs cash-flow negative; the key is runway and whether dilution is manageable until milestones land."
+      ]),
+      { severity: 1, tag: "bio_context", basis: "mixed" }
+    );
+  }
+
+  // Model-level & data-quality risk (allowed even if it's single-source)
+  if (bankruptcyRisk != null && bankruptcyRisk > 0.5 && !isEstablished) {
+    add(
+      "solvency",
+      "risk",
+      pick("model_bankruptcy", [
+        "Model flag: elevated financial stress risk (may need refinancing or a cash raise).",
+        "Model flag: higher-than-usual solvency risk (watch funding and debt maturity timelines).",
+        "Model flag: heightened failure/financing risk if conditions worsen."
+      ]),
+      { severity: 3, tag: "model_bankruptcy", basis: "mixed" }
+    );
+  }
   if (dilutionRisk != null && dilutionRisk > 0.5) {
-    push("quality", "risk", "High dilution risk; equity raises likely.");
+    add(
+      "quality",
+      "risk",
+      pick("model_dilution", [
+        "Model flag: dilution risk is elevated (more new shares could be issued).",
+        "Model flag: higher dilution risk (future fundraising may reduce existing ownership).",
+        "Model flag: dilution pressure looks high (equity issuance may be part of the plan)."
+      ]),
+      { severity: 2, tag: "model_dilution", basis: "mixed" }
+    );
+  } else if (proj?.dilutionOneOff) {
+    add(
+      "quality",
+      "note",
+      pick("model_dilution_oneoff", [
+        "Model note: recent dilution looks like a one-off raise, not a steady pattern.",
+        "Model note: share issuance appears episodic (may not repeat every quarter).",
+        "Model note: dilution spike looks one-time; watch if it continues."
+      ]),
+      { severity: 2, tag: "model_dilution_oneoff", basis: "mixed" }
+    );
   }
-  if (f.interestCoverage != null) {
-    if (f.interestCoverage > 8) push("solvency", "good", "Interest easily covered by earnings.");
-    else if (f.interestCoverage > 4) push("solvency", "note", "Interest cover acceptable; monitor if earnings wobble.");
-    else push("solvency", "risk", "Thin interest cover; downturn could stress payments.");
+  if (hasGoingConcernSignal) {
+    add(
+      "solvency",
+      "risk",
+      pick("filing_going_concern", [
+        "SEC filing uses “going concern” language (management is warning about funding risk).",
+        "SEC filing includes “going concern” wording (they’re signaling uncertainty about funding).",
+        "SEC filing flags “going concern” risk (keep an eye on runway/financing plans)."
+      ]),
+      { severity: 3, tag: "filing_going_concern", basis: "mixed" }
+    );
   }
-  const dil = percentToNumber(stock?.shareStats?.sharesChangeYoY);
-  if (dil != null) {
-    if (dil < 2) {
-      push("quality", "good", "Share count stable; low dilution risk.");
-    } else if (dil <= 10) {
-      push("quality", "note", `Share count up ~${formatPctCompact(dil)} YoY; monitor issuance.`);
-    } else {
-      if (isPenny && dil > 50) {
-        push("quality", "risk", "Heavy dilution suggests continuous equity raises; survival depends on external capital.");
-      } else if (dil > 100) {
-        push("quality", "risk", "Death Spiral Dilution Risk.");
-      } else {
-        push("quality", "risk", "High dilution pattern; shareholder value pressure.");
+  if (currentVm?.dataQuality?.mismatchedPeriods) {
+    add(
+      "quality",
+      "note",
+      pick("dq_mismatch", [
+        "Data note: some statements look out of sync by period, so a few ratios may be noisy.",
+        "Data note: statements don’t line up perfectly by date; treat some ratios as approximate.",
+        "Data note: mismatched reporting periods can make trend signals jumpy."
+      ]),
+      { severity: 2, tag: "dq_mismatch", basis: "mixed" }
+    );
+  }
+  if (Array.isArray(currentVm?.dataQuality?.materialMismatches) && currentVm.dataQuality.materialMismatches.length) {
+    add(
+      "quality",
+      "note",
+      pick("dq_material", [
+        "Data note: a few statement fields don’t reconcile cleanly; treat the summary as directional.",
+        "Data note: some numbers conflict across statements; double-check the underlying cards.",
+        "Data note: statement consistency looks off in places; use the details below for context."
+      ]),
+      { severity: 2, tag: "dq_material", basis: "mixed" }
+    );
+  }
+  const completenessPct = Number(currentVm?.dataCompleteness?.percent);
+  if (Number.isFinite(completenessPct) && completenessPct < 45) {
+    add(
+      "quality",
+      "note",
+      pick("low_confidence", [
+        "Lower confidence: lots of data is missing, so the summary can be incomplete.",
+        "Lower confidence: missing data limits what can be concluded from EDGAR right now.",
+        "Lower confidence: several metrics are missing, so treat the score as a rough read."
+      ]),
+      { severity: 2, tag: "low_confidence", basis: "mixed" }
+    );
+  }
+  if (currentVm?.confidenceMeta?.level === "low") {
+    add(
+      "quality",
+      "note",
+      pick("confidence_low", [
+        "Lower confidence: filings may be stale or incomplete (see the confidence pill).",
+        "Lower confidence: this ticker has limited/stale filing coverage right now.",
+        "Lower confidence: some filing data may be old; treat the read as provisional."
+      ]),
+      { severity: 2, tag: "confidence_low", basis: "mixed" }
+    );
+  }
+
+  // ========== Cash Flow / Liability Quality Signals ==========
+  const seriesDesc = (() => {
+    const src = (currentVm?.quarterlySeries && currentVm.quarterlySeries.length)
+      ? currentVm.quarterlySeries
+      : (currentVm?.annualSeries || []);
+    return src
+      .slice()
+      .filter((p) => p && p.periodEnd)
+      .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd));
+  })();
+  const recentSeries = (n = 12) => seriesDesc.slice(0, n);
+
+  const sumRecentSeries = (getter, n = 12) => {
+    const list = recentSeries(n);
+    let sum = 0;
+    let used = 0;
+    for (const row of list) {
+      const v = getter(row);
+      const num = Number(v);
+      if (!Number.isFinite(num)) continue;
+      sum += num;
+      used += 1;
+    }
+    return used ? { sum, used } : { sum: null, used: 0 };
+  };
+
+  // Cash conversion quality (3y): CFO vs Net Income
+  const ni = sumRecentSeries((q) => q.netIncome, 12);
+  const cfo = sumRecentSeries((q) => q.operatingCashFlow, 12);
+  if (Number.isFinite(ni.sum) && ni.sum > 0 && Number.isFinite(cfo.sum)) {
+    const ratio = cfo.sum / ni.sum;
+    if (ratio > 1.1) {
+      add(
+        "quality",
+        "good",
+        pick("cash_conversion_good", [
+          "Cash-rich earnings: operating cash flow has exceeded net income over the last ~3 years.",
+          "Strong cash conversion: operating cash flow is running ahead of accounting profits.",
+          "High-quality earnings: cash generation has outpaced reported profits recently.",
+          "Cash conversion looks strong: the business is turning earnings into cash efficiently."
+        ]),
+        { severity: 2, tag: "cash_conversion_good", basis: "ttm" }
+      );
+    } else if (ratio < 0.8) {
+      add(
+        "quality",
+        "risk",
+        pick("cash_conversion_suspect", [
+          "Accrual-heavy earnings: cash from operations is lagging net income over the last ~3 years.",
+          "Cash conversion looks weak: reported profits are not translating into operating cash flow.",
+          "Earnings quality flag: operating cash flow has trailed net income for an extended period.",
+          "Profit may be less cash-backed than it looks: CFO is running below net income."
+        ]),
+        { severity: 2, tag: "cash_conversion_suspect", basis: "ttm" }
+      );
+    }
+  }
+
+  // Capex vs Depreciation (3y): reinvestment intensity proxy
+  const capex = sumRecentSeries((q) => q.capex, 12);
+  const dep = sumRecentSeries((q) => q.depreciationDepletionAndAmortization, 12);
+  if (Number.isFinite(capex.sum) && Number.isFinite(dep.sum) && dep.sum > 0) {
+    const capexOut = Math.abs(capex.sum);
+    const ratio = capexOut / dep.sum;
+    if (ratio > 1.5) {
+      add(
+        "quality",
+        "note",
+        pick("capex_vs_dep_expand", [
+          "Reinvestment is elevated: CapEx has run well above depreciation (expanding infrastructure).",
+          "CapEx intensity is high versus depreciation, suggesting the company is building/expanding assets.",
+          "Investment-heavy phase: CapEx is outpacing depreciation by a wide margin.",
+          "CapEx is running meaningfully above depreciation, signaling expansion or major upgrades."
+        ]),
+        { severity: 1, tag: "capex_vs_dep_expand", basis: "ttm" }
+      );
+    } else if (ratio < 1.0) {
+      add(
+        "quality",
+        "note",
+        pick("capex_vs_dep_harvest", [
+          "CapEx is running below depreciation, which can signal underinvestment or asset harvesting.",
+          "Reinvestment looks light: CapEx is below depreciation, potentially indicating aging assets.",
+          "CapEx vs depreciation is low; growth may rely more on existing assets than new investment.",
+          "CapEx is trailing depreciation, which may indicate maintenance-only spending."
+        ]),
+        { severity: 1, tag: "capex_vs_dep_harvest", basis: "ttm" }
+      );
+    }
+  }
+
+  // Deferred revenue trajectory (YoY): contract liabilities as a proxy for future revenue locked in
+  const drSeries = recentSeries(8)
+    .map((r) => ({
+      date: r.periodEnd,
+      val: toNumber(r.deferredRevenue ?? r.contractWithCustomerLiability)
+    }))
+    .filter((r) => Number.isFinite(r.val));
+  if (drSeries.length >= 5) {
+    const latest = drSeries[0];
+    const latestTs = Date.parse(latest.date);
+    const target = latestTs - 31536000000;
+    const windowMs = 2600000000;
+    const yearAgo = drSeries.find((p) => {
+      const ts = Date.parse(p.date);
+      return Number.isFinite(ts) && Math.abs(ts - target) < windowMs;
+    });
+    if (yearAgo && Number.isFinite(yearAgo.val) && yearAgo.val !== 0) {
+      const yoy = (latest.val - yearAgo.val) / Math.abs(yearAgo.val);
+      if (yoy > 0.15) {
+        add(
+          "quality",
+          "good",
+          pick("deferred_rev_up", [
+            "Deferred revenue is rising year-over-year, which can indicate future revenue already locked in.",
+            "Contract liabilities are growing YoY, suggesting improving forward revenue visibility.",
+            "Deferred revenue is trending higher, supporting subscription/backlog strength.",
+            "Rising deferred revenue can be a positive signal for renewal strength and future revenue."
+          ]),
+          { severity: 1, tag: "deferred_rev_up", basis: baseBasis }
+        );
+      } else if (yoy < -0.15) {
+        add(
+          "quality",
+          "risk",
+          pick("deferred_rev_down", [
+            "Deferred revenue is declining year-over-year, which can be an early churn/backlog risk signal.",
+            "Contract liabilities are down YoY, potentially signaling weaker forward revenue visibility.",
+            "Deferred revenue is shrinking, which can indicate softer renewals or backlog burn-off.",
+            "Declining deferred revenue may point to demand softness or higher churn risk."
+          ]),
+          { severity: 1, tag: "deferred_rev_down", basis: baseBasis }
+        );
       }
     }
   }
-  if (Number.isFinite(fcfMargin) && fcfMargin < -25 && Number.isFinite(dil) && dil > 25) {
-    push("quality", "risk", "Dependence on external financing (burn + dilution).");
-  }
-  if (s.fcfPositiveYears != null) {
-    if (s.fcfPositiveYears >= 4) push("quality", "good", `Reliable FCF in ${s.fcfPositiveYears}/5 yrs; stability tailwind.`);
-    else if (s.fcfPositiveYears >= 2) push("quality", "note", `Mixed FCF record (${s.fcfPositiveYears}/5 yrs).`);
-    else push("quality", "risk", "Cash burn risk; FCF consistency weak.");
-  }
-  if (isPenny && (!Number.isFinite(s.ebitdaPositiveQuarters) || s.ebitdaPositiveQuarters < 4)) {
-    push("quality", "risk", "Financial results show instability; business model not yet validated.");
-  }
-  if (f.debtToEquity != null) {
-    if (f.debtToEquity < 0.6) push("solvency", "good", "Low leverage vs equity; balance sheet flexibility.");
-    else if (f.debtToEquity > 2.5) push("solvency", "risk", "High leverage vs equity; limited cushion.");
-  }
-  if (p.drawdownFromHigh != null) {
-    if (p.drawdownFromHigh < -20) push("valuation", "good", `Price ~${Math.abs(p.drawdownFromHigh).toFixed(1)}% below recent high.`);
-    else if (p.drawdownFromHigh > -5) push("valuation", "note", "Trading near highs; needs continued momentum.");
-  }
-  const grossMargin = percentToNumber(stock?.profitMargins?.grossMargin);
-  if (isPenny && Number.isFinite(grossMargin) && grossMargin < 20) {
-    push("quality", "risk", "Cost structure inconsistent; pricing power limited.");
-  }
-  const revGrowth = percentToNumber(stock?.growth?.revenueGrowthTTM);
-  if (Number.isFinite(revGrowth) && revGrowth > 50 && ((Number.isFinite(fcfMargin) && fcfMargin < 0) || (Number.isFinite(stock?.profitMargins?.operatingMargin) && stock.profitMargins.operatingMargin < 0))) {
-    push("quality", "note", "Momentum strong, but fundamentals do not yet support a sustained trend.");
-  }
-  const score = bullets.filter(b => b.startsWith(BULLET_PREFIX.good)).length - bullets.filter(b => b.startsWith(BULLET_PREFIX.risk)).length;
-  let label = "Moderate risk; read the factors below.";
-  if (score >= 2) label = "Low risk profile; debt and cash flows look comfortable.";
-  else if (score <= -2) label = "Higher risk; leverage or cash flow fragility.";
-  if (isPenny) label = "Higher risk; leverage or cash flow fragility.";
-  return { score, label, bullets, grouped };
-}
 
-function computeValuationSummary(stock = {}) {
-  const v = stock.valuationRatios || {};
-  const p = stock.priceStats || {};
-  const bullets = [];
-  const fcfMargin = percentToNumber(stock?.profitMargins?.fcfMargin);
-  const isPenny = isPennyStockVm(currentVm, stock);
-  const pfcfMeaningful = !(isPenny && Number.isFinite(fcfMargin) && fcfMargin < 0);
-  if (pfcfMeaningful && v.pfcfRatio != null) {
-    if (v.pfcfRatio < 12) bullets.push(makeBullet("good", "P/FCF in value zone; pricing leans cheap."));
-    else if (v.pfcfRatio < 20) bullets.push(makeBullet("note", "P/FCF fair for quality."));
-    else bullets.push(makeBullet("risk", "P/FCF elevated; needs strong execution."));
-  } else if (!pfcfMeaningful) {
-    bullets.push(makeBullet("note", "Valuation appears low on surface metrics, but negative cash flows reduce reliability."));
+  // Contingent liabilities (filing language) -> solvency note
+  const hasContingentLiabilities = (Array.isArray(filingSignals) ? filingSignals : [])
+    .some((s) => String(s?.id || "") === "contingent_liabilities");
+  if (hasContingentLiabilities) {
+    add(
+      "solvency",
+      "note",
+      pick("contingent_liabilities", [
+        "Filing language mentions commitments/contingencies; review the footnotes for potential off-balance-sheet risks.",
+        "Commitments and contingencies are referenced in filings—worth checking for legal, warranty, or environmental exposures.",
+        "Filings flag commitments/contingencies; these can be material even when not obvious in the main statements.",
+        "Contingency language appears in filings; potential obligations may not be fully captured in headline metrics."
+      ]),
+      { severity: 1, tag: "contingent_liabilities", basis: "mixed" }
+    );
   }
-  if (v.fcfYield != null) {
-    if (v.fcfYield > 6) bullets.push(makeBullet("good", `FCF yield ${v.fcfYield.toFixed(1)}%: attractive cash return.`));
-    else if (v.fcfYield > 3) bullets.push(makeBullet("note", `FCF yield ${v.fcfYield.toFixed(1)}%: reasonable.`));
-    else bullets.push(makeBullet("risk", `Thin FCF yield ${v.fcfYield.toFixed(1)}%: limited cushion.`));
+
+  // Multi-signal / tension bullets (hard rule compliant)
+  if (runwayShort && deepBurn) {
+    add(
+      "solvency",
+      "risk",
+      pick("runway_short_burn", [
+        `Cash looks tight: at the current pace, it may last under a year (${fmtYears1(runwayYears)} runway).`,
+        `Short runway (${fmtYears1(runwayYears)}): unless spending drops or funding arrives, cash could run out within ~12 months.`,
+        `Funding risk: runway is under a year (${fmtYears1(runwayYears)}) while the business is still ${describeCashBurn(fcfMargin) || "cash-flow negative"}.`
+      ]),
+      { severity: 3, tag: "runway_short_burn", basis: "mixed" }
+    );
+  } else if (runwayShort && dilutionHigh) {
+    add(
+      "solvency",
+      "risk",
+      pick("runway_short_dilution", [
+        `Short runway (${fmtYears1(runwayYears)}): the company has likely needed outside funding, and share issuance can dilute holders.`,
+        `Runway is under a year (${fmtYears1(runwayYears)}). Recent share issuance suggests fundraising may be ongoing.`,
+        `Cash runway is short (${fmtYears1(runwayYears)}), and ${describeDilution(dilutionYoY) || "share issuance is elevated"}—a common funding path when cash is tight.`
+      ]),
+      { severity: 3, tag: "runway_short_dilution", basis: "mixed" }
+    );
+  } else if (runwayTight && burn) {
+    add(
+      "solvency",
+      "note",
+      pick("runway_tight_burn", [
+        `Runway is limited (~${fmtYears1(runwayYears)}). It’s still spending more cash than it brings in.`,
+        `Cash runway is around ${fmtYears1(runwayYears)}. Funding risk is present if burn stays high.`,
+        `Runway is about ${fmtYears1(runwayYears)} and the business is still ${describeCashBurn(fcfMargin) || "cash-flow negative"}.`
+      ]),
+      { severity: 2, tag: "runway_tight_burn", basis: "mixed" }
+    );
   }
-  if (v.evToEbitda != null) {
-    if (v.evToEbitda < 8) bullets.push(makeBullet("good", "EV/EBITDA below typical range; value tilt."));
-    else if (v.evToEbitda > 20) bullets.push(makeBullet("risk", "EV/EBITDA rich vs fundamentals."));
+
+  if (burn && runwayTight && cashImproving) {
+    add(
+      "quality",
+      "note",
+      pick("burn_improving_but_tight", [
+        `Cash burn is improving, but the runway is still only about ${fmtYears1(runwayYears)}.`,
+        `Spending is trending in the right direction, but cash runway remains tight (~${fmtYears1(runwayYears)}).`,
+        `Burn rate looks better lately, but runway is still limited (${fmtYears1(runwayYears)}).`
+      ]),
+      { severity: 2, tag: "burn_improving_but_tight", basis: "mixed" }
+    );
+  } else if (burn && runwayShort && cashWorsening) {
+    add(
+      "solvency",
+      "risk",
+      pick("burn_worsening_and_short", [
+        `Cash burn is getting worse and the runway is under a year (${fmtYears1(runwayYears)}).`,
+        `Runway is short (${fmtYears1(runwayYears)}) and the burn rate is deteriorating—financing risk rises.`,
+        `Spending pressure is increasing while runway is under a year (${fmtYears1(runwayYears)}).`
+      ]),
+      { severity: 3, tag: "burn_worsening_and_short", basis: "mixed" }
+    );
   }
-  if (p.drawdownFromHigh != null) {
-    if (p.drawdownFromHigh < -20) bullets.push(makeBullet("good", `Discounted vs 52-week high (${p.drawdownFromHigh.toFixed(1)}%).`));
-    else if (p.drawdownFromHigh > -5) bullets.push(makeBullet("note", "Trading near highs; needs continued momentum."));
+
+  if (deepBurn && dilutionHigh) {
+    add(
+      "quality",
+      "risk",
+      pick("burn_plus_dilution", [
+        "Burn + dilution: they appear to be funding operations by issuing shares (which can reduce each shareholder’s slice).",
+        "Cash burn plus share issuance: growth may be funded by new shares rather than profits.",
+        "They’re burning cash and raising money through equity—good for survival, but it can dilute holders."
+      ]),
+      { severity: 2, tag: "burn_plus_dilution", basis: "mixed" }
+    );
   }
-  const score = bullets.filter(b => b.startsWith(BULLET_PREFIX.good)).length - bullets.filter(b => b.startsWith(BULLET_PREFIX.risk)).length;
-  let label = "Fairly priced; see context below.";
-  if (score >= 2) label = "Value-leaning setup; multiples not stretched.";
-  else if (score <= -2) label = "Rich valuation; upside needs strong catalysts.";
-  return { score, label, bullets };
+  if (dilutionHigh && debtScore != null && debtScore >= 4) {
+    add(
+      "quality",
+      "note",
+      pick("dilution_masks_leverage", [
+        "Debt looks manageable, but share issuance suggests they may be raising cash via equity instead of borrowing.",
+        "Low debt can be a strength—but if new shares are being issued, funding may be coming from dilution.",
+        "Leverage is fine, yet dilution is notable; the company may be choosing equity raises over debt."
+      ]),
+      { severity: 2, tag: "dilution_masks_leverage", basis: "mixed" }
+    );
+  }
+  if (dilutionPersistent && dilutionHigh) {
+    add(
+      "quality",
+      "note",
+      pick("dilution_persistent", [
+        "Dilution looks ongoing: share count keeps rising quarter after quarter.",
+        "Share issuance appears persistent (not just a one-time event).",
+        "New shares seem to be a recurring funding tool right now."
+      ]),
+      { severity: 2, tag: "dilution_persistent", basis: "mixed" }
+    );
+  }
+
+  if (growthStrong && burn) {
+    add(
+      "quality",
+      "note",
+      pick("growth_burn", [
+        "Sales are growing, but the business isn’t generating free cash yet.",
+        "Top-line growth is strong, but it’s still spending more cash than it brings in.",
+        "Growth is healthy, but profitability hasn’t turned into cash generation yet."
+      ]),
+      { severity: 2, tag: "growth_burn", basis: "ttm" }
+    );
+  } else if (growthStrong && profitWeak) {
+    add(
+      "quality",
+      "note",
+      pick("growth_profit_weak", [
+        "Sales are growing, but core operations are still losing money.",
+        "Revenue is up, but the business hasn’t reached operating profitability yet.",
+        "Growth is there, but operating profits haven’t followed yet."
+      ]),
+      { severity: 2, tag: "growth_profit_weak", basis: "ttm" }
+    );
+  } else if (growthWeak && profitStrong && !marginsCompressing) {
+    add(
+      "quality",
+      "note",
+      pick("shrink_but_profitable", [
+        "Revenue is down, but the core business still looks profitable.",
+        "Sales are shrinking, yet margins remain healthy—this can signal a mature cash-generator.",
+        "Top line is soft, but profitability is holding up."
+      ]),
+      { severity: 2, tag: "shrink_but_profitable", basis: "ttm" }
+    );
+  }
+
+  // Positive multi-signal bullets (to avoid “quiet” sections on strong large caps)
+  if (growthStrong && profitStrong && !burn) {
+    add(
+      "quality",
+      "good",
+      pick("good_growth_profit_cash", [
+        "Strong combo: growing sales, profitable operations, and positive cash generation.",
+        "This looks like a healthy business mix: growth + profits + cash flow.",
+        "Growth is supported by profitability and cash generation (not just accounting profits)."
+      ]),
+      { severity: 1, tag: "good_growth_profit_cash", basis: "mixed" }
+    );
+  }
+  if (profitStrong && Number.isFinite(fcfMargin) && fcfMargin > 5 && Number.isFinite(dilutionYoY) && dilutionYoY <= 5) {
+    add(
+      "quality",
+      "good",
+      pick("good_profit_cash_low_dilution", [
+        "Strong quality setup: profitable, cash-generating, and not issuing many new shares.",
+        "Healthy profile: profits turn into cash, and dilution is minimal.",
+        "A shareholder-friendly mix: strong cash generation and low dilution."
+      ]),
+      { severity: 1, tag: "good_profit_cash_low_dilution", basis: "mixed" }
+    );
+  }
+  if (Number.isFinite(dilutionYoY) && dilutionYoY < -2 && Number.isFinite(fcfMargin) && fcfMargin > 0) {
+    add(
+      "quality",
+      "good",
+      pick("good_buybacks_cash", [
+        "Cash is positive and the company is reducing share count (buybacks).",
+        "They’re generating cash and shrinking the share count—often a good shareholder signal.",
+        "Positive cash flow plus buybacks: shareholders aren’t being diluted."
+      ]),
+      { severity: 1, tag: "good_buybacks_cash", basis: "mixed" }
+    );
+  }
+  if (valuationCheapish && profitStrong && !burn) {
+    add(
+      "valuation",
+      "good",
+      pick("good_value_plus_quality", [
+        "Valuation looks reasonable given the profitability (see cards).",
+        "Looks fairly priced relative to business quality and profitability.",
+        "Valuation and fundamentals both look supportive."
+      ]),
+      { severity: 1, tag: "good_value_plus_quality", basis: "mixed" }
+    );
+  }
+
+  if (growthStrong && marginsCompressing) {
+    add(
+      "quality",
+      "note",
+      pick("growth_but_margin_pressure", [
+        "Sales are growing, but profits per dollar of sales are slipping.",
+        "Revenue is up, but margins are under pressure.",
+        "Growth is strong, yet profitability is tightening."
+      ]),
+      { severity: 2, tag: "growth_but_margin_pressure", basis: "mixed" }
+    );
+  } else if (growthWeak && marginsCompressing) {
+    add(
+      "quality",
+      "risk",
+      pick("downturn_operating_leverage", [
+        "Sales are shrinking and margins are falling—often a tough mix.",
+        "Revenue is down and profitability is worsening; costs may not be flexing down yet.",
+        "Both sales and margins are moving the wrong way at the same time."
+      ]),
+      { severity: 2, tag: "downturn_operating_leverage", basis: "mixed" }
+    );
+  }
+
+  if (Number.isFinite(ndFcfYears) && Number.isFinite(interestCoverage) && ndFcfYears > 6 && interestCoverage < 2.5) {
+    add(
+      "solvency",
+      "risk",
+      pick("leverage_plus_coverage", [
+        "Debt looks heavy relative to cash generation, and interest coverage is thin.",
+        "Debt burden looks high and profits may not comfortably cover interest costs.",
+        "Leverage looks stretched and interest payments may be hard to cover."
+      ]),
+      { severity: 3, tag: "leverage_plus_coverage", basis: "mixed" }
+    );
+  }
+
+  if (hasNegativeEquity && dilutionHigh) {
+    add(
+      "solvency",
+      "risk",
+      pick("neg_equity_plus_dilution", [
+        "Balance sheet shows negative equity, and the company has been issuing shares—higher-risk setup.",
+        "Negative equity plus share issuance suggests the balance sheet is under strain.",
+        "With negative equity and ongoing dilution, financing flexibility may be limited."
+      ]),
+      { severity: 3, tag: "neg_equity_plus_dilution", basis: "mixed" }
+    );
+  }
+
+  if (valuationOverstretched && (growthWeak || burn || profitWeak)) {
+    add(
+      "valuation",
+      "risk",
+      pick("val_stretched_fundamentals", isPreRevenueBiotech ? [
+        "Valuation looks stretched while the company is still in a cash-burn phase; biotech pricing can swing hard on milestone news.",
+        "The stock looks priced for success, but the fundamentals are still early-stage—biotech valuations can reset quickly.",
+        "Valuation looks demanding for a pre-revenue biotech; upside often hinges on milestones, and downside can be sharp if expectations reset."
+      ] : [
+        "The stock looks priced for good news, but the fundamentals are currently weak—risk of a valuation reset.",
+        "Valuation looks demanding relative to current fundamentals; downside if expectations come down.",
+        "If results don’t improve, the market may pay a lower price for the same business (valuation compression risk)."
+      ]),
+      { severity: 2, tag: "val_stretched_fundamentals", basis: "mixed" }
+    );
+  } else if (valuationCheapish && (runwayShort || deepBurn || dilutionHigh)) {
+    add(
+      "valuation",
+      "note",
+      pick("cheap_but_fragile", [
+        "It may look cheap on paper, but funding risk matters (runway/dilution).",
+        "Some valuation metrics look attractive, but financing risk can still dominate the story.",
+        "Valuation looks better than peers, but the company may still need to raise cash."
+      ]),
+      { severity: 2, tag: "cheap_but_fragile", basis: "mixed" }
+    );
+  }
+
+  // Filing-only fallback (demoted): show a single filing-driven risk if there are no cards.
+  if (!hasCards && hasFilingSignals) {
+    const topNeg = filingSignals
+      .filter((s) => Number(s?.score) < 0)
+      .sort((a, b) => Number(a?.score || 0) - Number(b?.score || 0))[0];
+    const title = String(topNeg?.title || topNeg?.id || "").trim();
+    if (title) {
+      add("quality", "risk", `Filing signal: ${title}.`, { severity: 2, tag: "filing_fallback", basis: "mixed" });
+    }
+  }
+
+  // Red single-metric fallback: allow only when severe (or data-quality critical) to prevent “quiet bullets”.
+  if (runwayShort && !seenTags.has("runway_short_burn") && !seenTags.has("runway_short_dilution")) {
+    add(
+      "solvency",
+      "risk",
+      pick("red_runway", [
+        `Cash runway looks under a year (${fmtYears1(runwayYears)}).`,
+        `Short runway (${fmtYears1(runwayYears)}): watch for financing or cost-cutting.`,
+        `Runway is tight (${fmtYears1(runwayYears)}); a cash raise may be needed if burn persists.`
+      ]),
+      { severity: 3, tag: "red_runway", basis: "mixed" }
+    );
+  }
+  if (Number.isFinite(dilutionYoY) && dilutionYoY > 50 && !seenTags.has("burn_plus_dilution") && !seenTags.has("neg_equity_plus_dilution")) {
+    add(
+      "quality",
+      "risk",
+      pick("red_dilution", [
+        "Share count jumped a lot over the last year (high dilution risk).",
+        "Large share issuance over the last year can meaningfully dilute holders.",
+        "Significant dilution: the company has issued a lot of new shares recently."
+      ]),
+      { severity: 3, tag: "red_dilution", basis: "annual" }
+    );
+  }
+  if (hasNegativeEquity && !seenTags.has("neg_equity_plus_dilution")) {
+    add(
+      "solvency",
+      "risk",
+      pick("red_negative_equity", [
+        "Negative equity: liabilities exceed assets on the balance sheet.",
+        "Negative equity flag: the balance sheet is in a deficit position.",
+        "Balance sheet deficit (negative equity) increases financial risk."
+      ]),
+      { severity: 3, tag: "red_negative_equity", basis: baseBasis }
+    );
+  }
+  if (Number.isFinite(interestCoverage) && interestCoverage < 1.5 && !seenTags.has("leverage_plus_coverage")) {
+    add(
+      "solvency",
+      "risk",
+      pick("red_coverage", [
+        "Interest payments may be hard to cover from operating profits.",
+        "Debt interest looks hard to cover from profits (thin coverage).",
+        "Thin interest coverage: profits don’t leave much cushion for interest costs."
+      ]),
+      { severity: 3, tag: "red_coverage", basis: baseBasis }
+    );
+  }
+  if (Number.isFinite(ndFcfYears) && ndFcfYears > 8 && !seenTags.has("leverage_plus_coverage")) {
+    add(
+      "solvency",
+      "risk",
+      pick("red_netdebt_fcf", [
+        "Debt looks large compared with the cash the business generates.",
+        "Debt burden looks high relative to cash generation.",
+        "Paying down debt could take a long time at the current cash generation pace."
+      ]),
+      { severity: 3, tag: "red_netdebt_fcf", basis: "mixed" }
+    );
+  }
+  if (f.debtReported && !f.cashReported) {
+    add(
+      "quality",
+      "risk",
+      pick("dq_cash_missing", [
+        "Data note: cash is missing, so it’s harder to judge debt safety.",
+        "Data note: missing cash data makes leverage and runway harder to estimate.",
+        "Data note: cash isn’t reported here; treat leverage signals as lower confidence."
+      ]),
+      { severity: 3, tag: "dq_cash_missing", basis: "mixed" }
+    );
+  }
+
+  if (!bullets.length) {
+    add("quality", "note", "No bullets triggered (limited signals); use the cards for metric-level detail.", { severity: 1, tag: "no_combined_alerts", basis: baseBasis });
+  }
+
+  const score =
+    bullets.filter((b) => b.startsWith(BULLET_PREFIX.good)).length -
+    bullets.filter((b) => b.startsWith(BULLET_PREFIX.risk)).length;
+
+  const label = (() => {
+    const marketCap = Number(stock?.marketCap ?? currentVm?.marketCap ?? currentVm?.keyMetrics?.marketCap);
+    const assetSize = (() => {
+      const series = Array.isArray(currentVm?.quarterlySeries) && currentVm.quarterlySeries.length
+        ? currentVm.quarterlySeries
+        : Array.isArray(currentVm?.annualSeries)
+          ? currentVm.annualSeries
+          : [];
+      const latest = series
+        .slice()
+        .sort((a, b) => Date.parse(b?.periodEnd || 0) - Date.parse(a?.periodEnd || 0))[0] || null;
+      const v = Number(latest?.totalAssets);
+      return Number.isFinite(v) ? v : null;
+    })();
+
+    const scaleRef = (() => {
+      // Market cap can be garbage when pricing is sparse; fall back to asset size when it looks implausible.
+      if (Number.isFinite(marketCap) && marketCap > 0) {
+        if (Number.isFinite(assetSize) && assetSize > 100_000_000 && marketCap < 25_000_000) {
+          return assetSize;
+        }
+        return marketCap;
+      }
+      return Number.isFinite(assetSize) ? assetSize : null;
+    })();
+
+    const capClass = (() => {
+      const v = Number(scaleRef);
+      if (!Number.isFinite(v) || v <= 0) return null;
+      if (v < 200_000_000) return "micro";
+      if (v < 1_000_000_000) return "small";
+      if (v < 10_000_000_000) return "mid";
+      if (v < 200_000_000_000) return "large";
+      return "mega";
+    })();
+
+    if (isPenny && capClass === "micro") {
+      return pick("risk.penny.microcap", [
+        "Higher risk setup; micro-cap volatility and financing constraints.",
+        "Speculative micro-cap profile: expect volatility and funding risk.",
+        "Micro-cap risk profile: volatility is likely and funding can be episodic."
+      ]);
+    }
+    if (isPenny) {
+      return pick("risk.penny.nonmicro", [
+        "Higher risk setup; low-priced stock volatility and financing constraints.",
+        "Higher risk profile: low-priced shares can be volatile and funding-sensitive.",
+        "Higher risk setup: expect elevated volatility and periodic financing risk."
+      ]);
+    }
+
+    const band = stock?.ratingTierLabel || currentVm?.ratingTierLabel || null;
+    const riskCount = bullets.filter((b) => b.startsWith(BULLET_PREFIX.risk)).length;
+    const goodCount = bullets.filter((b) => b.startsWith(BULLET_PREFIX.good)).length;
+    const onlyNoSignalNote = bullets.length === 1 && seenTags.has("no_combined_alerts");
+
+    const hasSevere =
+      [...seenTags].some((t) => String(t).startsWith("red_")) ||
+      seenTags.has("dq_cash_missing") ||
+      seenTags.has("model_bankruptcy") ||
+      seenTags.has("filing_going_concern") ||
+      seenTags.has("runway_short_burn") ||
+      seenTags.has("runway_short_dilution") ||
+      seenTags.has("leverage_plus_coverage");
+
+    if (hasSevere) {
+      return pick("risk.severe", [
+        "Higher risk; financing or data-quality flags are red.",
+        "Higher risk setup: multiple red flags need close monitoring.",
+        "Elevated risk: key funding, leverage, or data-quality signals are flashing red."
+      ]);
+    }
+    if (seenTags.has("burn_plus_dilution") || seenTags.has("dilution_persistent")) {
+      return pick("risk.funding", [
+        "Elevated risk; funding and issuance likely drive the story.",
+        "Financing-driven profile: dilution and burn appear to be key risks.",
+        "Capital dependence risk: funding needs may be a recurring theme."
+      ]);
+    }
+    if (seenTags.has("val_stretched_fundamentals")) {
+      return pick("risk.valuation", [
+        "Valuation-sensitive setup; fundamentals must deliver.",
+        "Valuation risk: the setup requires execution to justify expectations.",
+        "Expectations look high; fundamentals need to keep compounding."
+      ]);
+    }
+    if (onlyNoSignalNote) {
+      if (band === "elite" || band === "bullish" || band === "solid") {
+        return pick("risk.low.none", [
+          "Lower risk profile; no combined red flags triggered.",
+          "Lower risk profile: no major combined red flags detected.",
+          "Lower risk profile: nothing critical is flashing red right now."
+        ]);
+      }
+      if (band === "danger" || band === "spec") {
+        return pick("risk.uncertain", [
+          "Higher uncertainty; limited combined signals triggered.",
+          "Higher uncertainty: signals are thin; rely on the cards for detail.",
+          "Uncertain setup: limited signals available to form strong conclusions."
+        ]);
+      }
+      return pick("risk.moderate.limited", [
+        "Moderate risk; limited combined signals triggered.",
+        "Moderate risk profile: limited combined signals, but no major red flags.",
+        "Moderate risk: signals are mixed and somewhat sparse."
+      ]);
+    }
+    if (goodCount >= 2 && riskCount === 0) {
+      return pick("risk.low.strong", [
+        "Lower risk profile; cash generation and margins look strong.",
+        "Lower risk setup: strong cash generation and healthy margins support resilience.",
+        "Lower risk profile: profitability and cash flow look supportive."
+      ]);
+    }
+    if (score >= 2 && riskCount === 0) {
+      return pick("risk.low.supportive", [
+        "Lower risk profile; fundamentals look supportive.",
+        "Lower risk setup: fundamentals look broadly supportive.",
+        "Lower risk profile: underlying fundamentals look steady."
+      ]);
+    }
+    if (goodCount >= 1 && riskCount >= 1) {
+      return pick("risk.mixed", [
+        "Mixed setup; strengths exist but risks need monitoring.",
+        "Balanced setup: upside exists, but risks should be monitored.",
+        "Mixed profile: positives show up, but key risks remain."
+      ]);
+    }
+    return pick("risk.moderate.default", [
+      "Moderate risk; see combined-signal notes below.",
+      "Moderate risk profile; review the combined signals for details.",
+      "Moderate risk setup; the signal mix is not one-sided."
+    ]);
+  })();
+  return { score, label, bullets, grouped };
 }
 
 function updateSummaries(stock) {
   const risk = computeRiskSummary(stock);
-  const val = computeValuationSummary(stock);
   const riskEl = document.getElementById("riskSummary");
   const riskList = document.getElementById("riskReasons");
   if (riskEl) riskEl.textContent = risk.label;
@@ -2634,12 +4029,14 @@ function updateSummaries(stock) {
     const groups = risk.grouped || {};
     const ordered = [
       ["solvency", "SOLVENCY", "&#127974;"], // Bank
-      ["valuation", "VALUATION", "&#128181;"], // Banknote
-      ["quality", "QUALITY", "&#128202;"]     // Chart
+      ["quality", "QUALITY", "&#128202;"],     // Chart (top-right)
+      ["valuation", "VALUATION", "&#128181;"]  // Banknote (second row under Solvency)
     ];
     const html = ordered
       .map(([key, label, icon]) => {
-        const items = (groups[key] || []).slice(0, 4);
+        const items = (groups[key] || [])
+          .sort((a, b) => (b.severity || 0) - (a.severity || 0))
+          .slice(0, 4);
         if (!items.length) return "";
         const lis = items.map((i) => `<li>${i.label}</li>`).join("");
         return `<div class="risk-group"><div class="risk-heading">${icon} ${label}</div><ul class="muted" style="padding-left:16px; margin:0; line-height:1.3;">${lis}</ul></div>`;
@@ -2648,7 +4045,7 @@ function updateSummaries(stock) {
       .join("");
     if (html) riskList.innerHTML = html;
     else {
-      const bullets = (risk.bullets || []).slice(0, 6);
+      const bullets = (risk.bullets || []).slice(0, 10);
       riskList.innerHTML = bullets.map(b => `<li>${b}</li>`).join("") || "";
     }
   }
@@ -2671,14 +4068,15 @@ function updatePillars(stock, ratingMeta = null) {
   renderSignalGrid(stock);
 }
 
-const RATING_MIN = -40;
-const RATING_MAX = 60;
+// Recommended normalization: wider bounds to avoid easy 100/100 scores.
+const RATING_MIN = -60; // Captures truly distressed companies
+const RATING_MAX = 100; // Reserves 100/100 for near-perfect execution
+const RATING_RANGE = RATING_MAX - RATING_MIN || 1;
 function normalizeRuleScore(score) {
   const num = Number(score);
   if (!Number.isFinite(num)) return null;
-  const clamped = Math.max(RATING_MIN, Math.min(RATING_MAX, num));
-  const span = RATING_MAX - RATING_MIN || 1;
-  return ((clamped - RATING_MIN) / span) * 100;
+  const normalized = ((num - RATING_MIN) / RATING_RANGE) * 100;
+  return Math.round(Math.max(0, Math.min(100, normalized)));
 }
 function formatRatingText(rawScore, normalized) {
   if (Number.isFinite(normalized)) return `${normalized.toFixed(0)}/100`;
@@ -2702,7 +4100,7 @@ function applyQuality(value, { rawScore = null, normalizedScore = null, tierLabe
       ? normalizedFromRaw
       : Math.max(0, Math.min(100, value || 0));
 
-  // Client-side overrides removed – relying on server-side logic for caps & completeness.
+  // Client-side overrides removed - relying on server-side logic for caps & completeness.
 
   if (text) text.textContent = formatRatingText(rawScore, v);
 
@@ -2722,7 +4120,19 @@ function applyQuality(value, { rawScore = null, normalizedScore = null, tierLabe
 
   if (takeawayEl) {
     // PRIORITIZE DYNAMIC NARRATIVE FROM BACKEND
-    takeawayEl.textContent = takeaway || buildTakeaway(band);
+    let baseTakeaway = takeaway || buildTakeaway(band);
+
+    const formatted = (() => {
+      const target = baseTakeaway || "";
+      const idx = target.toLowerCase().indexOf("regulatory filings");
+      if (idx > -1) {
+        const first = target.slice(0, idx).trim();
+        const second = target.slice(idx).trim();
+        return [first, second].filter(Boolean).join("\n");
+      }
+      return target;
+    })();
+    takeawayEl.innerHTML = escapeHtml(formatted).replace(/\n/g, "<br>");
   }
 
   // Update tier badge if it exists
@@ -2811,7 +4221,7 @@ function renderSignalGrid(stock) {
   const p = stock.profitMargins || {};
   const f = stock.financialPosition || {};
   const sectorBucket = stock.sectorBucket || "";
-  const preRevenueBiotech = sectorBucket === "biotech" && (!Number.isFinite(stock.revenueLatest) || Math.abs(stock.revenueLatest) < 1);
+  const preRevenueBiotech = isBiotechSector(sectorBucket) && (!Number.isFinite(stock.revenueLatest) || Math.abs(stock.revenueLatest) < 1_000_000);
   const revenueValue = Number.isFinite(g.revenueGrowthTTM)
     ? formatPctCompact(g.revenueGrowthTTM)
     : (preRevenueBiotech ? "Pre-revenue biotech" : "n/a");
@@ -2829,6 +4239,66 @@ function renderSignalGrid(stock) {
     return Number.isFinite(fromVm) ? fromVm : (Number.isFinite(fromSeries) ? fromSeries : null);
   })();
   el.innerHTML = "";
+
+  const isForeign = stock?.issuerType === "foreign" || stock?.filingProfile?.annual === "20-F" || stock?.filingProfile?.interim === "6-K";
+  if (isForeign) {
+    el.style.display = 'block';
+    el.style.width = '100%';
+    el.style.maxWidth = '100%';
+    el.style.gridTemplateColumns = 'none'; // reset any grid columns
+    const currencyMismatch = stock?.snapshot?.currencyMismatch;
+    const reportingCur = stock?.snapshot?.reportingCurrency || "local currency";
+    const priceCur = stock?.snapshot?.priceCurrency || "price currency";
+    const currencyNote = currencyMismatch
+      ? ` Pricing uses ${priceCur}, filings use ${reportingCur}; valuation ratios may be skewed.`
+      : "";
+    const text = `<strong>Foreign Issuer:</strong> This is a foreign company on the stock market and ratings are based on year on year documents.${currencyNote}`;
+
+    el.innerHTML = `
+        <div style="width: 100%; box-sizing: border-box; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 12px; display: flex; align-items: center; gap: 10px; color: #fbbf24; font-size: 0.9rem; margin-bottom: 8px;">
+           <div style="font-size: 1.2rem; line-height: 1; margin-top: -2px;">&#9888;</div>
+           <div style="white-space: normal; line-height: 1.4; flex: 1;">${text}</div>
+        </div>
+      `;
+  }
+
+  // Biotech warning bubble - only for clinical-stage biotechs, not established pharma
+  const isBiotechSectorLocal = (() => {
+    const sector = String(stock?.sectorBucket || stock?.sector || "").toLowerCase();
+    const sicDesc = String(stock?.sicDescription || "").toLowerCase();
+    const name = String(stock?.companyName || "").toLowerCase();
+    return sector.includes("biotech") ||
+      sector.includes("pharma") ||
+      sicDesc.includes("pharmaceutical") ||
+      sicDesc.includes("biological") ||
+      sicDesc.includes("medicinal") ||
+      /\b(therapeutics|biopharma|oncology|biosciences)\b/i.test(name);
+  })();
+
+  const isEstablishedPharmaLocal = (() => {
+    if (!isBiotechSectorLocal) return false;
+    const revenueTTM = Number(stock?.snapshot?.revenueTTM ?? stock?.keyMetrics?.revenueTTM ?? 0);
+    const netIncome = Number(stock?.snapshot?.netIncomeTTM ?? stock?.keyMetrics?.netIncome ?? 0);
+    const marketCap = Number(stock?.marketCap ?? stock?.keyMetrics?.marketCap ?? 0);
+    return revenueTTM > 2_000_000_000 ||
+      (revenueTTM > 500_000_000 && netIncome > 0) ||
+      marketCap > 50_000_000_000;
+  })();
+
+  const isClinicalStageBiotechLocal = isBiotechSectorLocal && !isEstablishedPharmaLocal;
+
+  if (isClinicalStageBiotechLocal) {
+    const existingHtml = el.innerHTML;
+    const biotechText = `<strong>Clinical Stage Biotech:</strong> Traditional financial metrics have limited relevance. Investment thesis depends on clinical trial outcomes - a binary bet.`;
+    el.innerHTML = existingHtml + `
+        <div style="width: 100%; box-sizing: border-box; background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 6px; padding: 12px; display: flex; align-items: center; gap: 10px; color: #c084fc; font-size: 0.9rem; margin-bottom: 8px;">
+           <div style="font-size: 1.2rem; line-height: 1; margin-top: -2px;">&#129516;</div>
+           <div style="white-space: normal; line-height: 1.4; flex: 1;">${biotechText}</div>
+        </div>
+      `;
+    el.style.display = 'block';
+    el.style.width = '100%';
+  }
   // Removed "achievements" cards (Revenue, Profit, Cash & Debt main blocks) per user request
 }
 
@@ -2914,25 +4384,82 @@ function filterSeriesByRange(series, range) {
 }
 
 function nf(val) {
+  if (val === Infinity) return "∞";
+  if (val === -Infinity) return "-∞";
   if (val === null || val === undefined || isNaN(val)) return "-";
   const num = Number(val);
   if (Math.abs(num) >= 1e9) return (num / 1e9).toFixed(2) + "B";
   if (Math.abs(num) >= 1e6) return (num / 1e6).toFixed(2) + "M";
   return num.toLocaleString();
 }
-function numf(val) {
+function numf(val, { nullLabel = "-" } = {}) {
   const num = toNumber(val);
-  return num === null ? "-" : num.toFixed(2);
+  if (num === Infinity) return "∞";
+  if (num === -Infinity) return "-∞";
+  if (num === null || Number.isNaN(num)) return nullLabel;
+  if (num === 0) return "0.00";
+  return num.toFixed(2);
 }
 function pctf(val) {
   const num = pctFromRatio(val);
+  if (num === Infinity) return "∞%";
+  if (num === -Infinity) return "-∞%";
   return num === null ? "-" : `${num.toFixed(2)}%`;
 }
 function pctChange(curr, prev) { if (!isFinite(curr) || !isFinite(prev) || prev === 0) return null; return ((curr - prev) / Math.abs(prev)) * 100; }
 function calcMargin(num, den) { if (!isFinite(num) || !isFinite(den) || den === 0) return null; return (num / den) * 100; }
 function calcFcf(r) { if (!r) return null; const cfo = Number(r.netCashProvidedByOperatingActivities ?? r.operatingCashFlow); const capex = Number(r.capitalExpenditure); if (!isFinite(cfo) || !isFinite(capex)) return null; return cfo + capex; }
 function pctFromRatio(val) { const num = percentToNumber(val); if (num === null) return null; return Math.abs(num) <= 1 ? num * 100 : num; }
-function toNumber(val) { const num = percentToNumber(val); return num === null ? null : num; }
+function toNumber(val) {
+  if (val === Infinity || val === -Infinity) return val;
+  const num = percentToNumber(val);
+  return num === null ? null : num;
+}
+
+const isForeignIssuer = () => {
+  const issuerType = currentVm?.issuerType;
+  const profile = currentVm?.filingProfile || {};
+  const is20F = profile?.annual === "20-F" || profile?.interim === "6-K";
+  return issuerType === "foreign" || is20F;
+};
+
+function formatValuation(val) {
+  const num = toNumber(val);
+  if (num === Infinity) return "∞";
+  if (num === -Infinity) return "-∞";
+  if (num === null || Number.isNaN(num)) {
+    return isForeignIssuer() ? "Unavailable (not computed for foreign filers)" : "Not available";
+  }
+  return num.toFixed(2);
+}
+
+function formatRunway(val) {
+  const num = toNumber(val);
+  if (num === Infinity) return "∞ (no burn or cash flow positive)";
+  if (num === -Infinity) return "-∞";
+  if (num === null || Number.isNaN(num)) return "Not reported";
+  if (num === 0) return "0 (no cash runway)";
+  if (Number.isFinite(num) && num > 0 && num < 1) return `~${Math.max(1, Math.round(num * 12))} mo`;
+  return `${num.toFixed(1)} yrs`;
+}
+
+function formatCoverage(val) {
+  const num = toNumber(val);
+  if (num === Infinity) return "∞ (no interest burden)";
+  if (num === -Infinity) return "-∞";
+  if (num === null || Number.isNaN(num)) return "Not reported";
+  if (Number.isFinite(num) && num <= 0) return "Not covered";
+  return `${num.toFixed(2)}x`;
+}
+
+function formatPaybackYears(val) {
+  const num = toNumber(val);
+  if (num === Infinity) return "∞";
+  if (num === -Infinity) return "-∞";
+  if (num === null || Number.isNaN(num)) return "Not reported";
+  if (num === 0) return "0.0 yrs";
+  return `${num.toFixed(1)} yrs`;
+}
 
 function hasDebtField(entry) {
   if (!entry) return false;
@@ -2942,7 +4469,17 @@ function hasDebtField(entry) {
 function hasCashField(entry) {
   if (!entry) return false;
   const keys = ["cashAndCashEquivalents", "cashAndShortTermInvestments", "cash", "shortTermInvestments"];
-  return keys.some((k) => entry[k] !== undefined && entry[k] !== null);
+  const explicit = [
+    ...keys,
+    "cashAndCashEquivalentsAtCarryingValue",
+    "cashAndCashEquivalentsAndShortTermInvestments",
+    "cashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
+    "cashCashEquivalentsRestrictedCashAndRestrictedCashEquivalentsIncludingDisposalGroupAndDiscontinuedOperations"
+  ];
+  if (explicit.some((k) => entry[k] !== undefined && entry[k] !== null)) return true;
+  // Fallback: some providers use slightly different cash field names; treat any balance-sheet key
+  // that clearly looks like cash/cash equivalents as evidence of disclosure.
+  return Object.keys(entry).some((k) => /cash/i.test(k) && /(equival|restrict|invest)/i.test(k));
 }
 function formatPctCompact(val, { cap = 200 } = {}) {
   if (!Number.isFinite(val)) return "n/a";
@@ -2960,9 +4497,6 @@ function formatDebtSummary(f = {}, opts = {}) {
   const netCash = f.netCash === true || (Number.isFinite(f.netDebt) && f.netDebt < 0);
   const netDebtYears = f.netDebtToFcfYears;
   const debtVal = f.totalDebt;
-  const latestPrice = Number(opts.latestPrice);
-  const isPenny = Number.isFinite(latestPrice) && latestPrice < 5;
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   if (debtIsZero) {
     return { value: "Debt-free", note: "Company reported zero debt this period.", tone: "tone-good" };
   }
@@ -2973,7 +4507,7 @@ function formatDebtSummary(f = {}, opts = {}) {
     const months = Math.max(1, Math.round(netDebtYears * 12));
     return {
       value: `~${months} mo to clear debt`,
-      note: `FCF could retire debt in about ${months} month${months === 1 ? "" : "s"}.`,
+      note: `Free Cash Flow could retire debt in about ${months} month${months === 1 ? "" : "s"}.`,
       tone: "tone-good"
     };
   }
@@ -2981,27 +4515,21 @@ function formatDebtSummary(f = {}, opts = {}) {
     const tone = netDebtYears <= 3 ? "tone-good" : netDebtYears <= 6 ? "tone-warn" : "tone-risk";
     const note =
       netDebtYears <= 3
-        ? "Debt is manageable."
+        ? `Debt well-covered (${netDebtYears.toFixed(1)}x Free Cash Flow).`
         : netDebtYears <= 6
-          ? "Debt acceptable if cash flow holds."
-          : "Debt heavy vs cash flow.";
-    return { value: `${netDebtYears.toFixed(1)} yrs debt/FCF`, note, tone };
+          ? `Debt leverage moderate (${netDebtYears.toFixed(1)}x Free Cash Flow).`
+          : `Debt burden high relative to cash flow (${netDebtYears.toFixed(1)}x).`;
+    return { value: `${netDebtYears.toFixed(1)} yrs debt/flow`, note, tone };
   }
   if (!hasDebt) {
     return { value: "Debt data missing", note: "Latest filing did not report debt detail.", tone: "tone-neutral" };
   }
   if (hasDebt && !hasCash) {
-    const baseNotes = [
-      "Solvency and leverage can't be fully assessed.",
-      "Missing cash figures leave leverage unclear."
-    ];
-    const pennyNotes = [
-      "Solvency and leverage can't be fully assessed.",
-      "Sparse cash disclosure heightens balance-sheet uncertainty.",
-      "Balance sheet opacity raises solvency risk for penny issuers."
-    ];
-    const note = pick(isPenny ? pennyNotes : baseNotes);
-    return { value: "Debt reported; cash data missing.", note, tone: "tone-warn" };
+    return {
+      value: "Debt reported; cash data missing.",
+      note: "Cash disclosure is missing, so leverage can't be fully assessed.",
+      tone: "tone-warn"
+    };
   }
   if (hasDebt && Number.isFinite(debtVal) && debtVal === 0) {
     return { value: "Debt-free", note: "Company reported zero debt this period.", tone: "tone-good" };
@@ -3027,7 +4555,7 @@ if (manualPriceClear) {
   manualPriceClear.addEventListener("click", () => {
     clearManualPrice();
     if (manualPriceNote) manualPriceNote.textContent = "Manual price cleared.";
-    statusEl.textContent = "Last Close · --";
+    statusEl.textContent = "Last Close - --";
     closeManualPriceModal();
     loadAll().catch(handleLoadError);
   });
@@ -3040,6 +4568,20 @@ if (manualPriceClose && manualPriceModal) {
   });
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && manualModalShown) closeManualPriceModal();
+  });
+}
+
+if (missingTickerModal) {
+  const back = () => { window.location.href = "index.html"; };
+  const dismiss = () => closeMissingTickerModal();
+  missingTickerBack?.addEventListener("click", back);
+  missingTickerDismiss?.addEventListener("click", dismiss);
+  missingTickerClose?.addEventListener("click", dismiss);
+  missingTickerModal.addEventListener("click", (e) => {
+    if (e.target === missingTickerModal) dismiss();
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && missingTickerModal.style.display === "flex") dismiss();
   });
 }
 
@@ -3082,7 +4624,7 @@ if (rangeSwitch) {
   });
 }
 
-statusEl.textContent = "Last Close · --";
+statusEl.textContent = "Last Close - --";
 
 // Preload from bundle/cache on first load for current ticker, before provider choice.
 (async () => {
@@ -3138,25 +4680,3 @@ statusEl.textContent = "Last Close · --";
     console.debug("preload cache failed", err);
   }
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

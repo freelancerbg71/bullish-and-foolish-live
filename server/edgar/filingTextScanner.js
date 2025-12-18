@@ -1,19 +1,25 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { limitedFetch, lookupCompanyByTicker, normalizeEdgarCik, SEC_BASE } from "./edgarFundamentals.js";
+import {
+  detectIssuerTypeFromSubmissions,
+  fetchCompanySubmissions,
+  limitedFetch,
+} from "./edgarFundamentals.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, "..", "..");
 const EDGAR_DIR = path.join(ROOT, "data", "edgar");
 
-const DEFAULT_FORMS = ["10-Q", "10-K", "8-K", "DEF 14A", "DEF14A"];
+const DEFAULT_FORMS = ["10-Q", "10-K", "8-K", "6-K", "20-F", "DEF 14A", "DEF14A"];
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const FILING_SIGNALS_SCANNER_VERSION = "2025-12-17-forward-looking-trim-v6-insider-v4";
 const goingConcernCache = new Map();
 const filingSignalCache = new Map();
 const MAX_RECENT_FILINGS = 10;
-const PRIMARY_FORMS = new Set(["10-Q", "10-K"]);
+const PRIMARY_FORMS = new Set(["10-Q", "10-K", "20-F", "6-K"]);
+const INSIDER_FORMS = ["4", "4/A"];
 const BOILERPLATE_SECTION_TOKENS = [
   "risk factors",
   "forward-looking statements",
@@ -23,7 +29,14 @@ const BOILERPLATE_SECTION_TOKENS = [
   "legal proceedings",
   "liquidity risks may include",
   "cautionary note regarding",
-  "cautionary statement regarding"
+  "cautionary statement regarding",
+  "private securities litigation reform act",
+  "actual results could vary materially",
+  "actual results may differ materially",
+  "could differ materially",
+  "you are cautioned not to rely",
+  "inherently subject to uncertainty",
+  "undue reliance"
 ];
 const ALLOWED_SECTION_TOKENS = [
   "management's discussion",
@@ -67,10 +80,83 @@ const SEVERITY_LEVELS = {
   INFO: "info"
 };
 
+function formMatches(candidate, allowed) {
+  const upper = (candidate || "").toUpperCase();
+  const cleaned = upper.trim();
+  return allowed.some((f) => {
+    const target = (f || "").toUpperCase();
+    return cleaned === target || cleaned.startsWith(`${target}/`);
+  });
+}
+
 function stripTagsToText(html) {
   if (!html) return "";
   const withoutTags = html.replace(/<[^>]+>/g, " ");
-  return withoutTags.replace(/\s+/g, " ").trim();
+  const text = withoutTags.replace(/\s+/g, " ").trim();
+  return truncateForwardLookingFooter(text);
+}
+
+export function truncateForwardLookingFooter(text) {
+  const raw = String(text || "");
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  const len = lower.length;
+  if (!len) return raw;
+
+  const tokens = [
+    "forward-looking statements",
+    "forward looking statements",
+    "cautionary statement regarding forward-looking statements",
+    "cautionary statement regarding forward looking statements",
+    "safe harbor"
+  ];
+
+  // Use the last occurrence of any footer token (many filings repeat similar phrases earlier).
+  let lastIdx = -1;
+  for (const token of tokens) {
+    const idx = lower.lastIndexOf(token);
+    if (idx > lastIdx) lastIdx = idx;
+  }
+  if (lastIdx === -1) return raw;
+
+  // Heuristic: only treat as a boilerplate footer if it appears late in the document.
+  // This avoids truncating legitimate sections that happen to discuss forward-looking items earlier.
+  if (lastIdx < len * 0.35) return raw;
+
+  const tail = lower.slice(lastIdx, Math.min(len, lastIdx + 2400));
+  const disclaimerHints = [
+    "private securities litigation reform act",
+    "current report on form 8-k",
+    "this current report on form 8-k",
+    "section 27a",
+    "section 21e",
+    "undue reliance",
+    "no obligation to",
+    "risks and uncertainties",
+    "could differ materially",
+    "actual results may differ",
+    "actual results could vary materially",
+    "forward-looking statement",
+    "this press release",
+    "this report",
+    "this release",
+    "regarding, among other things",
+    "future operating and financial performance",
+    "product development",
+    "market position",
+    "business strategy",
+    "objectives",
+    "future financing plans",
+    "you are cautioned not to rely",
+    "inherently subject to uncertainty",
+    "known or unknown risks or uncertainties",
+    "assumptions prove inaccurate",
+    "materialize"
+  ];
+  const looksLikeFooter = disclaimerHints.some((h) => tail.includes(h));
+  if (!looksLikeFooter) return raw;
+
+  return raw.slice(0, lastIdx).trim();
 }
 
 function checkNegation(text, matchIndex, windowSize = 60) {
@@ -105,7 +191,7 @@ function scanForPhrases(text) {
   return snippets;
 }
 
-function contextWindow(text, idx, radius = 320) {
+function contextWindow(text, idx, radius = 1800) {
   const start = Math.max(0, idx - radius);
   const end = Math.min(text.length, idx + radius);
   return text.slice(start, end).toLowerCase();
@@ -138,12 +224,19 @@ function shouldSuppressFlag(text, idx, snippet) {
   const ctx = contextWindow(text, idx);
   const snippetLower = (snippet || "").toLowerCase();
 
+  // Foreign filers often state "Assumptions for going concern: none" in footnotes; treat that as explicit no-risk.
+  if (snippetLower.includes("going concern") && (snippetLower.includes(" none") || snippetLower.includes("no substantial doubt"))) {
+    return true;
+  }
+
   // IOVA Fix: Suppress "clinical failure" or "hold" if referring to stale years
   // e.g. "On December 22, 2023..."
   // Check 'ctx' (wider context) because the year might be 50 chars back and not in the tight snippet
+  /* 
   if (STALE_YEARS.some(year => ctx.includes(year))) {
     return true;
   }
+  */
 
   // IOVA Fix: Suppress "clinical hold" if it says "lifted" or "resumed" in the context
   const resolutionPhrases = [
@@ -207,6 +300,8 @@ function loadCachedFilingSignals(ticker, now = Date.now()) {
     const file = fundamentalsCachePath(ticker);
     if (!fs.existsSync(file)) return null;
     const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+    const version = parsed?.filingSignalsScannerVersion || null;
+    if (version !== FILING_SIGNALS_SCANNER_VERSION) return null;
     const signals = Array.isArray(parsed?.filingSignals) ? parsed.filingSignals : null;
     const meta = parsed?.filingSignalsMeta || null;
     const cachedAtStr = parsed?.filingSignalsCachedAt || parsed?.updatedAt || null;
@@ -248,9 +343,12 @@ function persistFilingSignals(ticker, payload) {
       console.warn("[filingTextScanner] failed to load existing fundamentals cache", ticker, err?.message || err);
     }
     const keepExistingSignals =
-      (!payload?.signals || payload.signals.length === 0) && Array.isArray(existing?.filingSignals);
+      (!payload?.signals || payload.signals.length === 0) &&
+      Array.isArray(existing?.filingSignals) &&
+      existing?.filingSignalsScannerVersion === FILING_SIGNALS_SCANNER_VERSION;
     const merged = {
       ...existing,
+      filingSignalsScannerVersion: FILING_SIGNALS_SCANNER_VERSION,
       filingSignals: keepExistingSignals
         ? existing.filingSignals
         : Array.isArray(payload?.signals)
@@ -266,13 +364,8 @@ function persistFilingSignals(ticker, payload) {
   }
 }
 
-export async function fetchLatestFilingMeta(ticker, forms = DEFAULT_FORMS) {
-  const company = await lookupCompanyByTicker(ticker);
-  const cik = normalizeEdgarCik(company?.cik);
-  if (!cik) throw new Error("CIK not found for ticker");
-
-  const submissionsUrl = `${SEC_BASE}/submissions/CIK${cik}.json`;
-  const subs = await limitedFetch(submissionsUrl, { parse: "json" });
+export async function fetchLatestFilingMeta(ticker, forms = DEFAULT_FORMS, opts = {}) {
+  const { submissions: subs, cik } = await fetchCompanySubmissions(ticker, opts);
   const recent = subs?.filings?.recent;
   const formList = recent?.form || [];
   const accList = recent?.accessionNumber || [];
@@ -281,23 +374,20 @@ export async function fetchLatestFilingMeta(ticker, forms = DEFAULT_FORMS) {
 
   for (let i = 0; i < formList.length; i += 1) {
     const f = (formList[i] || "").toUpperCase();
-    if (!forms.includes(f)) continue;
+    if (!formMatches(f, forms)) continue;
+    const canonicalForm = f.trim();
     const accession = accList[i];
     const filed = filedList[i];
     const primary = primaryDocs[i] || "";
     if (!accession) continue;
-    return { cik, accession, filed, form: f, primary };
+    return { cik, accession, filed, form: canonicalForm, primary };
   }
 
   return null;
 }
 
-async function fetchRecentFilingsMeta(ticker, forms = DEFAULT_FORMS, maxCount = MAX_RECENT_FILINGS) {
-  const company = await lookupCompanyByTicker(ticker);
-  const cik = normalizeEdgarCik(company?.cik);
-  if (!cik) throw new Error("CIK not found for ticker");
-  const submissionsUrl = `${SEC_BASE}/submissions/CIK${cik}.json`;
-  const subs = await limitedFetch(submissionsUrl, { parse: "json" });
+async function fetchRecentFilingsMeta(ticker, forms = DEFAULT_FORMS, maxCount = MAX_RECENT_FILINGS, opts = {}) {
+  const { submissions: subs, cik } = await fetchCompanySubmissions(ticker, opts);
   const recent = subs?.filings?.recent;
   const formList = recent?.form || [];
   const accList = recent?.accessionNumber || [];
@@ -306,14 +396,17 @@ async function fetchRecentFilingsMeta(ticker, forms = DEFAULT_FORMS, maxCount = 
   const rows = [];
   for (let i = 0; i < formList.length; i += 1) {
     const f = (formList[i] || "").toUpperCase();
-    if (!forms.includes(f)) continue;
+    if (!formMatches(f, forms)) continue;
+    const canonicalForm = f.trim();
     const accession = accList[i];
     const filed = filedList[i];
     const primary = primaryDocs[i] || "";
     if (!accession) continue;
-    rows.push({ cik, accession, filed, form: f, primary });
+    rows.push({ cik, accession, filed, form: canonicalForm, primary });
     if (rows.length >= maxCount) break;
   }
+  const issuerProfile = detectIssuerTypeFromSubmissions(subs);
+  rows.issuerProfile = issuerProfile;
   return rows;
 }
 
@@ -328,6 +421,23 @@ async function fetchFilingHtml({ cik, accession, primary }) {
   const docUrl = `https://www.sec.gov/Archives/edgar/data/${cikTrim}/${accessionNoDashes}/${mainDoc}`;
   const html = await limitedFetch(docUrl, { parse: "text" });
   return { html, docUrl };
+}
+
+function isRecentDateWithinDays(dateStr, days) {
+  const ts = Date.parse(dateStr || "");
+  if (!Number.isFinite(ts)) return false;
+  return Date.now() - ts <= Number(days) * 24 * 60 * 60 * 1000;
+}
+
+function parseForm4TransactionCounts(text) {
+  const t = String(text || "");
+  if (!t) return { buy: 0, sell: 0 };
+  const upper = t.toUpperCase();
+  // SEC "Form 4 XML" is often an HTML-ish XSL output where the transaction code cell uses SmallFormData spans.
+  // Example: <span class="SmallFormData">S</span>
+  const buy = (upper.match(/CLASS="SMALLFORMDATA">\s*P\s*<\/SPAN>/g) || []).length;
+  const sell = (upper.match(/CLASS="SMALLFORMDATA">\s*S\s*<\/SPAN>/g) || []).length;
+  return { buy, sell };
 }
 
 export async function scanFilingForGoingConcern(ticker) {
@@ -512,6 +622,21 @@ const SIGNAL_DEFS = [
     ]
   },
   {
+    id: "contingent_liabilities",
+    score: -3,
+    title: "Contingent Liabilities Mentioned",
+    includeInScore: false,
+    phrases: [
+      "commitments and contingencies",
+      "commitments & contingencies",
+      "contingent liabilities",
+      "environmental remediation",
+      "warranty reserve",
+      "material legal proceedings",
+      "legal proceedings"
+    ]
+  },
+  {
     id: "audit_opinion_issue",
     score: -6,
     title: "Audit Opinion Issue",
@@ -622,6 +747,31 @@ const SIGNAL_DEFS = [
     ]
   },
   {
+    id: "spinoff_separation",
+    score: 0,
+    severity: "info",
+    title: "Spin-off / Separation",
+    phrases: [
+      "spin-off",
+      "spinoff",
+      "split-off",
+      "carve-out",
+      "carve out",
+      "demerger",
+      "demerged",
+      "separation and distribution",
+      "separation of the company",
+      "separation transaction",
+      "separated from",
+      "separated into",
+      "newly formed company",
+      "distribution of shares",
+      "exchange offer",
+      "contributed to the newly formed",
+      "kenvue"
+    ]
+  },
+  {
     id: "clinical_failure",
     score: -6,
     title: "Clinical Failure",
@@ -656,6 +806,11 @@ const SIGNAL_DEFS = [
     title: "Clinical Failure",
     phrases: [
       "did not meet primary endpoint",
+      "did not meet its primary endpoint",
+      "did not meet the primary endpoint",
+      "failed to meet primary endpoint",
+      "failed to meet the primary endpoint",
+      "failed to meet its primary endpoint",
       "failed to achieve significance",
       "failed to achieve statistical significance",
       "trial failed",
@@ -927,7 +1082,7 @@ const SIGNAL_DEFS = [
   }
 ];
 
-export async function scanFilingForSignals(ticker) {
+export async function scanFilingForSignals(ticker, opts = {}) {
   const key = ticker.toUpperCase();
   const now = Date.now();
   const cached = filingSignalCache.get(key);
@@ -941,10 +1096,17 @@ export async function scanFilingForSignals(ticker) {
     return diskCached;
   }
 
-  const metas = await fetchRecentFilingsMeta(ticker, DEFAULT_FORMS, MAX_RECENT_FILINGS);
-  if (!metas || metas.length === 0) return { signals: [], meta: null };
+  const metas = await fetchRecentFilingsMeta(ticker, DEFAULT_FORMS, MAX_RECENT_FILINGS, opts);
+  const issuerProfile = metas?.issuerProfile;
+  if (!metas || metas.length === 0) {
+    return {
+      signals: [],
+      meta: issuerProfile ? { issuerType: issuerProfile.issuerType, filingProfile: issuerProfile.filingProfile } : null
+    };
+  }
 
   const dedupedSignals = new Map();
+  const signalCounts = new Map(); // Track how many filings have this signal
   let latestMeta = metas[0] || null;
 
   for (const meta of metas) {
@@ -981,6 +1143,11 @@ export async function scanFilingForSignals(ticker) {
         }
 
         if (foundSnippet) {
+          // Track counts for threshold logic (Foreign GC check)
+          const id = def.id;
+          if (!signalCounts.has(id)) signalCounts.set(id, 0);
+          signalCounts.set(id, signalCounts.get(id) + 1);
+
           const existing = dedupedSignals.get(def.id);
           // Keep the strongest (by abs score), otherwise prefer latest filing (first in list).
           // Since we process files latest-first, the first time we see a signal ID it is from the latest filing.
@@ -991,6 +1158,7 @@ export async function scanFilingForSignals(ticker) {
               id: def.id,
               title: def.title,
               score: def.score,
+              includeInScore: def.includeInScore,
               snippet: foundSnippet,
               form: meta.form,
               filed: meta.filed,
@@ -1007,18 +1175,109 @@ export async function scanFilingForSignals(ticker) {
     }
   }
 
+  // Post-Processing: Foreign issuers often include boilerplate "going concern" language; suppress entirely.
+  const isForeign = issuerProfile?.issuerType === "foreign";
+  if (isForeign) {
+    dedupedSignals.delete("going_concern");
+  }
+
   let signals = Array.from(dedupedSignals.values());
 
   // If no new signals but we have cached historical ones, keep them.
   if ((!signals || signals.length === 0) && diskCached?.signals?.length) {
+    const profileMeta = issuerProfile
+      ? { issuerType: issuerProfile.issuerType, filingProfile: issuerProfile.filingProfile }
+      : {};
     const result = {
       signals: diskCached.signals,
-      meta: { ...(diskCached.meta || {}), reused: true, note: "No new flags detected; showing prior risks." },
+      meta: {
+        ...(diskCached.meta || {}),
+        ...profileMeta,
+        reused: true,
+        note: "No new flags detected; showing prior risks."
+      },
       cachedAt: diskCached.cachedAt || new Date().toISOString()
     };
     filingSignalCache.set(key, { fetchedAt: now, result });
     return result;
   }
+
+  // ========== Derived Filing Intelligence (non-phrase based) ==========
+  // 1) Restatement history via amendment forms (10-K/A, 10-Q/A)
+  try {
+    const amendMetas = await fetchRecentFilingsMeta(ticker, ["10-K/A", "10-Q/A"], 2, opts);
+    const amendment = (amendMetas || []).find((m) => isRecentDateWithinDays(m?.filed, 365 * 3));
+    if (amendment) {
+      dedupedSignals.set("restatement_history", {
+        id: "restatement_history",
+        title: "Amended Filing History",
+        score: -6,
+        includeInScore: false,
+        snippet: `${amendment.form} filed ${amendment.filed} (amendment filing; can indicate corrections/restatement or administrative updates).`,
+        form: amendment.form,
+        filed: amendment.filed,
+        docUrl: `https://www.sec.gov/Archives/edgar/data/${String(amendment.cik || "").replace(/^0+/, "")}/${String(amendment.accession || "").replace(/-/g, "")}/${amendment.primary || ""}`,
+        accession: amendment.accession,
+        cik: amendment.cik
+      });
+    }
+  } catch (err) {
+    // Non-critical
+  }
+
+  // 2) Insider trading pattern via recent Form 4 filings (best-effort)
+  try {
+    const form4Metas = await fetchRecentFilingsMeta(ticker, INSIDER_FORMS, 12, opts);
+    const recentForm4 = (form4Metas || []).filter((m) => isRecentDateWithinDays(m?.filed, 180));
+    if (recentForm4.length >= 2) {
+      let buys = 0;
+      let sells = 0;
+      const sample = recentForm4.slice(0, 8);
+      for (const meta of sample) {
+        try {
+          const { html } = await fetchFilingHtml(meta);
+          const counts = parseForm4TransactionCounts(html);
+          buys += counts.buy;
+          sells += counts.sell;
+        } catch (_) {
+          // Ignore individual failures
+        }
+      }
+      if (buys || sells) {
+        // Prefer insider buying as a stronger signal than selling (selling is often planned/comp-driven).
+        // Weight sells at half-strength so mixed activity doesn't net to zero too easily.
+        const netSignal = buys - sells * 0.5;
+        const clustered = recentForm4.length >= 3;
+        // Keep the signal directionally useful, but avoid over-weighting (Form 4 code noise is common).
+        const score =
+          netSignal >= 2
+            ? 4
+            : netSignal >= 1
+              ? 2
+              : netSignal <= -2
+                ? -2
+                : 0;
+        const title = "Insider Trading Pattern";
+        const snippet = `Recent Form 4 activity: ${buys} buy-coded vs ${sells} sell-coded transactions (${recentForm4.length} filings / 180d).`;
+        dedupedSignals.set("insider_trading_pattern", {
+          id: "insider_trading_pattern",
+          title,
+          score,
+          includeInScore: false,
+          snippet,
+          form: "4",
+          filed: recentForm4[0]?.filed || null,
+          docUrl: null,
+          accession: recentForm4[0]?.accession || null,
+          cik: recentForm4[0]?.cik || null
+        });
+      }
+    }
+  } catch (err) {
+    // Non-critical; only enriches UI cards.
+  }
+
+  signals = Array.from(dedupedSignals.values());
 
   const result = {
     signals,
@@ -1026,7 +1285,9 @@ export async function scanFilingForSignals(ticker) {
       latestForm: latestMeta?.form || null,
       latestFiled: latestMeta?.filed || null,
       latestAccession: latestMeta?.accession || null,
-      latestDocUrl: signals.find((s) => s.form === latestMeta?.form && s.filed === latestMeta?.filed)?.docUrl || null
+      latestDocUrl: signals.find((s) => s.form === latestMeta?.form && s.filed === latestMeta?.filed)?.docUrl || null,
+      issuerType: issuerProfile?.issuerType || "domestic",
+      filingProfile: issuerProfile?.filingProfile || { annual: "10-K", interim: "10-Q", current: "8-K" }
     },
     cachedAt: new Date().toISOString()
   };

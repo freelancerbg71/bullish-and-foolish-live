@@ -2,7 +2,7 @@ import { fetchPriceFromPrimarySource } from "./priceFetcher.js";
 import { ensurePriceJobForTicker, getPriceJobStatus, inFlight, queue } from "./priceQueue.js";
 import { upsertCachedPrice, getLatestCachedPrice } from "./priceStore.js";
 
-const PRICE_REQUEST_SPACING_MS = 10_000;
+const PRICE_REQUEST_SPACING_MS = 2000;
 const MAX_JUMP_FACTOR = 12; // reject prices that are >12x or <1/12x the last cached
 
 function isPlausiblePrice(newPrice, lastPrice) {
@@ -15,7 +15,7 @@ function isPlausiblePrice(newPrice, lastPrice) {
 async function processNextPriceJob() {
   const ticker = queue.shift();
   if (!ticker) {
-    console.debug("[priceWorker] idle, queue empty; retrying in", PRICE_REQUEST_SPACING_MS, "ms");
+    // Idle: wait full spacing
     setTimeout(processNextPriceJob, PRICE_REQUEST_SPACING_MS);
     return;
   }
@@ -27,7 +27,7 @@ async function processNextPriceJob() {
     const lastCached = await getLatestCachedPrice(ticker);
     const price = await fetchPriceFromPrimarySource(ticker);
     if (price && isPlausiblePrice(price.close, lastCached?.close)) {
-      await upsertCachedPrice(price.ticker, price.date, price.close, price.source);
+      await upsertCachedPrice(price.ticker, price.date, price.close, price.source, price.marketCap, price.currency);
       console.info("[priceWorker] success", ticker, {
         close: price.close,
         date: price.date,
@@ -50,6 +50,8 @@ async function processNextPriceJob() {
     console.error("[priceWorker] error fetching price for", ticker, err);
     inFlight.set(ticker, "error");
   } finally {
+    // If we just did work, we can go faster if there's more work, but respect rate limits.
+    // 2s is safe for Yahoo/Alpha (30/min).
     setTimeout(processNextPriceJob, PRICE_REQUEST_SPACING_MS);
   }
 }
