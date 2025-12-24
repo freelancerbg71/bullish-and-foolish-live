@@ -9,6 +9,7 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(ROOT, "data");
 
 export const SEC_BASE = process.env.EDGAR_BASE || process.env.DATA_API_BASE || "https://data.sec.gov";
+export const SEC_FILES_BASE = process.env.EDGAR_FILES_BASE || "https://www.sec.gov";
 export const EDGAR_USER_AGENT =
   process.env.EDGAR_USER_AGENT ||
   process.env.DATA_USER_AGENT ||
@@ -366,7 +367,7 @@ async function loadDirectory() {
     return localFirst;
   }
 
-  const url = `${SEC_BASE}/files/company_tickers_exchange.json`;
+  const url = `${SEC_FILES_BASE}/files/company_tickers_exchange.json`;
   try {
     const data = await limitedFetchJson(url);
     directoryCache.data = data;

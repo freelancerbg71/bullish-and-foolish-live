@@ -10,7 +10,7 @@ import { buildTickerViewModel } from './server/ticker/tickerAssembler.js';
 import { queryScreener } from './server/screener/screenerService.js';
 import { startScreenerScheduler } from './server/screener/screenerScheduler.js';
 import { enqueueFundamentalsJob, getQueueDepth } from './server/edgar/edgarQueue.js';
-import { closeDb as closeFundamentalsDb } from './server/edgar/fundamentalsStore.js';
+import { closeDb as closeFundamentalsDb, getFundamentalsForTicker, writeFundamentalsSnapshot } from './server/edgar/fundamentalsStore.js';
 import { closeDb as closeScreenerDb } from './server/screener/screenerStore.js';
 import { closeDb as closePricesDb } from './server/prices/priceStore.js';
 
@@ -55,6 +55,7 @@ async function seedPersistentData() {
     if (path.resolve(sourceDir) === path.resolve(targetDir)) return;
 
     const targetEdgarDir = path.join(targetDir, 'edgar');
+    const targetDbFile = path.join(targetEdgarDir, 'fundamentals.db');
     try {
         await fsPromises.access(sourceDir);
     } catch (err) {
@@ -63,11 +64,11 @@ async function seedPersistentData() {
     }
 
     try {
-        await fsPromises.access(targetEdgarDir);
+        await fsPromises.access(targetDbFile);
         return;
     } catch (err) {
         if (err.code && err.code !== 'ENOENT') {
-            console.warn('[seed] failed to check target dir:', err.message);
+            console.warn('[seed] failed to check target db:', err.message);
             return;
         }
     }
@@ -162,6 +163,15 @@ async function ensureFundamentalsSnapshot(ticker, { ttlMs = JSON_SNAPSHOT_TTL_MS
     }
     if (existing?.data?.periods?.length && isSnapshotFresh(existing.updatedAt, ttlMs)) {
         return existing;
+    }
+    try {
+        const dbRows = await getFundamentalsForTicker(ticker);
+        if (dbRows?.length) {
+            writeFundamentalsSnapshot(dbRows);
+            return await loadFundamentalsSnapshot(ticker);
+        }
+    } catch (err) {
+        console.warn('[snapshot] DB fallback failed', ticker, err?.message || err);
     }
     const { pending, active } = getQueueDepth();
     if (pending + active >= EDGAR_SYNC_MAX_QUEUE) {
@@ -715,12 +725,15 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/' || pathname === '') pathname = '/index.html';
 
-    const base = pathname.startsWith('/assets/')
-        ? PROJECT_ROOT
-        : pathname.startsWith('/data/')
-            ? DATA_DIR
-            : __dirname;
-    const filePath = resolveSafePath(base, pathname);
+    let base = __dirname;
+    let staticPath = pathname;
+    if (pathname.startsWith('/assets/')) {
+        base = PROJECT_ROOT;
+    } else if (pathname.startsWith('/data/')) {
+        base = DATA_DIR;
+        staticPath = pathname.replace(/^\/data/, '') || '/';
+    }
+    const filePath = resolveSafePath(base, staticPath);
     if (!filePath) {
         res.writeHead(403);
         return res.end('Forbidden');
