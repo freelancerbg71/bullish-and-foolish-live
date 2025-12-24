@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bullish and Foolish | Fundamental Intelligence</title>
+    <link rel="stylesheet" href="style.css?v=20251224">
+</head>
+
+<body>
+
+    <header class="container"
+        style="padding: 0 var(--space-md) var(--space-xs) var(--space-md); display: flex; justify-content: space-between; align-items: flex-end;">
+        <a href="index.html"
+            style="font-family: var(--font-serif); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-primary); margin-bottom: 24px;">
+            Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
+        </a>
+        <nav style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px;"
+            class="text-muted">
+            <a href="screener.html">Screener</a>
+            <a href="about.html">Methodology</a>
+        </nav>
+    </header>
+
+    <main>
+        <section class="section container" style="text-align: center; padding-top: 5vh; padding-bottom: 5vh;">
+            <div class="logo-container">
+                <img src="/assets/images/bullishnfoolish.webp" class="logo-main" alt="Bullish and Foolish Logo">
+            </div>
+            <h1 class="huge">Search the US Market's<br>Fundamental Truth.</h1>
+            <p class="text-muted"
+                style="max-width: 600px; margin: var(--space-lg) auto var(--space-2xl) auto; font-size: 1.1rem;">
+                An independent rating engine that strips away the noise of price and hype, focusing exclusively on the
+                underlying financial health of public companies.
+            </p>
+
+            <div style="max-width: 700px; margin: 0 auto; position: relative; display: flex; gap: 10px;">
+                <input type="text" id="searchInput" placeholder="Search by Ticker (e.g. AAPL, MSFT, NVDA)"
+                    style="flex: 1; padding: 20px 24px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 1.1rem; outline: none; transition: border-color 0.2s;">
+                <button id="searchBtn"
+                    style="padding: 0 32px; background: var(--accent); color: var(--bg-primary); border: none; border-radius: 8px; font-weight: 700; font-size: 1.1rem; cursor: pointer; transition: transform 0.1s;">Go</button>
+            </div>
+
+            <p class="text-muted" style="margin-top: var(--space-md); font-size: 0.85rem;">
+                Found a bug, have a feature request, or just want to share your thoughts?
+                <a href="https://forms.gle/R2PBuazjAmqY2VZc8" target="_blank" rel="noopener"
+                    style="color: var(--accent); text-decoration: none; font-weight: 600;">Let us know →</a>
+            </p>
+
+            <script>
+                const input = document.getElementById('searchInput');
+                const btn = document.getElementById('searchBtn');
+
+                input.onfocus = () => {
+                    input.style.borderColor = 'var(--accent)';
+                    input.style.boxShadow = '0 0 0 1px var(--accent)';
+                };
+                input.onblur = () => {
+                    input.style.borderColor = 'var(--border)';
+                    input.style.boxShadow = 'none';
+                };
+                const doSearch = () => {
+                    const val = input.value.trim().toUpperCase();
+                    if (val) window.location.href = `ticker.html?ticker=${val}`;
+                };
+                input.addEventListener('keyup', (e) => {
+                    if (e.key === 'Enter') doSearch();
+                });
+                btn.addEventListener('click', doSearch);
+                btn.onmousedown = () => btn.style.transform = 'scale(0.97)';
+                btn.onmouseup = () => btn.style.transform = 'scale(1)';
+            </script>
+        </section>
+
+        <section class="container section">
+            <div class="label" style="margin-bottom: var(--space-md);">Latest SEC Filings</div>
+            <div class="card" style="display: flex; flex-direction: column; gap: var(--space-md);">
+                <div id="filingNewsStatus" class="text-muted">Loading filings...</div>
+                <div id="filingNewsList" style="display: grid; gap: var(--space-sm);"></div>
+            </div>
+        </section>
+
+        <section class="container section" style="text-align: center;">
+            <h2 class="huge" style="margin-bottom: var(--space-md);">About Bullish And Foolish</h2>
+            <p class="text-secondary"
+                style="font-size: 1.2rem; line-height: 1.5; max-width: 780px; margin: 0 auto var(--space-lg) auto;">
+                Investing shouldn't feel like reading an income statement in Latin.
+                Bullish And Foolish cuts through the noise, condenses the mountain of financial data, and shows you the
+                signal - fast.
+            </p>
+            <p class="text-secondary"
+                style="font-size: 1.2rem; line-height: 1.5; max-width: 780px; margin: 0 auto var(--space-lg) auto;">
+                The market can be chaotic, emotional, euphoric and brutal.
+                Instead of telling you what to buy, the goal is to help you understand why something looks promising or
+                questionable.
+            </p>
+            <p class="text-secondary"
+                style="font-size: 1.2rem; line-height: 1.5; max-width: 780px; margin: 0 auto var(--space-lg) auto;">
+                Many people start their investing journey in penny-stock land - convinced that the next CRKN will be the
+                one.
+                Some even believe the analysts assigning TNXP a $40+ future - without checking the fine print, dilution,
+                or reverse splits along the way.
+            </p>
+            <p class="text-secondary"
+                style="font-size: 1.2rem; line-height: 1.5; max-width: 780px; margin: 0 auto var(--space-lg) auto;">
+                This isn't about hype or hero forecasts - just signal over noise.
+                Put SOFI and META next to each other and the story shifts. Growth vs. maturity. Potential vs. proven
+                engine. Neither right or wrong - just clearer.
+            </p>
+            <p class="text-secondary" style="font-size: 1.2rem; line-height: 1.5; max-width: 780px; margin: 0 auto;">
+                If you find value in this project, the best support is simply using the site, learning from it, and
+                thinking independently.
+            </p>
+        </section>
+    </main>
+
+    <footer class="footer-disclaimer">
+        <div class="container">
+            <div class="disclaimer-text">
+                <p style="font-weight: 600; margin-bottom: var(--space-sm); color: var(--text-primary);">Disclaimer &
+                    Disclosure</p>
+                <p>Bullish and Foolish is an independent financial analysis tool. All data is sourced from public SEC
+                    filings.
+                    The ratings and analysis provided are for informational purposes only and do NOT constitute
+                    financial advice, investment recommendations, or an offer to buy/sell securities.
+                    Fundamental data can be subject to reporting lags or errors in source filings.
+                    Always perform your own due diligence before making investment decisions.</p>
+                <p style="margin-top: var(--space-md);">© 2025 Bullish and Foolish. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const filingStatus = document.getElementById('filingNewsStatus');
+        const filingList = document.getElementById('filingNewsList');
+
+        function fmtDate(val) {
+            if (!val) return '';
+            const parsed = new Date(val);
+            if (Number.isNaN(parsed.getTime())) return String(val);
+            return parsed.toISOString().slice(0, 10);
+        }
+
+        function safeText(val) {
+            return val == null ? '' : String(val);
+        }
+
+        function renderFilings(events) {
+            if (!filingList) return;
+            filingList.innerHTML = '';
+            if (!Array.isArray(events) || events.length === 0) {
+                if (filingStatus) filingStatus.textContent = 'No recent filings yet. Check back soon.';
+                return;
+            }
+            events.forEach((evt) => {
+                const link = document.createElement('a');
+                const href = evt.url || `https://www.sec.gov/edgar/search/#/q=${encodeURIComponent(evt.ticker || '')}`;
+                link.href = href;
+                link.target = '_blank';
+                link.rel = 'noopener';
+                link.className = 'card';
+                link.style.display = 'grid';
+                link.style.gridTemplateColumns = '1fr auto';
+                link.style.gap = '12px';
+                link.style.alignItems = 'center';
+
+                const left = document.createElement('div');
+                const ticker = document.createElement('div');
+                ticker.style.fontWeight = '700';
+                ticker.textContent = safeText(evt.ticker || '');
+                const title = document.createElement('div');
+                title.className = 'text-muted';
+                title.style.fontSize = '0.9rem';
+                title.textContent = safeText(evt.headline || 'New filing');
+                const meta = document.createElement('div');
+                meta.className = 'text-muted';
+                meta.style.fontSize = '0.75rem';
+                meta.textContent = `Filed ${fmtDate(evt.filingDate)}${evt.companyName ? ` - ${evt.companyName}` : ''}`;
+                left.appendChild(ticker);
+                left.appendChild(title);
+                left.appendChild(meta);
+
+                const right = document.createElement('div');
+                right.style.display = 'flex';
+                right.style.flexDirection = 'column';
+                right.style.alignItems = 'flex-end';
+                right.style.gap = '6px';
+                const type = document.createElement('div');
+                type.className = 'badge badge-neutral';
+                type.textContent = safeText(evt.filingType || 'Filing');
+                const when = document.createElement('div');
+                when.className = 'text-muted';
+                when.style.fontSize = '0.75rem';
+                when.textContent = fmtDate(evt.createdAt);
+                right.appendChild(type);
+                right.appendChild(when);
+
+                link.appendChild(left);
+                link.appendChild(right);
+                filingList.appendChild(link);
+            });
+
+            if (filingStatus) filingStatus.textContent = `Showing ${events.length} recent filings`;
+        }
+
+        async function loadFilings() {
+            if (!filingList) return;
+            try {
+                const res = await fetch('/api/filing-news');
+                const payload = await res.json();
+                renderFilings(payload?.events || []);
+            } catch (_) {
+                if (filingStatus) filingStatus.textContent = 'Could not load filings.';
+            }
+        }
+
+        loadFilings();
+    </script>
+</body>
+
+</html>

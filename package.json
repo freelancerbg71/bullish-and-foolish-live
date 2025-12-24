@@ -1,0 +1,21 @@
+{
+  "name": "stocks-tools",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dump:meta": "node scripts/dumpMetaFacts.js",
+    "edgar:ingest": "node scripts/edgarIngest.js",
+    "edgar:refresh-directory": "node scripts/refreshDirectory.js",
+    "export:screener": "node scripts/export_screener_static.js --out dist-screener --pageSize 200",
+    "publish:screener": "node scripts/publish_screener_static_versioned.js --pageSize 200",
+    "worker:weekly-fundamentals": "node worker/jobs/weekly-fundamentals.js",
+    "worker:daily-last-trade": "node worker/jobs/daily-last-trade.js",
+    "ingest:companyfacts:test": "node scripts/ingest_companyfacts_dir.js --limit 20 --concurrency 1",
+    "build:screener:static:test": "node scripts/build_screener_static_local.js --limit 20 --keepDb",
+    "test:prices": "node server/prices/priceFetcher.test.js && node server/prices/priceStore.test.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.5.0"
+  }
+}

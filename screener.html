@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Screener | Bullish and Foolish</title>
+    <link rel="stylesheet" href="style.css?v=20251224">
+    <style>
+        .filter-bar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: var(--space-md) 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: var(--space-xl);
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+            .filter-group {
+                gap: var(--space-sm);
+            }
+
+            #applyFilters {
+                width: 100%;
+                margin: var(--space-sm) 0;
+            }
+
+            th,
+            td {
+                padding: var(--space-sm) 4px !important;
+                font-size: 0.8rem !important;
+            }
+
+            .num-cell,
+            .ticker-cell,
+            .score-cell {
+                font-size: 0.8rem !important;
+            }
+        }
+
+        .select-minimal {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .select-minimal:hover {
+            background: var(--bg-tertiary);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--space-xl);
+        }
+
+        th {
+            text-align: left;
+            padding: var(--space-md);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: var(--space-lg) var(--space-md);
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .ticker-cell {
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .score-cell {
+            font-weight: 800;
+            font-size: 1.1rem;
+            text-align: right;
+        }
+
+        .num-cell {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="app-header">
+        <div class="container header-content">
+            <div class="header-left">
+                <a href="index.html" class="header-brand">
+                    Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
+                </a>
+            </div>
+            <nav class="header-nav text-muted">
+                <a href="screener.html" style="color: var(--text-primary);">Screener</a>
+                <a href="about.html">Methodology</a>
+                <a href="index.html">Search</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="filter-bar">
+        <div class="container filter-group">
+            <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                <span class="label">Sector</span>
+                <select id="sectorFilter" class="select-minimal">
+                    <option value="">All Sectors</option>
+                    <option value="Tech/Internet">Tech/Internet</option>
+                    <option value="Fintech">Fintech</option>
+                    <option value="Biotech/Pharma">Biotech</option>
+                    <option value="Financials">Financials</option>
+                    <option value="Consumer & Services">Consumer</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                <span class="label">Score</span>
+                <select id="scoreFilter" class="select-minimal">
+                    <option value="all" selected>All</option>
+                    <option value="0-30">Distressed (0-30)</option>
+                    <option value="31-45">Speculative (31-45)</option>
+                    <option value="46-60">Average (46-60)</option>
+                    <option value="61-75">Solid (61-75)</option>
+                    <option value="76-90">Bullish (76-90)</option>
+                    <option value="91-100">Elite (91-100)</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                <span class="label">Market Cap</span>
+                <select id="mcapFilter" class="select-minimal">
+                    <option value="all" selected>All</option>
+                    <option value="large-mid">Large & Mid</option>
+                    <option value="small-micro">Small/Micro</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                <span class="label">Price Range</span>
+                <select id="priceFilter" class="select-minimal">
+                    <option value="all">All Prices</option>
+                    <option value="0.01-5">Penny Stocks ($0 - $5)</option>
+                    <option value="5-20">Growth Range ($5 - $20)</option>
+                    <option value="20-100">Mid Range ($20 - $100)</option>
+                    <option value="100-1000000">High Value ($100+)</option>
+                </select>
+            </div>
+            <div style="margin-left: auto;">
+                <button id="applyFilters"
+                    style="background: var(--accent); color: var(--bg-primary); border: none; padding: 8px 16px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">Apply
+                    Filters</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="container" style="padding-bottom: var(--space-2xl);">
+        <div id="loading" class="section" style="text-align: center;">
+            <div class="label">Querying Market Intelligence...</div>
+        </div>
+
+        <div style="margin-bottom: var(--space-md); font-size: 0.85rem; line-height: 1.4; display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); flex-wrap: wrap;"
+            class="text-muted">
+            <div style="flex: 1; min-width: 140px;">
+                <div>Screener snapshot updated: <span id="snapshotDate">Loading...</span></div>
+                <div>Results are refreshed weekly.</div>
+            </div>
+            <div style="font-weight: 600; text-align: right; flex: 1; min-width: 140px;">
+                Enjoying these ratings? <br>
+                <a href="javascript:void(0)" onclick="showSupportModal()"
+                    style="color: var(--accent); text-decoration: none; font-weight: 700;">Support the project →</a>
+            </div>
+        </div>
+
+        <table id="screenerTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Company</th>
+                    <th class="hide-mobile">Sector</th>
+                    <th class="hide-mobile" style="text-align: right; cursor: pointer;"
+                        onclick="handleSort('marketCap')">
+                        Market Cap <span id="sort-marketCap" class="sort-icon"></span>
+                    </th>
+                    <th style="text-align: right; cursor: pointer;" onclick="handleSort('lastTradePrice')">
+                        Last Price <span id="sort-lastTradePrice" class="sort-icon"></span>
+                    </th>
+                    <th style="text-align: right; cursor: pointer;" onclick="handleSort('revenueGrowthYoY')">
+                        Rev Growth <span id="sort-revenueGrowthYoY" class="sort-icon"></span>
+                    </th>
+                    <th style="text-align: right; cursor: pointer;" onclick="handleSort('fcfMarginTTM')">
+                        FCF Margin <span id="sort-fcfMarginTTM" class="sort-icon"></span>
+                    </th>
+                    <th style="text-align: right; cursor: pointer;" onclick="handleSort('score')">
+                        Quality Score <span id="sort-score" class="sort-icon"></span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="screenerBody">
+                <!-- Data will be injected here -->
+            </tbody>
+        </table>
+
+        <div id="pagination"
+            style="margin-top: var(--space-xl); display: none; justify-content: center; gap: var(--space-md); align-items: center;">
+            <button id="prevPage" class="select-minimal" style="border: 1px solid var(--border);">Previous</button>
+            <span id="pageInfo" class="text-muted" style="font-size: 0.85rem;">Page 1 of 1</span>
+            <button id="nextPage" class="select-minimal" style="border: 1px solid var(--border);">Next</button>
+        </div>
+    </main>
+
+    <footer class="footer-disclaimer">
+        <div class="container">
+            <div class="disclaimer-text">
+                <p style="font-weight: 600; margin-bottom: var(--space-sm); color: var(--text-primary);">Disclaimer &
+                    Disclosure</p>
+                <p>Bullish and Foolish is an independent financial analysis tool. All data is sourced from public SEC
+                    filings.
+                    The ratings and analysis provided are for informational purposes only and do NOT constitute
+                    financial advice, investment recommendations, or an offer to buy/sell securities.
+                    Fundamental data can be subject to reporting lags or errors in source filings.
+                    Always perform your own due diligence before making investment decisions.</p>
+                <p style="margin-top: var(--space-md);">© 2025 Bullish and Foolish. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <div id="supportModal" class="modal-overlay" onclick="closeSupportModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>Keep the Signal Clean</h3>
+            <p>
+                Bullish & Foolish is an independent project.
+                Your support helps cover the hosting and server costs that keep this tool fast, free, and ad-free for
+                everyone.
+            </p>
+            <div class="modal-actions">
+                <a href="http://revolut.me/viktorc8gv" target="_blank" class="modal-btn-primary"
+                    onclick="closeSupportModal()">
+                    Continue to Revolut
+                </a>
+                <button class="modal-btn-secondary" onclick="closeSupportModal()">Maybe later</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showSupportModal() {
+            document.getElementById('supportModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSupportModal(e) {
+            document.getElementById('supportModal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        let currentPage = 1;
+        const pageSize = 50;
+        let pricePatch = null;
+
+        async function fetchPricePatch() {
+            if (pricePatch) return pricePatch;
+            try {
+                const dayTag = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                const res = await fetch(`/data/prices.json?v=${dayTag}`);
+                if (res.ok) {
+                    pricePatch = await res.json();
+                }
+            } catch (err) {
+                console.warn('Failed to load price patch', err);
+            }
+            return pricePatch;
+        }
+
+        function formatPct(val) {
+            if (val == null) return '--';
+            return (Number(val)).toFixed(1) + '%';
+        }
+
+        function formatNum(val, dec = 2) {
+            if (val == null) return '--';
+            return Number(val).toFixed(dec);
+        }
+
+        function formatMCap(val) {
+            if (val == null || Number(val) === 0) return 'Missing';
+            const num = Number(val);
+            // Values under $100k are almost certainly bad data (sharesOutstanding errors)
+            if (num < 100000) return 'Missing';
+            if (num >= 1e12) return '$' + (num / 1e12).toFixed(1) + 'T';
+            if (num >= 1e9) return '$' + (num / 1e9).toFixed(1) + 'B';
+            if (num >= 1e6) return '$' + (num / 1e6).toFixed(1) + 'M';
+            if (num >= 1e3) return '$' + (num / 1e3).toFixed(1) + 'k';
+            return '$' + num.toLocaleString();
+        }
+
+        let currentSort = 'score';
+        let currentDir = 'desc';
+
+        function handleSort(field) {
+            if (currentSort === field) {
+                currentDir = currentDir === 'desc' ? 'asc' : 'desc';
+            } else {
+                currentSort = field;
+                currentDir = 'desc';
+            }
+            updateSortIcons();
+            loadScreener();
+        }
+
+
+        function updateSortIcons() {
+            document.querySelectorAll('.sort-icon').forEach(el => el.innerHTML = '');
+            const icon = document.getElementById(`sort-${currentSort}`);
+            if (icon) {
+                icon.innerHTML = currentDir === 'desc' ? ' v' : ' ^';
+            }
+        }
+
+        async function loadScreener() {
+            const table = document.getElementById('screenerTable');
+            const body = document.getElementById('screenerBody');
+            const loading = document.getElementById('loading');
+            const pagination = document.getElementById('pagination');
+
+            loading.style.display = 'block';
+            table.style.display = 'none';
+            pagination.style.display = 'none';
+
+            const sector = document.getElementById('sectorFilter').value;
+            const scoreMin = document.getElementById('scoreFilter').value;
+            const mcap = document.getElementById('mcapFilter').value;
+
+            const params = new URLSearchParams();
+            params.set('page', currentPage);
+            params.set('pageSize', pageSize);
+            if (sector === 'Fintech') {
+                params.set('flags', 'isFintech');
+            } else if (sector) {
+                params.set('sectorBucket', sector);
+            }
+            const scoreVal = document.getElementById('scoreFilter').value;
+            if (scoreVal && scoreVal !== 'all') {
+                const parts = scoreVal.split('-');
+                if (parts.length === 2) {
+                    params.set('scoreMin', parts[0]);
+                    params.set('scoreMax', parts[1]);
+                } else {
+                    params.set('scoreMin', scoreVal);
+                }
+            }
+
+            const priceVal = document.getElementById('priceFilter').value;
+            if (priceVal && priceVal !== 'all') {
+                const parts = priceVal.split('-');
+                if (parts.length === 2) {
+                    const minP = parts[0];
+                    const maxP = parts[1];
+                    if (minP && minP !== '0') params.set('priceMin', minP);
+                    if (maxP && maxP !== '0') params.set('priceMax', maxP);
+                }
+            }
+
+            if (currentSort) {
+                params.set('sort', currentSort);
+                params.set('dir', currentDir);
+            }
+
+            if (mcap === 'large-mid') {
+                params.set('mcapBucket', 'Large,Mid');
+            } else if (mcap === 'small-micro') {
+                params.set('mcapBucket', 'Small,Micro');
+            }
+
+            try {
+                const [res, patch] = await Promise.all([
+                    fetch(`/api/screener?${params.toString()}`),
+                    fetchPricePatch()
+                ]);
+                if (!res.ok) throw new Error('Screener query failed');
+                const data = await res.json();
+                const rows = data.results || data.rows || [];
+
+                body.innerHTML = '';
+                rows.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.addEventListener('click', (event) => {
+                        if (event.target.closest('a')) return;
+                        const target = encodeURIComponent(row.ticker || '');
+                        window.location.href = `ticker.html?ticker=${target}`;
+                    });
+
+                    const companyCell = document.createElement('td');
+                    const link = document.createElement('a');
+                    link.href = `ticker.html?ticker=${encodeURIComponent(row.ticker || '')}`;
+                    link.style.textDecoration = 'none';
+                    link.style.color = 'inherit';
+                    link.style.display = 'block';
+
+                    const tickerDiv = document.createElement('div');
+                    tickerDiv.className = 'ticker-cell';
+                    tickerDiv.style.color = 'var(--text-primary)';
+                    tickerDiv.textContent = row.ticker || '--';
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'text-muted';
+                    nameDiv.style.fontSize = '0.8rem';
+                    nameDiv.textContent = row.name || '';
+
+                    link.appendChild(tickerDiv);
+                    link.appendChild(nameDiv);
+                    companyCell.appendChild(link);
+
+                    const sectorCell = document.createElement('td');
+                    sectorCell.className = 'text-muted hide-mobile';
+                    sectorCell.textContent = row.sectorBucket || row.sector || '--';
+
+                    const mcapCell = document.createElement('td');
+                    mcapCell.className = 'num-cell hide-mobile';
+                    mcapCell.style.fontWeight = '600';
+                    const mcapText = formatMCap(row.marketCap);
+                    mcapCell.textContent = mcapText;
+                    if (mcapText === 'Missing') {
+                        mcapCell.classList.add('text-muted');
+                        mcapCell.style.fontWeight = '400';
+                    }
+
+                    const priceCell = document.createElement('td');
+                    priceCell.className = 'num-cell';
+                    priceCell.style.fontWeight = '600';
+                    const latestPrice = (patch && patch[row.ticker]) ? patch[row.ticker].p : row.lastTradePrice;
+                    priceCell.textContent = `$${formatNum(latestPrice)}`;
+
+                    const revCell = document.createElement('td');
+                    revCell.className = 'num-cell';
+                    if (row.revenueGrowthYoY >= 20) revCell.style.color = 'var(--accent)';
+                    revCell.textContent = row.revenueGrowthYoY != null
+                        ? (row.revenueGrowthYoY > 0 ? '+' : '') + formatPct(row.revenueGrowthYoY)
+                        : '--';
+
+                    const fcfCell = document.createElement('td');
+                    fcfCell.className = 'num-cell';
+                    if (row.fcfMarginTTM < 0) fcfCell.style.color = 'var(--danger)';
+                    fcfCell.textContent = formatPct(row.fcfMarginTTM);
+
+                    const scoreCell = document.createElement('td');
+                    scoreCell.className = 'score-cell';
+                    const scoreVal = row.score ?? '--';
+                    scoreCell.textContent = scoreVal;
+                    if (row.score >= 70) scoreCell.style.color = 'var(--accent)';
+                    else if (row.score < 40) scoreCell.style.color = 'var(--danger)';
+                    else scoreCell.style.color = 'var(--warning)';
+
+                    tr.appendChild(companyCell);
+                    tr.appendChild(sectorCell);
+                    tr.appendChild(mcapCell);
+                    tr.appendChild(priceCell);
+                    tr.appendChild(revCell);
+                    tr.appendChild(fcfCell);
+                    tr.appendChild(scoreCell);
+                    body.appendChild(tr);
+                });
+
+                loading.style.display = 'none';
+                table.style.display = 'table';
+                updateSortIcons();
+                pagination.style.display = 'flex';
+
+                const totalPages = Math.ceil(data.total / pageSize);
+                document.getElementById('pageInfo').textContent = `Page ${data.page} of ${totalPages || 1} (${data.total} companies)`;
+                document.getElementById('prevPage').disabled = data.page <= 1;
+                document.getElementById('nextPage').disabled = data.page >= totalPages;
+
+                if (data.meta?.newestAt) {
+                    const d = new Date(data.meta.newestAt);
+                    document.getElementById('snapshotDate').textContent = d.toISOString().split('T')[0];
+                } else {
+                    document.getElementById('snapshotDate').textContent = 'Live';
+                }
+
+            } catch (err) {
+                loading.innerHTML = `<div class="badge badge-bearish">Error: ${err.message}</div>`;
+            }
+        }
+
+        document.getElementById('applyFilters').addEventListener('click', () => {
+            currentPage = 1;
+            loadScreener();
+        });
+
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadScreener();
+                window.scrollTo(0, 0);
+            }
+        });
+
+        document.getElementById('nextPage').addEventListener('click', () => {
+            currentPage++;
+            loadScreener();
+            window.scrollTo(0, 0);
+        });
+
+        // Initialize with Large/Mid 80+ by default as per the select state
+        loadScreener();
+    </script>
+</body>
+
+</html>

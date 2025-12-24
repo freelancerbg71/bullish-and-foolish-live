@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Analysis | Bullish and Foolish</title>
+    <link rel="stylesheet" href="style.css?v=20251224">
+    <style>
+        .pillar-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-xl);
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--space-sm) 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+        }
+
+        .warning-panel {
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: var(--space-md);
+            margin: var(--space-md) 0 var(--space-lg);
+        }
+
+        .warning-panel-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+        }
+
+        .warning-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .confidence-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 10px;
+            padding: 6px 8px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(148, 163, 184, 0.08);
+        }
+
+        .confidence-meter {
+            height: 4px;
+            width: 80px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .confidence-meter-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--text-muted);
+            transition: width 0.4s ease;
+        }
+
+        .confidence-text {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            line-height: 1.2;
+        }
+
+        .warning-item {
+            border-radius: 10px;
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 155, 27, 0.3);
+            background: rgba(255, 155, 27, 0.08);
+        }
+
+        .warning-item-title {
+            color: #ff9b1b;
+            font-weight: 700;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+        }
+
+        .warning-item-text {
+            color: var(--text);
+            opacity: 0.85;
+            font-size: 0.82rem;
+            line-height: 1.35;
+        }
+
+        .dq-badge {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #d97706;
+            background: rgba(255, 165, 0, 0.12);
+            border: 1px solid rgba(255, 165, 0, 0.25);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: var(--space-xl) auto;
+        }
+
+        .scroll-down-overlay {
+            position: fixed;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%) translateY(6px);
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(15, 23, 42, 0.72);
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+            z-index: 50;
+        }
+
+        .scroll-down-overlay::before {
+            content: "";
+            position: absolute;
+            inset: 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        .scroll-down-overlay.is-visible {
+            opacity: 0.92;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        @media (min-width: 721px) {
+            .scroll-down-overlay {
+                display: none;
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="app-header">
+        <div class="header-content">
+            <a href="index.html" class="header-brand header-left">
+                Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
+            </a>
+            <div class="header-ticker-info">
+                <div id="tickerDisplay">--</div>
+                <div id="nameDisplay" class="text-muted">--</div>
+            </div>
+            <div class="header-right"
+                style="display: flex; align-items: center; gap: var(--space-lg); justify-self: end;">
+                <div id="stickyScoreContainer" class="sticky-score">
+                    <span class="label" style="font-size: 0.7rem;">Score</span>
+                    <span id="headerScore" style="font-weight: 800; font-size: 1.1rem;">--</span>
+                </div>
+                <nav class="header-nav text-muted">
+                    <a href="screener.html">Screener</a>
+                    <a href="about.html">Methodology</a>
+                    <a href="index.html">Search</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Loading State -->
+        <div id="loading" class="section" style="text-align: center; padding-top: 10vh;">
+            <div class="label" style="font-size: 1.1rem; letter-spacing: 0.05em; color: var(--text-primary);"
+                id="loadingStatus">
+                Assembling Financial Intelligence...
+            </div>
+            <div id="scanningNotice"
+                style="font-size: 0.85rem; color: var(--text-muted); margin-top: 12px; display: none;">
+                Deep Scanning SEC Filings (this can take 10-15 seconds)...
+            </div>
+            <div class="spinner" style="margin-top: 24px;"></div>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- Hero Rating Section -->
+            <section class="section mobile-hero-layout"
+                style="border-bottom: 1px solid var(--border); display: flex; gap: var(--space-2xl); align-items: flex-start;">
+                <div class="mobile-hero-sidebar"
+                    style="flex-shrink: 0; text-align: center; width: 180px; position: sticky; top: 100px;">
+                    <div class="rating-group">
+                        <img id="ratingIcon" class="bull-icon-large mobile-bull-icon" alt="Rating Icon">
+                        <div id="tierBadge" class="badge"
+                            style="display: block; width: 100%; padding: 8px; font-size: 0.85rem; margin-top: 10px; margin-bottom: 20px;">
+                            --
+                        </div>
+                    </div>
+
+                    <div class="hero-stats-container mobile-hero-stats"
+                        style="flex-direction: column; align-items: center; text-align: center;">
+                        <div class="hero-stat-item">
+                            <div class="hero-stat-label">Quality Score</div>
+                            <div id="scoreDisplay" class="hero-stat-value">--</div>
+                            <div style="font-size: 0.65rem; margin-top: 8px; font-weight: 500; line-height: 1.3;">
+                                Enjoying these ratings? <br>
+                                <a href="javascript:void(0)" onclick="showSupportModal()"
+                                    style="color: var(--accent); text-decoration: none; font-weight: 700;">Support the
+                                    project →</a>
+                            </div>
+                        </div>
+                        <div class="hero-stat-item">
+                            <div class="hero-stat-label">Last Price</div>
+                            <div id="priceDisplay" class="hero-stat-value" style="font-size: 1.25rem;">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="flex-grow: 1;">
+                    <div class="label" style="margin-bottom: var(--space-md);">Strategic Financial Narrative</div>
+                    <div class="narrative-container">
+                        <div id="narrativeDisplay" class="narrative-text">
+                            Loading narrative...
+                        </div>
+                    </div>
+                    <div id="warningPanel" class="warning-panel" style="display: none;">
+                        <div class="warning-panel-title">Alerts &amp; Data Quality</div>
+                        <div id="warningItems" class="warning-items"></div>
+                        <div id="confidencePill" class="confidence-pill"
+                            style="display: none; margin-top: var(--space-md);">
+                            <div>
+                                <div id="confidenceText" class="confidence-text">Confidence: n/a</div>
+                            </div>
+                            <div class="confidence-meter" aria-hidden="true">
+                                <div id="confidenceFill" class="confidence-meter-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: var(--space-lg);"></div>
+                    <div id="quickHighlights" class="grid grid-3">
+                        <!-- Points Cards will be injected here -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Signals -->
+            <section class="section" style="margin-bottom: var(--space-2xl); border-bottom: 1px solid var(--border);">
+                <div class="label" style="margin-bottom: var(--space-lg);">Filing Intelligence & Signals</div>
+                <div id="filingSignalsContainer" class="grid grid-2">
+                    <!-- Skeleton Layover -->
+                    <div class="card skeleton skeleton-card"></div>
+                    <div class="card skeleton skeleton-card"></div>
+                </div>
+            </section>
+            <section id="bioIntelSection" class="section" style="margin-bottom: var(--space-2xl); display: none;">
+                <div class="label" style="margin-bottom: var(--space-lg);">Biotech Intelligence</div>
+                <div id="bioIntelContainer" class="grid grid-2">
+                    <!-- Biotech signals will be injected here -->
+                </div>
+            </section>
+
+            <!-- The Pillars (Reorganized) -->
+            <section class="section">
+                <div class="pillar-grid">
+                    <!-- Strategic Outlook -->
+                    <div class="card" style="grid-column: span 2;">
+                        <div class="pillar-title">Strategic Outlook</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);">
+                            <!-- Operational Momentum -->
+                            <div class="hero-stat-item" style="border: none;">
+                                <div class="hero-stat-label" style="font-size: 0.8rem;">Operational Momentum</div>
+                                <div id="opMomentum" style="font-size: 1.2rem; font-weight: 700; margin-top: 8px;">--
+                                </div>
+                                <div id="opMomentumDesc" class="text-muted"
+                                    style="font-size: 0.8rem; margin-top: 4px; min-height: 2.4em;">--</div>
+                                <div class="momentum-track">
+                                    <div id="opMomentumBar"
+                                        style="width: 0%; height: 100%; background: var(--text-muted); transition: width 0.5s ease;">
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Trajectory -->
+                            <div class="hero-stat-item" style="border: none;">
+                                <div class="hero-stat-label" style="font-size: 0.8rem;">Trajectory</div>
+                                <div
+                                    style="font-size: 1.1rem; margin-top: 8px; line-height: 1.4; display: flex; align-items: center; gap: 8px;">
+                                    <div id="trajIcon" style="font-size: 1.2rem;"></div>
+                                    <span id="trajLabel" style="font-weight: 800; display: block;">--</span>
+                                </div>
+                                <span id="trajText" class="text-muted"
+                                    style="font-size: 0.9rem; margin-top: 4px; display: block;">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+
+
+
+    <script>
+        function showSupportModal() {
+            document.getElementById('supportModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closeSupportModal(e) {
+            document.getElementById('supportModal').style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticker = urlParams.get('ticker')?.toUpperCase();
+
+        const ruleExplainers = {
+            "Revenue growth YoY": { pos: "Sales are growing vs last year.", neg: "Sales are shrinking vs last year." },
+            "Revenue growth": { pos: "Sales are growing vs last year.", neg: "Sales are shrinking vs last year." },
+            "Revenue Growth": { pos: "Sales are growing vs last year.", neg: "Sales are shrinking vs last year." },
+            "Gross margin": { pos: "High profit on every product sold.", neg: "Low profit per product sold." },
+            "FCF margin": { pos: "Business generates extra cash for growth.", neg: "Burning cash to operate." },
+            "Cash Runway (years)": { pos: "Enough cash for the long haul.", neg: "Might need more funding soon." },
+            "Shares dilution YoY": { pos: "Share count is stable.", neg: "New shares reduce your ownership." },
+            "Share Buybacks": { pos: "Company is repurchasing its own stock.", neg: "Shares are being diluted." },
+            "Debt / Equity": { pos: "Conservative debt levels.", neg: "High debt increases risk." },
+            "Net Debt / FCF": { pos: "Debt can be paid off quickly.", neg: "Debt burden is heavy relative to cash flow." },
+            "Interest coverage": { pos: "Profits easily cover interest payments.", neg: "Struggling to pay interest costs." },
+            "ROIC": { pos: "Creating value on every dollar invested.", neg: "Low returns on invested capital." },
+            "ROE": { pos: "Efficiently using shareholder money.", neg: "Low return on equity." },
+            "ROE quality": { pos: "Return on equity driven by efficiency.", neg: "Return on equity boosted by debt." },
+            "Refined ROE": { pos: "High quality returns.", neg: "Weak returns on capital." },
+            "Revenue CAGR (3Y)": { pos: "Consistent long-term growth.", neg: "Growth has stalled over time." },
+            "EPS CAGR (3Y)": { pos: "Earnings are compounding.", neg: "Earnings have stagnated." },
+            "R&D intensity": { pos: "Investing heavily in the future.", neg: "Spending little on innovation." },
+            "Working Capital": { pos: "Efficient cash cycle.", neg: "Cash cycle is inefficient/strapped." },
+            "Operating leverage": { pos: "Growing profit faster than revenue.", neg: "Costs rising faster than sales." },
+            "Price / Sales": { pos: "Valuation is reasonable relative to sales.", neg: "Expensive relative to sales." },
+            "Price / Earnings": { pos: "Valuation is reasonable relative to profit.", neg: "Expensive relative to profit." },
+            "Asset Efficiency": { pos: "Generating strong turnover on assets.", neg: "Assets are underutilized." },
+            "Revenue per Asset Efficiency": { pos: "Getting more revenue out of every asset.", neg: "Asset yield is declining." },
+            "Revenue Per Asset Efficiency": { pos: "Getting more revenue out of every asset.", neg: "Asset yield is declining." },
+            "Revenue Quality": { pos: "Growth backed by cash collection.", neg: "Growth relies on uncollected IOU sales." },
+            "Effective Tax Rate": { pos: "Tax rate implies normal operations.", neg: "Tax rate suggests unusual items." },
+            "Return on Assets": { pos: "Profitable relative to total assets.", neg: "Low profit relative to asset base." },
+            "Gross margin trend": { pos: "Margins are expanding.", neg: "Margins are compressing." },
+            "Capital Return": { pos: "Returning value to shareholders.", neg: "Limited capital return programs." },
+            "Capital Return TTM": { pos: "Returning value to shareholders.", neg: "Limited capital return programs." },
+            "Debt Maturity Runway": { pos: "No major debt due soon.", neg: "Significant debt maturing shortly." },
+            "Net income trend": { pos: "Profits are trending up.", neg: "Profits are shrinking." },
+            "Operating Leverage Inflection": { pos: "Operating leverage is improving.", neg: "Operating leverage is weakening." },
+            "Asset Growth Velocity": { pos: "Assets are scaling quickly.", neg: "Asset growth is slowing." }
+        };
+
+        function initScrollCue() {
+            const overlay = document.getElementById('scrollDownOverlay');
+            if (!overlay) return;
+            const isMobile = window.matchMedia('(max-width: 720px)').matches;
+            if (!isMobile) {
+                overlay.classList.remove('is-visible');
+                return;
+            }
+
+            overlay.classList.add('is-visible');
+
+            const onScroll = () => {
+                if (window.scrollY > 10) {
+                    overlay.classList.remove('is-visible');
+                    window.removeEventListener('scroll', onScroll);
+                    window.removeEventListener('touchstart', onTouchStart);
+                }
+            };
+
+            const onTouchStart = () => {
+                overlay.classList.remove('is-visible');
+                window.removeEventListener('scroll', onScroll);
+                window.removeEventListener('touchstart', onTouchStart);
+            };
+
+            window.addEventListener('scroll', onScroll, { passive: true });
+            window.addEventListener('touchstart', onTouchStart, { passive: true });
+        }
+
+        function formatPct(val, multiply = true) {
+            if (val == null) return '--';
+            const n = Number(val) * (multiply ? 100 : 1);
+            return n.toFixed(1) + '%';
+        }
+
+        function formatNum(val, dec = 2) {
+            if (val == null) return '--';
+            return Number(val).toFixed(dec);
+        }
+
+        async function init() {
+            if (!ticker) {
+                document.getElementById('loading').innerHTML = '<div class="badge badge-bearish">No Ticker Specified</div>';
+                return;
+            }
+
+            try {
+                // Show deep scanning notice if it takes > 2.5s
+                const scanTimer = setTimeout(() => {
+                    const notice = document.getElementById('scanningNotice');
+                    if (notice) notice.style.display = 'block';
+                }, 2500);
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s timeout for deep scans
+
+                let res = await fetch(`/api/ticker?symbol=${ticker}`, { signal: controller.signal });
+                if (!res.ok) {
+                    try {
+                        await fetch(`/api/edgar-facts?ticker=${ticker}&mode=snapshot`, { signal: controller.signal });
+                    } catch (err) {
+                        console.warn('EDGAR fallback failed', err);
+                    }
+                    res = await fetch(`/api/ticker?symbol=${ticker}`, { signal: controller.signal });
+                }
+                clearTimeout(timeoutId);
+                clearTimeout(scanTimer);
+
+                if (!res.ok) throw new Error('Ticker not found');
+                const data = await res.json();
+
+                // 1. Header & Meta
+                document.title = `${data.ticker} | Bullish and Foolish`;
+                document.getElementById('tickerDisplay').textContent = data.ticker;
+                document.getElementById('nameDisplay').textContent = data.companyName || '';
+
+                const score = data.ratingNormalizedScore;
+                document.getElementById('scoreDisplay').textContent = score ?? '--';
+                const scoreColor = score >= 70 ? 'var(--accent)' : (score < 40 ? 'var(--danger)' : 'var(--warning)');
+                document.getElementById('scoreDisplay').style.color = scoreColor;
+
+                // Sync header score
+                const headerScore = document.getElementById('headerScore');
+                headerScore.textContent = score ?? '--';
+                headerScore.style.color = scoreColor;
+
+                // Bull Icon Selection
+                const iconEl = document.getElementById('ratingIcon');
+                if (score >= 70) iconEl.src = '/assets/images/bull.webp';
+                else if (score >= 40) iconEl.src = '/assets/images/neutral.webp';
+                else iconEl.src = '/assets/images/foolish.webp';
+
+                const tierMap = {
+                    'bullish': 'Elite Compounder',
+                    'solid': 'Solid Compounder',
+                    'neutral': 'Investment Grade',
+                    'danger': 'High Risk',
+                    'bearish': 'High Risk'
+                };
+                const rawTier = (data.ratingTierLabel || 'N/A').toLowerCase();
+                const baseTierLabel = tierMap[rawTier] || data.ratingTierLabel || 'N/A';
+                const tierBadge = document.getElementById('tierBadge');
+
+                const issuerType =
+                    data.issuerType ||
+                    (data.filingProfile?.annual === '20-F' || data.filingProfile?.interim === '6-K' ? 'foreign' : 'domestic');
+
+                const isBiotechSector = (() => {
+                    const sector = String(data.sectorBucket || data.sector || '').toLowerCase();
+                    const sicDesc = String(data.filingProfile?.sicDescription || '').toLowerCase();
+                    const name = String(data.companyName || '').toLowerCase();
+                    return sector.includes('biotech') ||
+                        sector.includes('pharma') ||
+                        sicDesc.includes('pharmaceutical') ||
+                        sicDesc.includes('biological') ||
+                        sicDesc.includes('medicinal') ||
+                        /\b(therapeutics|biopharma|oncology|biosciences)\b/i.test(name);
+                })();
+
+                const isEstablishedPharma = (() => {
+                    if (!isBiotechSector) return false;
+                    const revenueTTM = Number(data.snapshot?.revenueTTM ?? data.keyMetrics?.revenueTTM ?? 0);
+                    const netIncome = Number(data.snapshot?.netIncomeTTM ?? data.keyMetrics?.netIncome ?? 0);
+                    const marketCap = Number(data.marketCap ?? data.snapshot?.marketCap ?? data.keyMetrics?.marketCap ?? 0);
+                    return revenueTTM > 2_000_000_000 ||
+                        (revenueTTM > 500_000_000 && netIncome > 0) ||
+                        marketCap > 50_000_000_000;
+                })();
+
+                const isClinicalStageBiotech = isBiotechSector && !isEstablishedPharma;
+                const tierLabel = isClinicalStageBiotech ? 'Trial Dependent' : baseTierLabel;
+
+                tierBadge.textContent = tierLabel;
+                tierBadge.className = `badge ${score >= 70 ? 'badge-bullish' : (score < 40 ? 'badge-bearish' : 'badge-neutral')}`;
+                if (isClinicalStageBiotech) {
+                    tierBadge.style.background = 'rgba(147, 51, 234, 0.15)';
+                    tierBadge.style.color = '#c084fc';
+                    tierBadge.title = 'Pre-revenue biotech - investment thesis depends on clinical trial outcomes.';
+                } else {
+                    tierBadge.style.background = '';
+                    tierBadge.style.color = '';
+                    tierBadge.title = '';
+                }
+
+                const price = data.priceSummary?.lastClose;
+                document.getElementById('priceDisplay').innerHTML = `
+                    <div class="price-stat-value">$${formatNum(price, 2)}</div>
+                    <div style="font-size: 0.8rem; line-height: 1.4; color: var(--text-muted);">
+                        Price last updated: ${data.priceSummary?.lastCloseDate ? data.priceSummary.lastCloseDate.split('T')[0] : '--'} • official Daily Close<br>
+                        Bullish And Foolish uses official EOD data from Nasdaq.
+                    </div>
+                `;
+
+                // 2. Narrative & Points Cards (Filter out Filing signals)
+                const narrative = data.narrative || 'Summary not available.';
+                const fmtNarrative = narrative.replace(/((?:High\s*risk|Speculative):)/gi, '<br>$1');
+                document.getElementById('narrativeDisplay').innerHTML = `"${fmtNarrative}"`;
+
+                const warnings = [];
+                if (issuerType === 'foreign') {
+                    warnings.push({
+                        title: 'Foreign Issuer',
+                        text: 'This is a foreign company; ratings are based on year-on-year documents (20-F / 6-K).'
+                    });
+                }
+                if (isClinicalStageBiotech) {
+                    warnings.push({
+                        title: 'Clinical Stage Biotech',
+                        text: 'Traditional financial metrics have limited relevance. Outcomes depend on clinical trial results.'
+                    });
+                }
+
+                const dataQuality = data.dataQuality || {};
+                const mismatches = Array.isArray(dataQuality.materialMismatches) ? dataQuality.materialMismatches : [];
+                const hasStaleData = mismatches.some(m => m.issue === 'Stale Data');
+                if (hasStaleData) {
+                    warnings.push({
+                        title: 'Stale Data (>180d)',
+                        text: 'Some financial statements are older than 180 days. Ratings may not reflect current conditions.'
+                    });
+                    // Visually restrain score (P0)
+                    document.getElementById('scoreDisplay').style.opacity = '0.5';
+                    document.getElementById('scoreDisplay').title = 'Rating restrained due to stale data';
+                    document.getElementById('scoreDisplay').textContent += '*';
+                    headerScore.style.opacity = '0.5';
+                }
+
+                const warningPanel = document.getElementById('warningPanel');
+                const warningItems = document.getElementById('warningItems');
+                const confidencePill = document.getElementById('confidencePill');
+                const confidenceText = document.getElementById('confidenceText');
+                const confidenceFill = document.getElementById('confidenceFill');
+                const showConfidence = false;
+                if (warnings.length) {
+                    warningItems.innerHTML = warnings.map(w => `
+                        <div class="warning-item">
+                            <div class="warning-item-title">${w.title}</div>
+                            <div class="warning-item-text">${w.text}</div>
+                        </div>
+                    `).join('');
+                    warningPanel.style.display = '';
+                } else {
+                    warningPanel.style.display = 'none';
+                }
+
+                const confidenceScore = Number(data.confidenceMeta?.score ?? data.dataCompleteness?.percent);
+                if (showConfidence && Number.isFinite(confidenceScore)) {
+                    const clamped = Math.max(0, Math.min(100, Math.round(confidenceScore)));
+                    const level = data.confidenceMeta?.level || (clamped >= 75 ? 'high' : clamped >= 45 ? 'medium' : 'low');
+                    confidenceText.textContent = `Confidence: ${level} (${clamped}%)`;
+                    confidenceFill.style.width = `${clamped}%`;
+                    confidencePill.style.display = '';
+                    if (warningPanel.style.display === 'none') warningPanel.style.display = '';
+                } else if (confidencePill) {
+                    confidencePill.style.display = 'none';
+                }
+
+                const filingSignalIds = new Set(['insider_trading_pattern', 'going_concern', 'material_weakness', 'substantial_doubt', 'liquidity_shortage', 'needs_financing', 'dilution_risk', 'covenant_risk', 'restatement']);
+
+                const ratingReasons = (data.ratingReasons || [])
+                    .filter(r => !r.missing && !r.notApplicable && r.score !== 0 && !filingSignalIds.has(r.id) && r.name.toLowerCase() !== 'filing signals')
+                    .sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
+
+                document.getElementById('quickHighlights').innerHTML = ratingReasons.map(r => {
+                    const isPos = r.score > 0;
+                    const isNeg = r.score < 0;
+                    const typeClass = isPos ? 'positive' : (isNeg ? 'negative' : 'neutral');
+                    const color = isPos ? 'var(--accent)' : (isNeg ? 'var(--danger)' : 'var(--warning)');
+
+                    const explainer = ruleExplainers[r.name] ? (r.score >= 0 ? ruleExplainers[r.name].pos : ruleExplainers[r.name].neg) : '';
+
+                    const basis = data.ratingBasis || 'Mixed';
+                    let displayBasis = basis;
+                    let displayName = r.name;
+
+                    // Restore old naming convention (Strip YoY, TTM)
+                    displayName = displayName
+                        .replace(/ YoY/i, '')
+                        .replace(/ TTM/i, '')
+                        .replace(/ \(3Y\)/i, '');
+
+                    // Ensure matching key for explainer even if renamed
+                    const explainerKey = r.name;
+                    const explanationText = ruleExplainers[explainerKey]
+                        ? (r.score >= 0 ? ruleExplainers[explainerKey].pos : ruleExplainers[explainerKey].neg)
+                        : (ruleExplainers[displayName] ? (r.score >= 0 ? ruleExplainers[displayName].pos : ruleExplainers[displayName].neg) : '');
+
+                    if (r.name.toLowerCase().includes('pe ratio') || r.name.toLowerCase().includes('p/e') || r.name.toLowerCase().includes('price /')) {
+                        displayBasis = 'Market';
+                    } else if (r.name.toLowerCase().includes('trend') || r.name.toLowerCase().includes('cagr')) {
+                        displayBasis = 'Mixed';
+                    } else if (r.name.toLowerCase() === 'revenue growth yoy') {
+                        displayBasis = 'Quarterly';
+                    }
+
+                    return `
+                        <div class="points-card ${typeClass}">
+                            <div class="points-header">
+                                <span style="text-transform: capitalize;">${displayName}</span>
+                                <span class="points-score" style="background: ${color}; color: var(--bg-primary);">${isPos ? '+' : ''}${r.score}</span>
+                            </div>
+                            <p class="points-desc">${(r.message || '').replace(/\n/g, '<br>').replace(/(-?\d+(\.\d+)?%?|\$\d+(\.\d+)?[BMT]?)/g, '<strong>$1</strong>')}</p>
+                            <div class="points-footer">
+                                ${explanationText ? `<p class="points-explainer">${explanationText}</p>` : ''}
+                                <div class="basis-pointer">Basis: ${displayBasis}</div>
+                            </div>
+                            ${hasStaleData ? `<div class="dq-badge">Stale Data (&gt;180d)</div>` : ''}
+                            <div class="indicator-track">
+                                <div class="indicator-fill" style="width: ${Math.min(100, Math.abs(r.score) * 10)}%; background: ${color};"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // 3. Strategic Outlook
+                const outlook = data.strategicOutlook || {};
+
+                // Op Momentum
+                const op = outlook.operationalMomentum || {};
+                document.getElementById('opMomentum').textContent = op.label || '--';
+                document.getElementById('opMomentumDesc').textContent = op.narrative || '';
+
+                if (op.score01 != null) {
+                    const color = op.score01 >= 0.6 ? 'var(--accent)' : (op.score01 <= 0.4 ? 'var(--danger)' : 'var(--text-primary)');
+                    document.getElementById('opMomentum').style.color = color;
+                    document.getElementById('opMomentumBar').style.width = `${Math.min(100, op.score01 * 100)}%`;
+                    document.getElementById('opMomentumBar').style.background = color;
+                }
+
+                // Trajectory
+                const traj = outlook.trajectory || {};
+                const trajLabel = traj.label || '--';
+                document.getElementById('trajLabel').textContent = trajLabel;
+                document.getElementById('trajText').textContent = traj.narrative || 'No detailed trajectory data.';
+
+                const trajIcon = document.getElementById('trajIcon');
+
+                if (trajLabel === 'Accelerating' || trajLabel === 'Improving' || trajLabel === 'Compounder') {
+                    trajIcon.innerHTML = '▲';
+                    trajIcon.style.color = 'var(--accent)';
+                    document.getElementById('trajLabel').style.color = 'var(--accent)';
+                } else if (trajLabel === 'Recovering') {
+                    trajIcon.innerHTML = '▲';
+                    trajIcon.style.color = 'var(--warning)';
+                    document.getElementById('trajLabel').style.color = 'var(--warning)';
+                } else if (trajLabel === 'Stalling' || trajLabel === 'Cooling') {
+                    trajIcon.innerHTML = '●';
+                    trajIcon.style.color = 'var(--warning)';
+                    document.getElementById('trajLabel').style.color = 'var(--warning)';
+                } else if (trajLabel === 'Deteriorating' || trajLabel === 'Falling') {
+                    trajIcon.innerHTML = '▼';
+                    trajIcon.style.color = 'var(--danger)';
+                    document.getElementById('trajLabel').style.color = 'var(--danger)';
+                } else {
+                    trajIcon.innerHTML = '';
+                    document.getElementById('trajLabel').style.color = 'var(--text-primary)';
+                }
+
+                // 4. Filing Signals (Detailed)
+                const sigList = (data.filingSignals || [])
+                    .filter(s => s.severity !== 'low')
+                    .sort((a, b) => {
+                        const aScore = Number(a.score) || 0;
+                        const bScore = Number(b.score) || 0;
+                        const aAbs = Math.abs(aScore);
+                        const bAbs = Math.abs(bScore);
+                        if (bAbs !== aAbs) return bAbs - aAbs;
+                        return bScore - aScore;
+                    })
+                    .slice(0, 6);
+                if (sigList.length === 0) {
+                    document.getElementById('filingSignalsContainer').innerHTML = '<div class="text-muted">No major recent filing signals detected in the latest SEC docs.</div>';
+                } else {
+                    document.getElementById('filingSignalsContainer').innerHTML = sigList.map(sig => {
+                        const scoreVal = Number(sig.score) || 0;
+                        const isPos = scoreVal > 0;
+                        const isNeg = scoreVal < 0;
+                        const color = isPos ? 'var(--accent)' : (isNeg ? 'var(--danger)' : 'var(--warning)');
+                        const badgeBg = isPos ? 'var(--accent-muted)' : (isNeg ? 'var(--danger-muted)' : 'var(--warning-muted)');
+                        const title = String(sig.title || '')
+                            .replace(/\s+Mentioned\b/i, '')
+                            .trim();
+
+                        return `
+                            <div class="filing-card" style="border-top: 2px solid ${color};">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                    <div>
+                                        <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 4px;">
+                                            ${title || sig.title}
+                                        </div>
+                                        <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">
+                                            Filed: ${sig.filed} • Form ${sig.form}
+                                        </div>
+                                    </div>
+                                    <div class="badge" style="background: ${badgeBg}; color: ${color};">
+                                        Impact: ${isPos ? '+' : ''}${scoreVal}
+                                    </div>
+                                </div>
+                                <div class="filing-quote">
+                                    "${sig.snippet || 'Significant phrasing detected in recent document.'}"
+                                </div>
+                                <a href="${sig.docUrl}" target="_blank" class="filing-link">
+                                    View SEC Filing <span style="font-size: 1.1em;">↗</span>
+                                </a>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+                const biotechIds = new Set([
+                    'clinical_positive',
+                    'clinical_negative',
+                    'safety_good',
+                    'safety_bad',
+                    'regulatory_positive',
+                    'regulatory_negative',
+                    'regulatory_setback',
+                    'catalyst_upcoming',
+                    'moa_strength',
+                    'moa_weak',
+                    'trial_execution_risk',
+                    'biotech_cash_dependency',
+                    'non_dilutive_finance'
+                ]);
+
+                const isBioCompany = (() => {
+                    const sector = String(data.sectorBucket || data.sector || '').toLowerCase();
+                    const sicDesc = String(data.filingProfile?.sicDescription || '').toLowerCase();
+                    const name = String(data.companyName || '').toLowerCase();
+                    return sector.includes('biotech') ||
+                        sector.includes('pharma') ||
+                        sicDesc.includes('pharmaceutical') ||
+                        sicDesc.includes('biological') ||
+                        sicDesc.includes('medicinal') ||
+                        /\b(therapeutics|biopharma|oncology|biosciences)\b/i.test(name);
+                })();
+
+                const shownIds = new Set(sigList.map(sig => sig.id));
+                const bioSignals = (data.filingSignals || []).filter(sig => biotechIds.has(sig.id) && !shownIds.has(sig.id));
+                const bioSection = document.getElementById('bioIntelSection');
+                const bioContainer = document.getElementById('bioIntelContainer');
+
+                if (isBioCompany && bioSignals.length) {
+                    bioContainer.innerHTML = bioSignals.map(sig => {
+                        const scoreVal = Number(sig.score) || 0;
+                        const isPos = scoreVal > 0;
+                        const isNeg = scoreVal < 0;
+                        const color = isPos ? 'var(--accent)' : (isNeg ? 'var(--danger)' : 'var(--warning)');
+                        const badgeBg = isPos ? 'var(--accent-muted)' : (isNeg ? 'var(--danger-muted)' : 'var(--warning-muted)');
+                        const snippet = sig.snippet || 'Biotech-specific signal detected in recent filing.';
+                        return `
+                            <div class="filing-card" style="border-top: 2px solid ${color};">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                    <div>
+                                        <div style="font-weight: 700; color: var(--text-primary); font-size: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 4px;">
+                                            ${sig.title || 'Biotech Signal'}
+                                        </div>
+                                        <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">
+                                            Filed: ${sig.filed || 'n/a'} Form ${sig.form || 'n/a'}
+                                        </div>
+                                    </div>
+                                    <div class="badge" style="background: ${badgeBg}; color: ${color};">
+                                        Impact: ${isPos ? '+' : ''}${scoreVal}
+                                    </div>
+                                </div>
+                                <div class="filing-quote">
+                                    "${snippet}"
+                                </div>
+                                ${sig.docUrl ? `<a href="${sig.docUrl}" target="_blank" class="filing-link">View SEC Filing <span style="font-size: 1.1em;">&#62;</span></a>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+                    bioSection.style.display = '';
+                } else {
+                    bioSection.style.display = 'none';
+                    bioContainer.innerHTML = '';
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                initScrollCue();
+
+                // Initial scroll check for sticky score
+                handleScroll();
+                window.addEventListener('scroll', handleScroll);
+
+                function handleScroll() {
+                    const heroScore = document.getElementById('scoreDisplay');
+                    const stickyScore = document.getElementById('stickyScoreContainer');
+                    const rect = heroScore.getBoundingClientRect();
+                    // If hero score is out of view (above the viewport), show sticky score
+                    if (rect.bottom < 0) {
+                        stickyScore.style.display = 'flex';
+                    } else {
+                        stickyScore.style.display = 'none';
+                    }
+                }
+
+            } catch (err) {
+                document.getElementById('loading').innerHTML = `
+                    <div class="badge badge-bearish">Error: ${err.message}</div>
+                    <p class="text-muted" style="margin-top: var(--space-md);">Ensure "${ticker}" is valid and has data.</p>
+                `;
+            }
+        }
+
+        init();
+    </script>
+    <div id="scrollDownOverlay" class="scroll-down-overlay" aria-hidden="true">&darr;</div>
+    <footer class="footer-disclaimer">
+        <div class="container">
+            <div class="disclaimer-text">
+                <p style="font-weight: 600; margin-bottom: var(--space-sm); color: var(--text-primary);">Disclaimer &
+                    Disclosure</p>
+                <p>Bullish and Foolish is an independent financial analysis tool. All data is sourced from public SEC
+                    filings.
+                    The ratings and analysis provided are for informational purposes only and do NOT constitute
+                    financial advice, investment recommendations, or an offer to buy/sell securities.
+                    Fundamental data can be subject to reporting lags or errors in source filings.
+                    Always perform your own due diligence before making investment decisions.</p>
+                <p style="margin-top: var(--space-md);">© 2025 Bullish and Foolish. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <div id="supportModal" class="modal-overlay" onclick="closeSupportModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h3>Keep the Signal Clean</h3>
+            <p>
+                Bullish & Foolish is an independent project.
+                Your support helps cover the hosting and server costs that keep this tool fast, free, and ad-free for
+                everyone.
+            </p>
+            <div class="modal-actions">
+                <a href="http://revolut.me/viktorc8gv" target="_blank" class="modal-btn-primary"
+                    onclick="closeSupportModal()">
+                    Continue to Revolut
+                </a>
+                <button class="modal-btn-secondary" onclick="closeSupportModal()">Maybe later</button>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
