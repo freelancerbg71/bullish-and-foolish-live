@@ -4304,6 +4304,13 @@ export async function buildScreenerRowForTicker(ticker) {
       return false;
     })();
     const highGrowth = Number.isFinite(revenueGrowthYoY) ? revenueGrowthYoY >= 30 : false;
+    // Compute isPenny and isBiotechFlag for screener row
+    const isBiotechFlag = sectorBucket === "Biotech/Pharma";
+    const lastClose = priceSummary?.lastClose;
+    const hasPennyPrice = Number.isFinite(lastClose) && lastClose < 5;
+    const hasMicroCap = Number.isFinite(marketCap) && marketCap > 0 && marketCap < 300_000_000;
+    const isPenny = hasPennyPrice || (hasMicroCap && !isBiotechFlag);
+
     const prominentSentiment = (() => {
       // 1. Check for severe "Penny Stock" or "Microcap" warning
       if (isPenny || (marketCap && marketCap < 300_000_000 && sectorBucket !== "Biotech/Pharma")) {
