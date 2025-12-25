@@ -61,6 +61,19 @@ async function seedPersistentData() {
     const sourceDbFile = path.join(sourceDir, 'edgar', 'fundamentals.db');
     const sourcePricesFile = path.join(sourceDir, 'prices.json');
 
+    async function flushSourceDb(filePath) {
+        try {
+            const { default: Database } = await import('better-sqlite3');
+            const db = new Database(filePath, { fileMustExist: true });
+            db.pragma('wal_checkpoint(TRUNCATE);');
+            db.pragma('journal_mode=DELETE;');
+            db.close();
+            console.log('[seed] source db checkpointed');
+        } catch (err) {
+            console.warn('[seed] source db checkpoint failed', err?.message || err);
+        }
+    }
+
     async function logDbRowCount(label, filePath) {
         if (!seedDebug) return;
         try {
@@ -78,6 +91,10 @@ async function seedPersistentData() {
     } catch (err) {
         console.warn('[seed] source data dir missing:', sourceDir);
         return;
+    }
+
+    if (seedForce) {
+        await flushSourceDb(sourceDbFile);
     }
 
     try {
