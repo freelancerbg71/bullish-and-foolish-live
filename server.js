@@ -523,7 +523,7 @@ async function buildTickerPayload(symbol, section) {
     }
     const vm = await buildTickerViewModel(symbol, {
         fundamentalsOverride: fundamentals,
-        allowFilingScan: false
+        allowFilingScan: true
     });
     if (!vm) {
         const err = new Error('Ticker data unavailable');
@@ -547,7 +547,7 @@ async function buildEdgarStatusPayload(ticker, { enqueueIfStale = true } = {}) {
         if (cached) return { status: 'ready', updatedAt: snap.updatedAt, data: cached };
         const vm = await buildTickerViewModel(normalized, {
             fundamentalsOverride: snap.data.periods,
-            allowFilingScan: false
+            allowFilingScan: true
         });
         if (!vm) return { status: 'error', error: 'Could not assemble ticker view model' };
         await saveCachedViewModel(normalized, vm);
@@ -558,7 +558,7 @@ async function buildEdgarStatusPayload(ticker, { enqueueIfStale = true } = {}) {
         if (refreshed?.data?.periods?.length) {
             const vm = await buildTickerViewModel(normalized, {
                 fundamentalsOverride: refreshed.data.periods,
-                allowFilingScan: false
+                allowFilingScan: true
             });
             if (vm) {
                 await saveCachedViewModel(normalized, vm);
