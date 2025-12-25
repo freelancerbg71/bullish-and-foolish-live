@@ -243,6 +243,18 @@ async function initDb() {
     try {
       fs.mkdirSync(dbDir, { recursive: true });
     } catch (_) {}
+    if (process.env.FUNDAMENTALS_DB_LOG === "1") {
+      try {
+        const stats = fs.existsSync(dbFile) ? fs.statSync(dbFile) : null;
+        console.log("[fundamentalsStore] opening db", {
+          file: dbFile,
+          exists: Boolean(stats),
+          size: stats?.size ?? null
+        });
+      } catch (err) {
+        console.warn("[fundamentalsStore] db stat failed", dbFile, err?.message || err);
+      }
+    }
     const db = new Database(dbFile);
     dbInstance = db;
     db.pragma("journal_mode = WAL");
