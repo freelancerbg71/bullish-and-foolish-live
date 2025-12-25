@@ -49,6 +49,7 @@ await loadEnv();
 async function seedPersistentData() {
     const seedEnabled = process.env.SEED_DATA_ON_BOOT === '1';
     if (!seedEnabled) return;
+    const seedForce = process.env.SEED_DATA_FORCE === '1';
 
     const sourceDir = path.join(PROJECT_ROOT, 'data');
     const targetDir = DATA_DIR;
@@ -64,8 +65,8 @@ async function seedPersistentData() {
     }
 
     try {
-        await fsPromises.access(targetDbFile);
-        return;
+        const stats = await fsPromises.stat(targetDbFile);
+        if (!seedForce && stats.size > 1024) return;
     } catch (err) {
         if (err.code && err.code !== 'ENOENT') {
             console.warn('[seed] failed to check target db:', err.message);
@@ -75,8 +76,8 @@ async function seedPersistentData() {
 
     try {
         await fsPromises.mkdir(targetDir, { recursive: true });
-        await fsPromises.cp(sourceDir, targetDir, { recursive: true, force: false });
-        console.log('[seed] copied data from app bundle to persistent volume');
+        await fsPromises.cp(sourceDir, targetDir, { recursive: true, force: seedForce });
+        console.log('[seed] copied data from app bundle to persistent volume', { force: seedForce });
     } catch (err) {
         console.warn('[seed] failed to copy data:', err?.message || err);
     }
