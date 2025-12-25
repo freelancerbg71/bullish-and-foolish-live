@@ -1039,7 +1039,14 @@ function buildStockForRules(vm) {
     });
   }
 
-  const daysSinceReport = incomeDate ? (Date.now() - incomeDate) / (1000 * 60 * 60 * 24) : null;
+  const annualDateRaw = vm?.annualSeries?.[0]?.periodEnd || vm?.annualSeries?.[0]?.date || null;
+  const annualDate = annualDateRaw ? new Date(annualDateRaw) : null;
+  const latestReportMs = Math.max(
+    incomeDate ? incomeDate.getTime() : 0,
+    balanceDate ? balanceDate.getTime() : 0,
+    annualDate ? annualDate.getTime() : 0
+  );
+  const daysSinceReport = latestReportMs ? (Date.now() - latestReportMs) / (1000 * 60 * 60 * 24) : null;
   if (daysSinceReport && daysSinceReport > 180) {
     dataQuality.materialMismatches.push({
       metric: "Financials",
