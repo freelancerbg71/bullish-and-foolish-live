@@ -1130,7 +1130,14 @@ export async function scanFilingForSignals(ticker, opts = {}) {
 
   const metas = await fetchRecentFilingsMeta(ticker, DEFAULT_FORMS, maxFilings, opts);
   const issuerProfile = metas?.issuerProfile;
+  console.log('[filingTextScanner] scanFilingForSignals', key, {
+    metasCount: metas?.length || 0,
+    issuerType: issuerProfile?.issuerType || 'unknown',
+    deep,
+    maxFilings
+  });
   if (!metas || metas.length === 0) {
+    console.log('[filingTextScanner] no metas found for', key);
     return {
       signals: [],
       meta: issuerProfile ? { issuerType: issuerProfile.issuerType, filingProfile: issuerProfile.filingProfile } : null
@@ -1344,6 +1351,10 @@ export async function scanFilingForSignals(ticker, opts = {}) {
     },
     cachedAt: new Date().toISOString()
   };
+  console.log('[filingTextScanner] scan complete', key, {
+    signalsCount: signals.length,
+    signalIds: signals.map(s => s.id).join(',') || 'none'
+  });
   persistFilingSignals(key, result);
   filingSignalCache.set(key, { fetchedAt: now, result });
   return result;
