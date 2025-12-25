@@ -61,6 +61,18 @@ async function seedPersistentData() {
     const sourceDbFile = path.join(sourceDir, 'edgar', 'fundamentals.db');
     const sourcePricesFile = path.join(sourceDir, 'prices.json');
 
+    async function backupSourceDb(sourceFile, targetFile) {
+        try {
+            const { default: Database } = await import('better-sqlite3');
+            const src = new Database(sourceFile, { readonly: true, fileMustExist: true });
+            await src.backup(targetFile);
+            src.close();
+            console.log('[seed] source db backup complete');
+        } catch (err) {
+            console.warn('[seed] source db backup failed', err?.message || err);
+        }
+    }
+
     async function flushSourceDb(filePath) {
         try {
             const { default: Database } = await import('better-sqlite3');
@@ -122,8 +134,33 @@ async function seedPersistentData() {
     }
 
     try {
-        await fsPromises.mkdir(targetDir, { recursive: true });
-        await fsPromises.cp(sourceDir, targetDir, { recursive: true, force: seedForce });
+        // Step 1: Create target directories first
+        await fsPromises.mkdir(targetEdgarDir, { recursive: true });
+        console.log('[seed] created target directories');
+
+        // Step 2: Backup the SQLite DB FIRST (materializes all WAL data)
+        // This MUST happen before the cp to avoid overwriting with empty file
+        await backupSourceDb(sourceDbFile, targetDbFile);
+
+        // Step 3: Copy other files (prices.json, JSON snapshots, etc.)
+        // Use a filter to skip the .db file since backup already handled it
+        const copyOptions = {
+            recursive: true,
+            force: seedForce,
+            filter: (src) => {
+                // Skip the main database files - backup already handled this
+                const basename = path.basename(src);
+                if (basename === 'fundamentals.db' || basename.endsWith('-wal') || basename.endsWith('-shm')) {
+                    console.log('[seed] skipping (already backed up):', basename);
+                    return false;
+                }
+                return true;
+            }
+        };
+        await fsPromises.cp(sourceDir, targetDir, copyOptions);
+        console.log('[seed] copied non-db files from app bundle');
+
+        // Step 4: Verify what we have
         let targetDbSize = null;
         let targetPricesSize = null;
         try {
@@ -132,10 +169,10 @@ async function seedPersistentData() {
         try {
             targetPricesSize = (await fsPromises.stat(path.join(targetDir, 'prices.json'))).size;
         } catch (_) { }
-        console.log('[seed] copied data from app bundle to persistent volume', { force: seedForce, targetDbSize, targetPricesSize });
+        console.log('[seed] final verification', { force: seedForce, targetDbSize, targetPricesSize });
         await logDbRowCount('target', targetDbFile);
     } catch (err) {
-        console.warn('[seed] failed to copy data:', err?.message || err);
+        console.warn('[seed] failed to seed data:', err?.message || err);
     }
 }
 
