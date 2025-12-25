@@ -7,10 +7,10 @@ import zlib from 'zlib';
 import { processFilingForTicker } from './server/edgar/filingWorkflow.js';
 import { getRecentFilingEvents } from './server/edgar/edgarRegistry.js';
 import { buildTickerViewModel } from './server/ticker/tickerAssembler.js';
-import { queryScreener } from './server/screener/screenerService.js';
+import { queryScreener, getScreenerMeta } from './server/screener/screenerService.js';
 import { startScreenerScheduler } from './server/screener/screenerScheduler.js';
 import { enqueueFundamentalsJob, getQueueDepth } from './server/edgar/edgarQueue.js';
-import { closeDb as closeFundamentalsDb, getFundamentalsForTicker, writeFundamentalsSnapshot } from './server/edgar/fundamentalsStore.js';
+import { closeDb as closeFundamentalsDb, getFundamentalsForTicker, writeFundamentalsSnapshot, getDb as getFundamentalsDb } from './server/edgar/fundamentalsStore.js';
 import { closeDb as closeScreenerDb } from './server/screener/screenerStore.js';
 import { closeDb as closePricesDb } from './server/prices/priceStore.js';
 
@@ -57,11 +57,26 @@ async function seedPersistentData() {
 
     const targetEdgarDir = path.join(targetDir, 'edgar');
     const targetDbFile = path.join(targetEdgarDir, 'fundamentals.db');
+    const sourceDbFile = path.join(sourceDir, 'edgar', 'fundamentals.db');
+    const sourcePricesFile = path.join(sourceDir, 'prices.json');
     try {
         await fsPromises.access(sourceDir);
     } catch (err) {
         console.warn('[seed] source data dir missing:', sourceDir);
         return;
+    }
+
+    try {
+        const sourceDbStats = await fsPromises.stat(sourceDbFile);
+        console.log('[seed] source fundamentals.db size', sourceDbStats.size);
+    } catch (err) {
+        console.warn('[seed] source fundamentals.db missing', sourceDbFile);
+    }
+    try {
+        const sourcePricesStats = await fsPromises.stat(sourcePricesFile);
+        console.log('[seed] source prices.json size', sourcePricesStats.size);
+    } catch (err) {
+        console.warn('[seed] source prices.json missing', sourcePricesFile);
     }
 
     try {
@@ -77,13 +92,36 @@ async function seedPersistentData() {
     try {
         await fsPromises.mkdir(targetDir, { recursive: true });
         await fsPromises.cp(sourceDir, targetDir, { recursive: true, force: seedForce });
-        console.log('[seed] copied data from app bundle to persistent volume', { force: seedForce });
+        let targetDbSize = null;
+        let targetPricesSize = null;
+        try {
+            targetDbSize = (await fsPromises.stat(targetDbFile)).size;
+        } catch (_) { }
+        try {
+            targetPricesSize = (await fsPromises.stat(path.join(targetDir, 'prices.json'))).size;
+        } catch (_) { }
+        console.log('[seed] copied data from app bundle to persistent volume', { force: seedForce, targetDbSize, targetPricesSize });
     } catch (err) {
         console.warn('[seed] failed to copy data:', err?.message || err);
     }
 }
 
 await seedPersistentData();
+
+async function logScreenerBootStatus() {
+    if (process.env.SCREENER_BOOT_LOG !== '1') return;
+    try {
+        const meta = await getScreenerMeta();
+        console.log('[screener] boot meta', meta);
+        const db = await getFundamentalsDb();
+        const fundamentalsCount = db.prepare("SELECT COUNT(*) as n FROM fundamentals").get()?.n ?? 0;
+        console.log('[fundamentals] boot count', fundamentalsCount);
+    } catch (err) {
+        console.warn('[screener] boot meta failed', err?.message || err);
+    }
+}
+
+await logScreenerBootStatus();
 
 const PORT = Number(process.env.PORT) || 3003;
 
@@ -160,6 +198,15 @@ function isSnapshotFresh(updatedAt, ttlMs = JSON_SNAPSHOT_TTL_MS) {
 async function ensureFundamentalsSnapshot(ticker, { ttlMs = JSON_SNAPSHOT_TTL_MS } = {}) {
     const existing = await loadFundamentalsSnapshot(ticker);
     if (existing?.data?.periods?.length && !isSnapshotFresh(existing.updatedAt, ttlMs)) {
+        try {
+            const dbRows = await getFundamentalsForTicker(ticker);
+            if (dbRows?.length) {
+                writeFundamentalsSnapshot(dbRows);
+                return await loadFundamentalsSnapshot(ticker);
+            }
+        } catch (err) {
+            console.warn('[snapshot] DB refresh failed', ticker, err?.message || err);
+        }
         return existing;
     }
     if (existing?.data?.periods?.length && isSnapshotFresh(existing.updatedAt, ttlMs)) {
