@@ -50,6 +50,7 @@ async function seedPersistentData() {
     const seedEnabled = process.env.SEED_DATA_ON_BOOT === '1';
     if (!seedEnabled) return;
     const seedForce = process.env.SEED_DATA_FORCE === '1';
+    const seedDebug = process.env.SEED_DATA_DEBUG === '1';
 
     const sourceDir = path.join(PROJECT_ROOT, 'data');
     const targetDir = DATA_DIR;
@@ -59,6 +60,19 @@ async function seedPersistentData() {
     const targetDbFile = path.join(targetEdgarDir, 'fundamentals.db');
     const sourceDbFile = path.join(sourceDir, 'edgar', 'fundamentals.db');
     const sourcePricesFile = path.join(sourceDir, 'prices.json');
+
+    async function logDbRowCount(label, filePath) {
+        if (!seedDebug) return;
+        try {
+            const { default: Database } = await import('better-sqlite3');
+            const db = new Database(filePath, { readonly: true, fileMustExist: true });
+            const count = db.prepare('SELECT COUNT(*) as n FROM fundamentals').get()?.n ?? 0;
+            db.close();
+            console.log(`[seed] ${label} fundamentals rows`, count);
+        } catch (err) {
+            console.warn(`[seed] ${label} db check failed`, err?.message || err);
+        }
+    }
     try {
         await fsPromises.access(sourceDir);
     } catch (err) {
@@ -69,6 +83,7 @@ async function seedPersistentData() {
     try {
         const sourceDbStats = await fsPromises.stat(sourceDbFile);
         console.log('[seed] source fundamentals.db size', sourceDbStats.size);
+        await logDbRowCount('source', sourceDbFile);
     } catch (err) {
         console.warn('[seed] source fundamentals.db missing', sourceDbFile);
     }
@@ -101,6 +116,7 @@ async function seedPersistentData() {
             targetPricesSize = (await fsPromises.stat(path.join(targetDir, 'prices.json'))).size;
         } catch (_) { }
         console.log('[seed] copied data from app bundle to persistent volume', { force: seedForce, targetDbSize, targetPricesSize });
+        await logDbRowCount('target', targetDbFile);
     } catch (err) {
         console.warn('[seed] failed to copy data:', err?.message || err);
     }
