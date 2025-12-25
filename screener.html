@@ -192,6 +192,13 @@
             </div>
         </div>
 
+        <div id="paginationTop"
+            style="margin-bottom: var(--space-md); display: none; justify-content: center; gap: var(--space-md); align-items: center;">
+            <button id="prevPageTop" class="select-minimal" style="border: 1px solid var(--border);">Previous</button>
+            <span id="pageInfoTop" class="text-muted" style="font-size: 0.85rem;">Page 1 of 1</span>
+            <button id="nextPageTop" class="select-minimal" style="border: 1px solid var(--border);">Next</button>
+        </div>
+
         <table id="screenerTable" style="display: none;">
             <thead>
                 <tr>
@@ -237,7 +244,10 @@
                     filings.
                     The ratings and analysis provided are for informational purposes only and do NOT constitute
                     financial advice, investment recommendations, or an offer to buy/sell securities.
+                    We are not a registered investment advisor.
                     Fundamental data can be subject to reporting lags or errors in source filings.
+                    Past performance is not indicative of future results.
+                    We make no representation or warranty as to the accuracy or completeness of the information.
                     Always perform your own due diligence before making investment decisions.</p>
                 <p style="margin-top: var(--space-md);">© 2025 Bullish and Foolish. All rights reserved.</p>
             </div>
@@ -482,11 +492,16 @@
                 table.style.display = 'table';
                 updateSortIcons();
                 pagination.style.display = 'flex';
+                document.getElementById('paginationTop').style.display = 'flex';
 
                 const totalPages = Math.ceil(data.total / pageSize);
-                document.getElementById('pageInfo').textContent = `Page ${data.page} of ${totalPages || 1} (${data.total} companies)`;
+                const pageText = `Page ${data.page} of ${totalPages || 1} (${data.total} companies)`;
+                document.getElementById('pageInfo').textContent = pageText;
+                document.getElementById('pageInfoTop').textContent = pageText;
                 document.getElementById('prevPage').disabled = data.page <= 1;
                 document.getElementById('nextPage').disabled = data.page >= totalPages;
+                document.getElementById('prevPageTop').disabled = data.page <= 1;
+                document.getElementById('nextPageTop').disabled = data.page >= totalPages;
 
                 if (data.meta?.newestAt) {
                     const d = new Date(data.meta.newestAt);
@@ -514,6 +529,20 @@
         });
 
         document.getElementById('nextPage').addEventListener('click', () => {
+            currentPage++;
+            loadScreener();
+            window.scrollTo(0, 0);
+        });
+
+        document.getElementById('prevPageTop').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadScreener();
+                window.scrollTo(0, 0);
+            }
+        });
+
+        document.getElementById('nextPageTop').addEventListener('click', () => {
             currentPage++;
             loadScreener();
             window.scrollTo(0, 0);
