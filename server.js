@@ -944,23 +944,38 @@ const server = http.createServer(async (req, res) => {
         try {
             const meta = readPricesPatchMeta(filePath);
             const ageMs = meta.newestAtMs != null ? Date.now() - meta.newestAtMs : null;
-            if (!meta.exists || !Number.isFinite(ageMs) || ageMs > PRICE_PATCH_MAX_AGE_MS) {
-                if (!loggedStalePricePatch) {
-                    console.error('[prices] prices.json missing or stale', { ageMs, filePath, newestAt: meta.newestAt, entries: meta.entries });
-                    loggedStalePricePatch = true;
-                }
-                res.writeHead(503);
-                return res.end('prices.json is stale or missing');
-            }
+            const isStale = !meta.exists || !Number.isFinite(ageMs) || ageMs > PRICE_PATCH_MAX_AGE_MS;
+
+            // In production, stale/missing prices should not crash the deploy/healthcheck loop.
+            // Serve an empty object when missing; serve stale data when present, and expose status via headers.
+            res.setHeader('X-Prices-Stale', isStale ? '1' : '0');
             if (meta.newestAt) res.setHeader('X-Prices-Newest-At', meta.newestAt);
             res.setHeader('X-Prices-Entries', String(meta.entries || 0));
-        } catch (err) {
-            if (!loggedStalePricePatch) {
-                console.error('[prices] prices.json missing or stale', { filePath, error: err?.message || err });
+
+            if (isStale && !loggedStalePricePatch) {
+                console.error('[prices] prices.json missing or stale (serving fallback)', { ageMs, filePath, newestAt: meta.newestAt, entries: meta.entries });
                 loggedStalePricePatch = true;
             }
-            res.writeHead(503);
-            return res.end('prices.json is stale or missing');
+
+            if (!meta.exists) {
+                res.writeHead(200, {
+                    'Content-Type': 'application/json; charset=utf-8',
+                    'Cache-Control': 'no-store',
+                    'Vary': 'Accept-Encoding'
+                });
+                return res.end('{}');
+            }
+        } catch (err) {
+            if (!loggedStalePricePatch) {
+                console.error('[prices] prices.json read failed (serving fallback)', { filePath, error: err?.message || err });
+                loggedStalePricePatch = true;
+            }
+            res.writeHead(200, {
+                'Content-Type': 'application/json; charset=utf-8',
+                'Cache-Control': 'no-store',
+                'Vary': 'Accept-Encoding'
+            });
+            return res.end('{}');
         }
     }
 
