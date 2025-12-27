@@ -415,12 +415,12 @@
                     tr.addEventListener('click', (event) => {
                         if (event.target.closest('a')) return;
                         const target = encodeURIComponent(row.ticker || '');
-                        window.location.href = `ticker.html?ticker=${target}`;
+                        window.location.href = `/ticker/${target}`;
                     });
 
                     const companyCell = document.createElement('td');
                     const link = document.createElement('a');
-                    link.href = `ticker.html?ticker=${encodeURIComponent(row.ticker || '')}`;
+                    link.href = `/ticker/${encodeURIComponent(row.ticker || '')}`;
                     link.style.textDecoration = 'none';
                     link.style.color = 'inherit';
                     link.style.display = 'block';

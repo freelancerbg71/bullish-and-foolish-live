@@ -64,7 +64,7 @@
                 };
                 const doSearch = () => {
                     const val = input.value.trim().toUpperCase();
-                    if (val) window.location.href = `ticker.html?ticker=${val}`;
+                    if (val) window.location.href = `/ticker/${encodeURIComponent(val)}`;
                 };
                 input.addEventListener('keyup', (e) => {
                     if (e.key === 'Enter') doSearch();

@@ -338,7 +338,21 @@
         }
 
         const urlParams = new URLSearchParams(window.location.search);
-        const ticker = urlParams.get('ticker')?.toUpperCase();
+        const tickerParam = urlParams.get('ticker')?.toUpperCase();
+        const refreshParam = urlParams.get('refresh');
+
+        let ticker = tickerParam;
+        if (!ticker) {
+            const parts = window.location.pathname.split('/').filter(Boolean);
+            if (parts.length === 2 && parts[0].toLowerCase() === 'ticker') {
+                ticker = decodeURIComponent(parts[1]).toUpperCase();
+            }
+        }
+
+        if (tickerParam && !window.location.pathname.startsWith('/ticker/')) {
+            const redirectUrl = `/ticker/${encodeURIComponent(tickerParam)}` + (refreshParam ? `?refresh=${encodeURIComponent(refreshParam)}` : '');
+            window.location.replace(redirectUrl);
+        }
 
         const ruleExplainers = {
             "Revenue growth YoY": { pos: "Sales are growing vs last year.", neg: "Sales are shrinking vs last year." },
