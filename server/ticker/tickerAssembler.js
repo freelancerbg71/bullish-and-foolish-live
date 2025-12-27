@@ -22,11 +22,13 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(ROOT, "data");
 const EDGAR_DIR = path.join(DATA_DIR, "edgar");
 const STATIC_PRICE_PATCH_PATH = path.join(DATA_DIR, "prices.json");
+const PRICE_PATCH_MAX_AGE_DAYS = Number(process.env.PRICE_PATCH_MAX_AGE_DAYS) || 2;
 const RISK_FREE_RATE_PCT = 4.5; // Placeholder for 10Y Treasury Yield or similar
 const priceLogCache = new Map(); // throttle noisy price logs per ticker
 const staticPricePatchCache = { loadedAt: 0, data: null };
 
 const SAFE_THRESHOLD = 0.000001;
+const tickerDebug = process.env.TICKER_DEBUG === '1';
 
 function isFiniteValue(val) {
   if (val === null || val === undefined) return false;
@@ -650,10 +652,13 @@ function normalizeRuleScore(score) {
 
 function getScoreBand(val) {
   const v = Number(val) || 0;
-  if (v >= 90) return "elite";
-  if (v >= 75) return "bullish";
-  if (v >= 60) return "solid";
-  if (v >= 40) return "mixed";
+  // Align to the public score bands used in the screener UI:
+  // Elite: 91-100, Bullish: 76-90, Solid: 61-75, Average: 46-60, Speculative: 31-45, Distressed: 0-30
+  if (v >= 91) return "elite";
+  if (v >= 76) return "bullish";
+  if (v >= 61) return "solid";
+  if (v >= 46) return "mixed";
+  if (v >= 31) return "spec";
   return "danger";
 }
 
@@ -2117,8 +2122,11 @@ function computeRuleRating({
   const synthesis = reconcileNarrative();
   overrideNotes.push(...synthesis);
 
-  if (stock.ticker === "IOVA" || stock.symbol === "IOVA") {
-    console.log(`[DEBUG] IOVA Rating: Raw=${total}, Norm=${normalized}, Tier=${tierLabel}, Missing=${missingCritical} (${criticalMissingFields.join(",")})`);
+  const debugTicker = String(process.env.DEBUG_TICKER || "").trim().toUpperCase();
+  if (debugTicker && (stock.ticker === debugTicker || stock.symbol === debugTicker)) {
+    console.log(
+      `[DEBUG ${debugTicker} Rating] Raw=${total}, Norm=${normalized}, Tier=${tierLabel}, Missing=${missingCritical} (${criticalMissingFields.join(",")})`
+    );
   }
 
   return {
@@ -2827,7 +2835,7 @@ export async function buildTickerViewModel(
 ) {
   try {
     if (!ticker) return null;
-    console.log("[tickerAssembler] buildTickerViewModel start", ticker);
+    if (tickerDebug) console.log("[tickerAssembler] buildTickerViewModel start", ticker);
     const fundamentals = Array.isArray(fundamentalsOverride)
       ? fundamentalsOverride
       : (await getFundamentalsForTicker(ticker)) || [];
@@ -2839,7 +2847,7 @@ export async function buildTickerViewModel(
           .sort()
           .slice(-1)[0]
         : null;
-    console.log(
+    if (tickerDebug) console.log(
       "[tickerAssembler] fundamentals fetched",
       fundamentals?.length || 0,
       "latest",
@@ -2861,10 +2869,14 @@ export async function buildTickerViewModel(
     const patchHit = lookupPricePatch(patch, ticker);
     const patchPrice = Number(patchHit?.p);
     const patchTime = patchHit?.t || null;
-    if (Number.isFinite(patchPrice) && patchPrice > 0) {
+    const patchDate = patchTime ? String(patchTime).slice(0, 10) : null;
+    const patchLooksFresh = !isPriceStale(patchDate, PRICE_PATCH_MAX_AGE_DAYS);
+    if (Number.isFinite(patchPrice) && patchPrice > 0 && patchLooksFresh) {
       priceSummary.lastClose = patchPrice;
-      priceSummary.lastCloseDate = patchTime ? String(patchTime).slice(0, 10) : null;
+      priceSummary.lastCloseDate = patchDate;
       pricePending = false;
+    } else if (Number.isFinite(patchPrice) && patchPrice > 0 && !patchLooksFresh) {
+      logPriceOnce("stale-patch", ticker, `[tickerAssembler] static price patch stale for ${ticker} (${patchDate || "n/a"})`);
     }
 
     // Fallback: if price looks implausible or is missing, try local price file
@@ -3313,8 +3325,9 @@ export async function buildTickerViewModel(
     };
     const pennyStock = Object.values(pennyStockCheck).some(Boolean);
 
-    if (ticker === "WVE") {
-      console.log("[DEBUG WVE PENNY CHECKS]", {
+    const debugTicker = String(process.env.DEBUG_TICKER || "").trim().toUpperCase();
+    if (debugTicker && ticker.toUpperCase() === debugTicker) {
+      console.log(`[DEBUG ${debugTicker} PENNY CHECKS]`, {
         pennyStockCheck,
         vals: {
           price: priceSummary?.lastClose,
@@ -3808,6 +3821,7 @@ export async function buildTickerViewModel(
       filingProfile,
       issuerType,
       filingSignalsMeta: resolvedFilingMeta,
+      filingSignalsCachedAt: resolvedFilingCachedAt || null,
       fundamentalsAsOf: ttm?.asOf ?? latestEnd ?? null,
       lastFilingDate: latestFiledDate,
       priceAsOf: priceSummary?.lastCloseDate ?? null,
@@ -3829,7 +3843,7 @@ export async function buildTickerViewModel(
         return [...(ratingNotes || []), ...dqNotes];
       })()
     };
-    console.log("[tickerAssembler] built view model", {
+    if (tickerDebug) console.log("[tickerAssembler] built view model", {
       ticker: vm.ticker,
       periods: fundamentals.length,
       pricePoints: vm.priceHistory.length,

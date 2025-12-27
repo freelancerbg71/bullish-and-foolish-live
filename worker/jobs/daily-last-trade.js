@@ -73,6 +73,23 @@ async function ensureLastTradeColumns(db) {
   `);
 }
 
+async function ensurePricesEodTable(db) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS prices_eod (
+      id INTEGER PRIMARY KEY,
+      ticker TEXT NOT NULL,
+      date TEXT NOT NULL,
+      close REAL NOT NULL,
+      source TEXT NOT NULL,
+      marketCap REAL,
+      currency TEXT,
+      createdAt TEXT NOT NULL,
+      updatedAt TEXT NOT NULL,
+      UNIQUE (ticker, date)
+    );
+  `);
+}
+
 async function main() {
   const day = new Date().getUTCDay();
   const isWeekend = day === 0 || day === 6; // 0=Sunday, 6=Saturday
@@ -83,10 +100,12 @@ async function main() {
 
   parseArgs(process.argv.slice(2)); // reserved for future flags
 
-  const dbFile = envString("FUNDAMENTALS_DB_FILE");
-  if (!dbFile) throw new Error("Missing required env var: FUNDAMENTALS_DB_FILE");
-
-  const nasdaqUrl = envString("NASDAQ_LAST_TRADE_URL");
+  // If DATA_DIR / RAILWAY_VOLUME_MOUNT_PATH are set, fundamentalsStore will place the DB in the persistent volume.
+  // FUNDAMENTALS_DB_FILE is still supported but no longer required.
+  const nasdaqUrl = envString(
+    "NASDAQ_LAST_TRADE_URL",
+    "https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=0&download=true"
+  );
   const nyseUrl = envString("NYSE_LAST_TRADE_URL");
   if (!nasdaqUrl && !nyseUrl) {
     throw new Error("Set at least one of NASDAQ_LAST_TRADE_URL or NYSE_LAST_TRADE_URL");
@@ -118,16 +137,46 @@ async function main() {
     priceMaps.push(extractPriceMap(txt, { sourceLabel: "NYSE", delimiter, hasHeader, symbolCol, priceCol }));
   }
 
-  const tickersAll = await loadSupportedTickers();
+  const sourceTickers = new Set();
+  for (const m of priceMaps) {
+    for (const k of m.keys()) sourceTickers.add(k);
+  }
+
+  let tickersAll = [];
+  let dbAvailable = true;
+  try {
+    tickersAll = await loadSupportedTickers();
+  } catch (err) {
+    // Allow this job to run even when the DB layer isn't available (e.g. local without native deps).
+    // In that case, fall back to writing a bulk prices.json patch from the source data.
+    dbAvailable = false;
+    tickersAll = [...sourceTickers];
+    console.warn("[worker:daily-last-trade] supported ticker universe unavailable; falling back to source tickers", {
+      tickers: tickersAll.length,
+      error: err?.message || String(err)
+    });
+  }
+
   const tickers = Number.isFinite(limit) && limit > 0 ? tickersAll.slice(0, limit) : tickersAll;
   console.log("[worker:daily-last-trade] mapping prices", { tickers: tickers.length });
 
   const nowIso = new Date().toISOString();
   const todayDate = nowIso.split('T')[0];
-  const db = await getDb();
-  await ensureLastTradeColumns(db);
+  let db = null;
+  if (dbAvailable) {
+    try {
+      db = await getDb();
+      await ensureLastTradeColumns(db);
+      await ensurePricesEodTable(db);
+    } catch (err) {
+      db = null;
+      dbAvailable = false;
+      console.warn("[worker:daily-last-trade] DB unavailable; skipping DB writes", err?.message || err);
+    }
+  }
 
-  const upsert = db.prepare(`
+  const upsert = db
+    ? db.prepare(`
     INSERT INTO ticker_last_trade (ticker, lastTradePrice, lastTradeAt, source, updatedAt)
     VALUES (@ticker, @lastTradePrice, @lastTradeAt, @source, @updatedAt)
     ON CONFLICT(ticker) DO UPDATE SET
@@ -135,32 +184,37 @@ async function main() {
       lastTradeAt=excluded.lastTradeAt,
       source=excluded.source,
       updatedAt=excluded.updatedAt
-  `);
+  `)
+    : null;
 
-  const upsertEod = db.prepare(`
+  const upsertEod = db
+    ? db.prepare(`
     INSERT INTO prices_eod (ticker, date, close, source, createdAt, updatedAt)
     VALUES (@ticker, @date, @close, @source, @createdAt, @updatedAt)
     ON CONFLICT(ticker, date) DO UPDATE SET
       close=excluded.close,
       source=excluded.source,
       updatedAt=excluded.updatedAt
-  `);
+  `)
+    : null;
 
-  const tx = db.transaction((batch) => {
-    for (const row of batch) {
-      upsert.run(row);
-      try {
-        upsertEod.run({
-          ticker: row.ticker,
-          date: todayDate,
-          close: row.lastTradePrice,
-          source: row.source,
-          createdAt: nowIso,
-          updatedAt: nowIso
-        });
-      } catch (_) { }
-    }
-  });
+  const tx = db
+    ? db.transaction((batch) => {
+      for (const row of batch) {
+        upsert.run(row);
+        try {
+          upsertEod.run({
+            ticker: row.ticker,
+            date: todayDate,
+            close: row.lastTradePrice,
+            source: row.source,
+            createdAt: nowIso,
+            updatedAt: nowIso
+          });
+        } catch (_) { }
+      }
+    })
+    : null;
 
   const batch = [];
   let matched = 0;
@@ -171,23 +225,25 @@ async function main() {
     batch.push({
       ticker: ticker,
       lastTradePrice: hit.price,
-        lastTradeAt: todayDate,
+      lastTradeAt: todayDate,
       source: hit.source,
       updatedAt: nowIso
     });
   }
-  tx(batch);
+  if (tx) tx(batch);
 
   // Best-effort: also copy onto screener_index if the columns exist.
-  try {
-    db.exec(`
-      UPDATE screener_index
-      SET lastTradePrice = (SELECT lastTradePrice FROM ticker_last_trade WHERE ticker_last_trade.ticker = screener_index.ticker),
-          lastTradeAt = (SELECT lastTradeAt FROM ticker_last_trade WHERE ticker_last_trade.ticker = screener_index.ticker),
-          lastTradeSource = (SELECT source FROM ticker_last_trade WHERE ticker_last_trade.ticker = screener_index.ticker)
-      WHERE ticker IN (SELECT ticker FROM ticker_last_trade);
-    `);
-  } catch (_) { }
+  if (db) {
+    try {
+      db.exec(`
+        UPDATE screener_index
+        SET lastTradePrice = (SELECT lastTradePrice FROM ticker_last_trade WHERE ticker_last_trade.ticker = screener_index.ticker),
+            lastTradeAt = (SELECT lastTradeAt FROM ticker_last_trade WHERE ticker_last_trade.ticker = screener_index.ticker),
+            lastTradeSource = (SELECT source FROM ticker_last_trade WHERE ticker_last_trade.ticker = screener_index.ticker)
+        WHERE ticker IN (SELECT ticker FROM ticker_last_trade);
+      `);
+    } catch (_) { }
+  }
 
   console.log("[worker:daily-last-trade] done", { matched, written: batch.length, asOf: nowIso });
 

@@ -13,6 +13,7 @@ import { enqueueFundamentalsJob, getQueueDepth } from './server/edgar/edgarQueue
 import { closeDb as closeFundamentalsDb, getFundamentalsForTicker, writeFundamentalsSnapshot, getDb as getFundamentalsDb } from './server/edgar/fundamentalsStore.js';
 import { closeDb as closeScreenerDb } from './server/screener/screenerStore.js';
 import { closeDb as closePricesDb } from './server/prices/priceStore.js';
+import { startDailyPricesScheduler } from './server/prices/dailyLastTradeScheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -207,7 +208,10 @@ const OUTBOUND_MIN_INTERVAL_MS = Number(process.env.DATA_MIN_INTERVAL_MS) || 250
 const OUTBOUND_MAX_INFLIGHT = Number(process.env.DATA_MAX_INFLIGHT) || 1;
 const OUTBOUND_MAX_RETRIES = Number(process.env.DATA_MAX_RETRIES) || 3;
 const OUTBOUND_BASE_BACKOFF_MS = Number(process.env.DATA_BASE_BACKOFF_MS) || 60000;
-const DATA_USER_AGENT = process.env.DATA_USER_AGENT || 'BullishAndFoolishBot/0.1 (+freelancer.bg@gmail.com)';
+const DATA_USER_AGENT = process.env.DATA_USER_AGENT || 'BullishAndFoolishBot/0.1';
+if (!process.env.DATA_USER_AGENT && /sec\.gov/i.test(DATA_API_BASE)) {
+    console.warn('[config] DATA_USER_AGENT is not set; SEC requests may be rate-limited or blocked without a descriptive UA.');
+}
 const EDGAR_CACHE_TTL_MS = Number(process.env.EDGAR_CACHE_TTL_MS) || 30 * 24 * 60 * 60 * 1000;
 const VM_CACHE_DIR = path.join(DATA_DIR, 'cache', 'vm');
 const VM_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -220,6 +224,44 @@ let outboundInFlight = 0;
 let nextOutboundSlot = Date.now();
 let activeTickerRequests = 0;
 let loggedStalePricePatch = false;
+
+function safeParseDateMs(dateStr) {
+    const ts = Date.parse(String(dateStr || ''));
+    return Number.isFinite(ts) ? ts : null;
+}
+
+function readPricesPatchMeta(filePath) {
+    try {
+        if (!fs.existsSync(filePath)) {
+            return { exists: false, entries: 0, newestAt: null, newestAtMs: null, error: null };
+        }
+        const raw = fs.readFileSync(filePath, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') {
+            return { exists: true, entries: 0, newestAt: null, newestAtMs: null, error: 'invalid_json_shape' };
+        }
+
+        let newestAtMs = null;
+        let entries = 0;
+        for (const v of Object.values(parsed)) {
+            if (!v || typeof v !== 'object') continue;
+            entries += 1;
+            const ts = safeParseDateMs(v.t);
+            if (ts == null) continue;
+            if (newestAtMs == null || ts > newestAtMs) newestAtMs = ts;
+        }
+
+        return {
+            exists: true,
+            entries,
+            newestAtMs,
+            newestAt: newestAtMs ? new Date(newestAtMs).toISOString() : null,
+            error: null
+        };
+    } catch (err) {
+        return { exists: false, entries: 0, newestAt: null, newestAtMs: null, error: err?.message || String(err) };
+    }
+}
 
 const MIME_TYPES = {
     '.html': 'text/html; charset=utf-8',
@@ -381,11 +423,18 @@ function isRateLimited(ip) {
     return false;
 }
 
+function setSecurityHeaders(res) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+}
+
 function setApiCors(res) {
     const allowOrigin = process.env.CORS_ALLOW_ORIGIN || '*';
     res.setHeader('Access-Control-Allow-Origin', allowOrigin);
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    setSecurityHeaders(res);
 }
 
 function sendJson(req, res, status, payload) {
@@ -692,7 +741,13 @@ async function handleApi(req, res, url) {
 
                     if (!refresh) {
                         const cached = await getCachedViewModel(ticker);
-                        if (cached) return sendJson(req, res, 200, cached);
+                        if (cached) {
+                            const cachedAt = cached?.filingSignalsCachedAt ? Date.parse(cached.filingSignalsCachedAt) : NaN;
+                            // If the cached VM predates filingSignalsCachedAt support, rebuild once so filing cards can render.
+                            if (Number.isFinite(cachedAt)) {
+                                return sendJson(req, res, 200, cached);
+                            }
+                        }
                     }
 
                     const data = await buildTickerPayload(ticker, section);
@@ -706,6 +761,14 @@ async function handleApi(req, res, url) {
             const { getScreenerPricePatch } = await import('./server/screener/screenerService.js');
             const data = await getScreenerPricePatch();
             return sendJson(req, res, 200, data);
+        }
+        if (url.pathname === '/api/prices/status') {
+            const filePath = path.join(DATA_DIR, 'prices.json');
+            const meta = readPricesPatchMeta(filePath);
+            const staleAfterMs = Number(process.env.PRICES_PATCH_MAX_AGE_MS) || 48 * 60 * 60 * 1000;
+            const ageMs = meta.newestAtMs != null ? Date.now() - meta.newestAtMs : null;
+            const isStale = !meta.newestAtMs || !Number.isFinite(ageMs) || ageMs > staleAfterMs;
+            return sendJson(req, res, 200, { ...meta, ageMs, staleAfterMs, isStale, filePath });
         }
         if (url.pathname === '/api/screener') {
             const data = await queryScreener(url);
@@ -843,13 +906,30 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/' || pathname === '') pathname = '/index.html';
 
+    // Support pretty URLs: /ticker/AAPL -> serve ticker.html
+    // Only capture 2-segment paths under /ticker/ that don't look like file requests
+    if (pathname.startsWith('/ticker/')) {
+        const parts = pathname.split('/').filter(Boolean);
+        // parts[0] is 'ticker', parts[1] is symbol.
+        if (parts.length === 2) {
+            // Allow dots for tickers like BRK.B, but exclude common web extensions
+            const isAsset = /\.(css|js|png|jpg|jpeg|webp|gif|ico|json|map|svg|woff2?|ttf|html)$/i.test(parts[1]);
+            if (!isAsset) {
+                pathname = '/ticker.html';
+            }
+        }
+    }
+
     let base = __dirname;
     let staticPath = pathname;
     if (pathname.startsWith('/assets/')) {
         base = PROJECT_ROOT;
-    } else if (pathname.startsWith('/data/')) {
+    } else if (pathname === '/data/prices.json') {
         base = DATA_DIR;
-        staticPath = pathname.replace(/^\/data/, '') || '/';
+        staticPath = '/prices.json';
+    } else if (pathname.startsWith('/data/')) {
+        res.writeHead(404);
+        return res.end('Not found');
     }
     const filePath = resolveSafePath(base, staticPath);
     if (!filePath) {
@@ -862,16 +942,18 @@ const server = http.createServer(async (req, res) => {
 
     if (pathname === '/data/prices.json') {
         try {
-            const stats = fs.statSync(filePath);
-            const ageMs = Date.now() - stats.mtimeMs;
-            if (!Number.isFinite(ageMs) || ageMs > PRICE_PATCH_MAX_AGE_MS) {
+            const meta = readPricesPatchMeta(filePath);
+            const ageMs = meta.newestAtMs != null ? Date.now() - meta.newestAtMs : null;
+            if (!meta.exists || !Number.isFinite(ageMs) || ageMs > PRICE_PATCH_MAX_AGE_MS) {
                 if (!loggedStalePricePatch) {
-                    console.error('[prices] prices.json missing or stale', { ageMs, filePath });
+                    console.error('[prices] prices.json missing or stale', { ageMs, filePath, newestAt: meta.newestAt, entries: meta.entries });
                     loggedStalePricePatch = true;
                 }
                 res.writeHead(503);
                 return res.end('prices.json is stale or missing');
             }
+            if (meta.newestAt) res.setHeader('X-Prices-Newest-At', meta.newestAt);
+            res.setHeader('X-Prices-Entries', String(meta.entries || 0));
         } catch (err) {
             if (!loggedStalePricePatch) {
                 console.error('[prices] prices.json missing or stale', { filePath, error: err?.message || err });
@@ -894,14 +976,22 @@ const server = http.createServer(async (req, res) => {
         } else {
             const staticCacheLimit = 31536000; // 1 year for versioned assets
             const dataCacheLimit = 3600 * 8; // 8 hours for data files
+            const pricesCacheLimit = Number(process.env.PRICES_JSON_MAX_AGE_SEC) || 300; // 5 minutes
             const isAsset = pathname.startsWith('/assets/') || pathname.endsWith('.css') || pathname.endsWith('.js');
             const isData = pathname.startsWith('/data/') && pathname.endsWith('.json');
+            const isPricesPatch = pathname === '/data/prices.json';
 
             const headers = { 'Content-Type': contentType };
+            // Security headers for all responses
+            headers['X-Content-Type-Options'] = 'nosniff';
+            headers['X-Frame-Options'] = 'SAMEORIGIN';
+            headers['Referrer-Policy'] = 'strict-origin-when-cross-origin';
             if (isAsset) {
                 headers['Cache-Control'] = `public, max-age=${staticCacheLimit}, immutable`;
             } else if (isData) {
-                headers['Cache-Control'] = `public, max-age=${dataCacheLimit}`;
+                headers['Cache-Control'] = isPricesPatch
+                    ? `public, max-age=${pricesCacheLimit}`
+                    : `public, max-age=${dataCacheLimit}`;
             }
 
             const acceptEncoding = req.headers['accept-encoding'] || '';
@@ -923,12 +1013,20 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`Bullish and Foolish v2 prototype is live at http://localhost:${PORT}`);
+    console.log(`Bullish and Foolish v1.21 is live on port ${PORT}`);
 });
 
 if (process.env.SCREENER_SCHEDULER_ENABLED === '1') {
     startScreenerScheduler().catch((err) => {
         console.warn('[screenerScheduler] failed to start', err?.message || err);
+    });
+}
+
+const pricesSchedulerEnabled =
+    process.env.PRICES_SCHEDULER_ENABLED === '1' || Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH);
+if (pricesSchedulerEnabled) {
+    startDailyPricesScheduler().catch((err) => {
+        console.warn('[dailyPricesScheduler] failed to start', err?.message || err);
     });
 }
 

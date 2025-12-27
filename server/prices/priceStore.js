@@ -9,6 +9,7 @@ const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH |
 const DB_DIR = path.join(DATA_DIR, "edgar");
 const DB_FILE = process.env.PRICES_DB_FILE || path.join(DB_DIR, "fundamentals.db");
 const PRICE_FILE_DIR = path.join(DATA_DIR, "prices");
+const PRICE_HISTORY_KEEP = Number(process.env.PRICE_HISTORY_KEEP) || 260;
 
 let dbPromise = null;
 let dbInstance = null;
@@ -127,7 +128,7 @@ export async function upsertCachedPrice(ticker, date, close, source, marketCap =
     updatedAt: now
   });
   await yieldToEventLoop(); // Allow HTTP handlers to run
-  await pruneOldPrices(key, 2);
+  await pruneOldPrices(key, PRICE_HISTORY_KEEP);
   await writePriceFile(key, db);
   console.info("[priceStore] upserted price", { ticker: key, date, close: Number(close), marketCap, currency, source, file: path.join(PRICE_FILE_DIR, `${key}.json`) });
 }
@@ -176,7 +177,7 @@ export async function upsertCachedPriceSeries(ticker, series = [], source, marke
 
   tx(normalized);
   await yieldToEventLoop(); // Allow HTTP handlers to run after heavy transaction
-  await pruneOldPrices(key, 2);
+  await pruneOldPrices(key, PRICE_HISTORY_KEEP);
   await writePriceFile(key, db);
   console.info("[priceStore] upserted price series", {
     ticker: key,

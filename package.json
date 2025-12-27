@@ -1,7 +1,10 @@
 {
-  "name": "stocks-tools",
-  "version": "0.0.1",
+  "name": "bullish-and-foolish",
+  "version": "1.21.0",
   "type": "module",
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dump:meta": "node scripts/dumpMetaFacts.js",

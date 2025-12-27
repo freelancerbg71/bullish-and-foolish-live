@@ -9,6 +9,7 @@ function normalizeTierFilter(raw) {
   if (tier === "bullish+" || tier === "bullishplus" || tier === "bullish plus") return ["bullish", "elite"];
   if (tier === "solid+" || tier === "solidplus" || tier === "solid plus")
     return ["solid", "bullish", "elite"];
+  if (tier === "spec" || tier === "speculative") return ["spec"];
   if (tier === "danger") return ["danger"];
   if (tier === "mixed") return ["mixed"];
   if (tier === "solid") return ["solid"];
@@ -69,7 +70,7 @@ function getDedupAllowlist() {
 
 export function getScreenerPresets() {
   return [
-    { id: "elite_compounders", name: "Elite Compounders", filters: { tier: "Elite Only", scoreMin: 90 } },
+    { id: "elite_compounders", name: "Elite Compounders", filters: { tier: "Elite Only", scoreMin: 91 } },
     { id: "undervalued_quality", name: "Undervalued Quality", filters: { tier: "Solid", scoreMin: 60, scoreMax: 75, peMax: 20 } },
     {
       id: "growth_phase_bargains",

@@ -19,6 +19,7 @@ export async function fetchText(url, { timeoutMs = 45_000 } = {}) {
       method: "GET",
       headers: {
         "User-Agent": resolveUserAgent(),
+        "Accept-Encoding": "gzip, deflate, br",
         "Accept": "*/*"
       },
       signal: controller.signal
@@ -34,4 +35,3 @@ export async function fetchText(url, { timeoutMs = 45_000 } = {}) {
     clearTimeout(t);
   }
 }
-

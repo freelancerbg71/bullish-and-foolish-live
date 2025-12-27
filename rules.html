@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Explore the financial rules powering Bullish and Foolish quality scores: revenue growth, FCF margin, dilution, cash runway, valuation multiples, and more.">
+    <title>Scoring Rules | Bullish and Foolish</title>
+    <link rel="stylesheet" href="/style.css?v=20251224">
+    <style>
+        .rules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: var(--space-lg);
+            margin-top: var(--space-xl);
+        }
+
+        .rule-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--space-lg);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .rule-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .rule-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: var(--space-xs);
+            color: var(--text-primary);
+        }
+
+        .rule-weight {
+            display: inline-block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+            border: 1px solid var(--border);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .rule-desc {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: var(--space-md);
+        }
+
+        .sector-tag {
+            font-size: 0.75rem;
+            color: var(--accent);
+            background: rgba(var(--accent-rgb), 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-right: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="app-header">
+        <div class="container header-content">
+            <div class="header-left">
+                <a href="/" class="header-brand">
+                    Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
+                </a>
+            </div>
+            <nav class="header-nav text-muted">
+                <a href="/screener.html">Screener</a>
+                <a href="/about.html">Methodology</a>
+                <a href="/rules.html" style="color: var(--text-primary);">Rules</a>
+                <a href="/">Search</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="section">
+            <div style="max-width: 800px;">
+                <h1 class="huge">The Rulebook</h1>
+                <p class="text-secondary" style="font-size: 1.25rem; margin-top: var(--space-lg); max-width: 700px;">
+                    Our rating engine runs over 100 checks on every standardized filing. Here are the core financial
+                    rules that drive the bulk of the "Quality Score."
+                </p>
+                <div class="text-muted" style="margin-top: var(--space-md);">
+                    Note: Rules adapt dynamically based on the company's sector (e.g., Biotech rules differ
+                    significantly from Retail).
+                </div>
+            </div>
+
+            <div class="rules-grid">
+
+                <!-- Growth Checks -->
+                <div class="rule-card">
+                    <div class="rule-title">Revenue Growth YoY</div>
+                    <div class="rule-weight">High Impact</div>
+                    <p class="rule-desc">
+                        Measures raw top-line expansion compared to the same quarter last year.
+                    </p>
+                    <div style="font-size:0.85rem; color:var(--text-muted);">
+                        <strong>Benchmarks:</strong><br>
+                        Tech/Fintech: >30% (Bullish), <0% (Bearish)<br>
+                            Industrial: >10% (Bullish), <0% (Bearish) </div>
+                    </div>
+
+                    <div class="rule-card">
+                        <div class="rule-title">Shares Dilution</div>
+                        <div class="rule-weight">High Impact</div>
+                        <p class="rule-desc">
+                            Tracks whether existing shareholders are being diluted by new issuance or rewarded with
+                            buybacks.
+                        </p>
+                        <div style="font-size:0.85rem; color:var(--text-muted);">
+                            <strong>Score:</strong><br>
+                            Buybacks (-shares): Positive impact<br>
+                            Dilution >5%: Negative impact<br>
+                            Dilution >15%: Severe penalty
+                        </div>
+                    </div>
+
+                    <!-- Profitability -->
+                    <div class="rule-card">
+                        <div class="rule-title">FCF Margin</div>
+                        <div class="rule-weight">High Impact</div>
+                        <p class="rule-desc">
+                            Free Cash Flow as a percentage of Revenue. The ultimate truth of profitability.
+                        </p>
+                        <div style="font-size:0.85rem; color:var(--text-muted);">
+                            <strong>Tech Benchmarks:</strong><br>
+                            >20%: Elite Cash Generator<br>
+                            <-20%: Cash Burner </div>
+                        </div>
+
+                        <div class="rule-card">
+                            <div class="rule-title">Gross Margin</div>
+                            <div class="rule-weight">Medium Impact</div>
+                            <p class="rule-desc">
+                                Measures the core markup on products/services sold. Adjusts heavily by sector.
+                            </p>
+                            <div style="font-size:0.85rem; color:var(--text-muted);">
+                                <strong>Targets:</strong><br>
+                                Software: >75%<br>
+                                Retail: >35%<br>
+                                Hardware: >45%
+                            </div>
+                        </div>
+
+                        <!-- Financial Health -->
+                        <div class="rule-card">
+                            <div class="rule-title">Cash Runway</div>
+                            <div class="rule-weight">Critical (Biotech)</div>
+                            <p class="rule-desc">
+                                For unprofitable companies (especially Biotech), how many years can they survive at
+                                current burn rates?
+                            </p>
+                            <div style="font-size:0.85rem; color:var(--text-muted);">
+                                >3 Years: Safe<br>
+                                <1 Year: High Risk (Dilution imminent) </div>
+                            </div>
+
+                            <div class="rule-card">
+                                <div class="rule-title">Operating Leverage</div>
+                                <div class="rule-weight">Medium Impact</div>
+                                <p class="rule-desc">
+                                    Are operating expenses growing slower than revenue? This indicates scalability.
+                                </p>
+                                <div style="font-size:0.85rem; color:var(--text-muted);">
+                                    Checks if OpEx/Revenue ratio is declining sequentially over 3 quarters.
+                                </div>
+                            </div>
+
+                            <!-- Valuation -->
+                            <div class="rule-card">
+                                <div class="rule-title">Price / Sales</div>
+                                <div class="rule-weight">Valuation</div>
+                                <p class="rule-desc">
+                                    Valuation check relative to revenue. Adjusted for growth rate (fast growers 'earn'
+                                    higher multiples).
+                                </p>
+                                <div style="font-size:0.85rem; color:var(--text-muted);">
+                                    Tech: >18x is expensive, <6x is cheap<br>
+                                        General: >5x is expensive
+                                </div>
+                            </div>
+
+                            <div class="rule-card">
+                                <div class="rule-title">Price / Earnings</div>
+                                <div class="rule-weight">Valuation</div>
+                                <p class="rule-desc">
+                                    Valuation check relative to net income.
+                                </p>
+                                <div style="font-size:0.85rem; color:var(--text-muted);">
+                                    <20x: Reasonable<br>
+                                        >50x: Expensive (unless hyper-growth)
+                                </div>
+                            </div>
+
+                            <!-- Efficiency -->
+                            <div class="rule-card">
+                                <div class="rule-title">Working Capital Efficiency</div>
+                                <div class="rule-weight">Bonus</div>
+                                <p class="rule-desc">
+                                    Analyzes Cash Conversion Cycle (CCC). How fast does the company turn inventory/spend
+                                    into cash?
+                                </p>
+                                <div style="font-size:0.85rem; color:var(--text-muted);">
+                                    Lower CCC days = Higher Score.
+                                </div>
+                            </div>
+
+                            <div class="rule-card">
+                                <div class="rule-title">Capital Return</div>
+                                <div class="rule-weight">Bonus</div>
+                                <p class="rule-desc">
+                                    Rewards companies that return >20% of their Free Cash Flow to shareholders via
+                                    dividends or buybacks.
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <div style="margin-top: var(--space-2xl); text-align: center;">
+                            <p class="text-muted">Plus 90+ other signals including Auditor status, Debt Covenants,
+                                Insider Trading patterns, and more.</p>
+                            <div style="margin-top: var(--space-lg);">
+                                <a href="screener.html" class="button"
+                                    style="background: var(--accent); color: var(--bg-primary); font-weight: 700; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+                                    See the Rules in Action (Screener)
+                                </a>
+                            </div>
+                        </div>
+        </section>
+    </main>
+
+    <footer class="footer-disclaimer">
+        <div class="container">
+            <div class="disclaimer-text">
+                <p style="font-weight: 600; margin-bottom: var(--space-sm); color: var(--text-primary);">Disclaimer &
+                    Disclosure</p>
+                <p>Bullish and Foolish is an independent financial analysis tool. All data is sourced from public SEC
+                    filings.
+                    The ratings and analysis provided are for informational purposes only and do NOT constitute
+                    financial advice, investment recommendations, or an offer to buy/sell securities.
+                    We are not a registered investment advisor.
+                    Fundamental data can be subject to reporting lags or errors in source filings.
+                    Past performance is not indicative of future results.
+                    We make no representation or warranty as to the accuracy or completeness of the information.
+                    Visual indicators are symbolic and intended to aid recognition; all assessments are based solely on
+                    the underlying rules-based analysis described in the methodology.
+                    Always perform your own due diligence before making investment decisions.</p>
+                <p style="margin-top: var(--space-md);">© 2025 Bullish and Foolish. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>
