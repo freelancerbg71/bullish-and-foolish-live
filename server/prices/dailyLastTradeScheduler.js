@@ -82,7 +82,9 @@ export async function startDailyPricesScheduler() {
     const shouldWarm = forceOnStart || !info.exists || isStale(info.newestAt, staleAfterMs);
     if (shouldWarm) {
       console.info("[dailyPricesScheduler] warming daily prices in background...", { ...info, force: forceOnStart });
-      const spawned = spawnDailyLastTradeJob({ force: forceOnStart || runOnWeekends });
+      // If the patch is stale, run even on weekends so fresh prices are available after deploys.
+      const force = forceOnStart || runOnWeekends || isStale(info.newestAt, staleAfterMs);
+      const spawned = spawnDailyLastTradeJob({ force });
       if (!spawned) {
         console.info("[dailyPricesScheduler] daily-last-trade already running; skipping warm start");
       }

@@ -2876,6 +2876,9 @@ export async function buildTickerViewModel(
       priceSummary.lastCloseDate = patchDate;
       pricePending = false;
     } else if (Number.isFinite(patchPrice) && patchPrice > 0 && !patchLooksFresh) {
+      // Keep the stale patch price as a best-effort value so the UI doesn't go blank on weekends/deploys.
+      priceSummary.lastClose = patchPrice;
+      priceSummary.lastCloseDate = patchDate;
       logPriceOnce("stale-patch", ticker, `[tickerAssembler] static price patch stale for ${ticker} (${patchDate || "n/a"})`);
     }
 
@@ -2897,10 +2900,12 @@ export async function buildTickerViewModel(
           pricePending = false;
         }
       } else if (isPriceStale(priceSummary.lastCloseDate, 5)) {
-        // stale and no fallback; mark pending and clear price to avoid showing ghost values
-        priceSummary = emptyPriceSummary();
-        priceHistory = [];
+        // Stale and no fallback. If we have a stale patch price, keep it as best-effort.
         pricePending = true;
+        if (!Number.isFinite(priceSummary?.lastClose) || priceSummary.lastClose <= 0) {
+          priceSummary = emptyPriceSummary();
+          priceHistory = [];
+        }
         logPriceOnce("stale-no-fallback", ticker, `[tickerAssembler] price stale and no fallback for ${ticker}`);
       }
     }
