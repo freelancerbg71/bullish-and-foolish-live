@@ -4,8 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
     <meta name="description"
         content="Bullish and Foolish: An independent rating engine analyzing public SEC filings to deliver transparent, rules-based fundamental health scores for US public companies.">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bullishandfoolish.com/">
+    <meta property="og:title" content="Bullish and Foolish | Fundamental Intelligence">
+    <meta property="og:description"
+        content="Free stock analysis tool powered by SEC filings. Get instant quality scores and filing intelligence for any US stock.">
+    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Bullish and Foolish | Fundamental Intelligence">
+    <meta name="twitter:description"
+        content="Free stock analysis tool powered by SEC filings. Get instant quality scores and filing intelligence for any US stock.">
+    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+
     <title>Bullish and Foolish | Fundamental Intelligence</title>
     <link rel="stylesheet" href="/style.css?v=20251224">
 </head>
@@ -32,16 +49,51 @@
             </div>
             <h1 class="huge">Search the US Market's<br>Fundamental Health.</h1>
             <p class="text-muted"
-                style="max-width: 600px; margin: var(--space-lg) auto var(--space-2xl) auto; font-size: 1.1rem;">
-                An independent rating engine that strips away the noise of price and hype, focusing exclusively on the
-                underlying financial health of public companies.
+                style="max-width: 600px; margin: var(--space-lg) auto var(--space-lg) auto; font-size: 1.1rem;">
+                An independent rating engine that strips away the noise of price and hype, showing you what the actual
+                SEC filings reveal about company quality.
             </p>
 
-            <div style="max-width: 700px; margin: 0 auto; position: relative; display: flex; gap: 10px;">
-                <input type="text" id="searchInput" placeholder="Search by Ticker (e.g. AAPL, MSFT, NVDA)"
-                    style="flex: 1; padding: 20px 24px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 1.1rem; outline: none; transition: border-color 0.2s;">
-                <button id="searchBtn"
-                    style="padding: 0 32px; background: var(--accent); color: var(--bg-primary); border: none; border-radius: 8px; font-weight: 700; font-size: 1.1rem; cursor: pointer; transition: transform 0.1s;">Go</button>
+            <!-- Mini Preview Examples -->
+            <div
+                style="display: flex; justify-content: center; gap: var(--space-lg); flex-wrap: wrap; margin-bottom: var(--space-xl);">
+                <a href="/ticker/AAPL" style="text-decoration: none;">
+                    <div class="card"
+                        style="padding: 12px 20px; display: flex; align-items: center; gap: 12px; transition: transform 0.1s;">
+                        <span style="font-weight: 700; color: var(--text-primary);">AAPL</span>
+                        <span style="color: var(--positive); font-weight: 800;">87</span>
+                        <span style="color: var(--positive);">✓</span>
+                    </div>
+                </a>
+                <a href="/ticker/NVDA" style="text-decoration: none;">
+                    <div class="card"
+                        style="padding: 12px 20px; display: flex; align-items: center; gap: 12px; transition: transform 0.1s;">
+                        <span style="font-weight: 700; color: var(--text-primary);">NVDA</span>
+                        <span style="color: var(--positive); font-weight: 800;">74</span>
+                        <span style="color: var(--positive);">✓</span>
+                    </div>
+                </a>
+                <a href="/ticker/META" style="text-decoration: none;">
+                    <div class="card"
+                        style="padding: 12px 20px; display: flex; align-items: center; gap: 12px; transition: transform 0.1s;">
+                        <span style="font-weight: 700; color: var(--text-primary);">META</span>
+                        <span style="color: var(--positive); font-weight: 800;">82</span>
+                        <span style="color: var(--positive);">✓</span>
+                    </div>
+                </a>
+            </div>
+
+            <div style="max-width: 700px; margin: 0 auto; position: relative;">
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="searchInput"
+                        placeholder="Search by Ticker or Company Name (e.g. AAPL, Microsoft, Nvidia)" autocomplete="off"
+                        style="flex: 1; padding: 20px 24px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary); font-size: 1.1rem; outline: none; transition: border-color 0.2s;">
+                    <button id="searchBtn"
+                        style="padding: 0 32px; background: var(--accent); color: var(--bg-primary); border: none; border-radius: 8px; font-weight: 700; font-size: 1.1rem; cursor: pointer; transition: transform 0.1s;">Go</button>
+                </div>
+                <div id="searchDropdown"
+                    style="display: none; position: absolute; top: 100%; left: 0; right: 80px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; margin-top: 4px; max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.3);">
+                </div>
             </div>
 
             <p class="text-muted" style="margin-top: var(--space-md); font-size: 0.85rem;">
@@ -53,6 +105,9 @@
             <script>
                 const input = document.getElementById('searchInput');
                 const btn = document.getElementById('searchBtn');
+                const dropdown = document.getElementById('searchDropdown');
+                let debounceTimer = null;
+                let selectedIndex = -1;
 
                 input.onfocus = () => {
                     input.style.borderColor = 'var(--accent)';
@@ -61,22 +116,152 @@
                 input.onblur = () => {
                     input.style.borderColor = 'var(--border)';
                     input.style.boxShadow = 'none';
+                    // Delay hiding to allow click on dropdown items
+                    setTimeout(() => { dropdown.style.display = 'none'; }, 200);
                 };
-                const doSearch = () => {
-                    const val = input.value.trim().toUpperCase();
+
+                const doSearch = (ticker) => {
+                    const val = (ticker || input.value).trim().toUpperCase();
                     if (val) window.location.href = `/ticker/${encodeURIComponent(val)}`;
                 };
-                input.addEventListener('keyup', (e) => {
-                    if (e.key === 'Enter') doSearch();
+
+                const renderDropdown = (results) => {
+                    if (!results || results.length === 0) {
+                        dropdown.style.display = 'none';
+                        return;
+                    }
+                    dropdown.innerHTML = results.map((r, i) => `
+                        <div class="search-result" data-ticker="${r.ticker}" data-index="${i}"
+                            style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.1s;">
+                            <span style="font-weight: 700; color: var(--accent);">${r.ticker}</span>
+                            <span style="color: var(--text-muted); margin-left: 8px;">${r.name}</span>
+                            ${r.exchange ? `<span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 8px;">(${r.exchange})</span>` : ''}
+                        </div>
+                    `).join('');
+                    dropdown.style.display = 'block';
+                    selectedIndex = -1;
+
+                    // Mobile fix: scroll input into view so dropdown isn't hidden behind keyboard
+                    setTimeout(() => {
+                        input.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+
+                    // Add click handlers
+                    dropdown.querySelectorAll('.search-result').forEach(el => {
+                        el.onmouseenter = () => el.style.background = 'var(--bg-primary)';
+                        el.onmouseleave = () => el.style.background = 'transparent';
+                        el.onclick = () => doSearch(el.dataset.ticker);
+                    });
+                };
+
+                const fetchResults = async (query) => {
+                    if (!query || query.length < 1) {
+                        dropdown.style.display = 'none';
+                        return;
+                    }
+                    try {
+                        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=8`);
+                        if (!res.ok) return;
+                        const results = await res.json();
+                        renderDropdown(results);
+                    } catch (err) {
+                        console.warn('Search failed', err);
+                    }
+                };
+
+                input.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => fetchResults(input.value.trim()), 200);
                 });
-                btn.addEventListener('click', doSearch);
+
+                input.addEventListener('keydown', (e) => {
+                    const items = dropdown.querySelectorAll('.search-result');
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                        items.forEach((el, i) => el.style.background = i === selectedIndex ? 'var(--bg-primary)' : 'transparent');
+                        if (items[selectedIndex]) input.value = items[selectedIndex].dataset.ticker;
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        selectedIndex = Math.max(selectedIndex - 1, 0);
+                        items.forEach((el, i) => el.style.background = i === selectedIndex ? 'var(--bg-primary)' : 'transparent');
+                        if (items[selectedIndex]) input.value = items[selectedIndex].dataset.ticker;
+                    } else if (e.key === 'Enter') {
+                        doSearch();
+                    } else if (e.key === 'Escape') {
+                        dropdown.style.display = 'none';
+                    }
+                });
+
+                btn.addEventListener('click', () => doSearch());
                 btn.onmousedown = () => btn.style.transform = 'scale(0.97)';
                 btn.onmouseup = () => btn.style.transform = 'scale(1)';
             </script>
         </section>
 
+        <!-- Why Use Bullish And Foolish -->
         <section class="container section">
-            <div class="label" style="margin-bottom: var(--space-md);">Latest SEC Filings</div>
+            <h2 class="huge" style="text-align: center; margin-bottom: var(--space-xl);">Why Use Bullish And Foolish?
+            </h2>
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-lg); max-width: 1100px; margin: 0 auto;">
+
+                <div class="card" style="text-align: center; padding: var(--space-xl);">
+                    <h3 style="color: var(--accent); margin-bottom: var(--space-sm);">Transparent Methodology</h3>
+                    <p class="text-muted" style="line-height: 1.6;">
+                        Every score is built from <strong>100+ documented rules</strong>. No black boxes.
+                        View exactly how we rate profitability, growth, solvency, and filing signals on our
+                        <a href="/rules.html" style="color: var(--accent);">Rules page</a>.
+                    </p>
+                </div>
+
+                <div class="card" style="text-align: center; padding: var(--space-xl);">
+                    <h3 style="color: var(--accent); margin-bottom: var(--space-sm);">Direct SEC Data</h3>
+                    <p class="text-muted" style="line-height: 1.6;">
+                        We pull financial statements directly from <strong>SEC EDGAR</strong> - the official source.
+                        No middlemen, no delayed data, no "estimates." Just actual filed numbers.
+                    </p>
+                </div>
+
+                <div class="card" style="text-align: center; padding: var(--space-xl);">
+                    <h3 style="color: var(--accent); margin-bottom: var(--space-sm);">Free & Independent</h3>
+                    <p class="text-muted" style="line-height: 1.6;">
+                        No paywalls. No subscriptions. No affiliate deals. Built as a public good to
+                        <strong>democratize access</strong> to quality analysis that typically costs $300+/month.
+                    </p>
+                </div>
+
+                <div class="card" style="text-align: center; padding: var(--space-xl);">
+                    <h3 style="color: var(--accent); margin-bottom: var(--space-sm);">Sector-Aware Scoring</h3>
+                    <p class="text-muted" style="line-height: 1.6;">
+                        Banks aren't judged on inventory turnover. Biotechs get clinical-trial context.
+                        Our engine adapts its rules to <strong>each company's sector</strong>.
+                    </p>
+                </div>
+
+                <div class="card" style="text-align: center; padding: var(--space-xl);">
+                    <h3 style="color: var(--accent); margin-bottom: var(--space-sm);">Filing Intelligence</h3>
+                    <p class="text-muted" style="line-height: 1.6;">
+                        We scan SEC filings for <strong>risk signals</strong> you'd normally miss:
+                        going concern warnings, regulatory investigations, reverse splits, dilution patterns.
+                    </p>
+                </div>
+
+                <div class="card" style="text-align: center; padding: var(--space-xl);">
+                    <h3 style="color: var(--accent); margin-bottom: var(--space-sm);">Open & Extensible</h3>
+                    <p class="text-muted" style="line-height: 1.6;">
+                        Built with open-source principles. The fundamentals engine is designed to be
+                        <strong>adaptable to other markets</strong> (EU expansion planned for 2026).
+                    </p>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="container section">
+            <div class="label" style="margin-bottom: var(--space-sm);">Latest Company Updates</div>
+            <p class="text-muted" style="font-size: 0.85rem; margin-bottom: var(--space-md);">Recent SEC filings from
+                companies we track — new financial reports, material events, and disclosures.</p>
             <div class="card" style="display: flex; flex-direction: column; gap: var(--space-md);">
                 <div id="filingNewsStatus" class="text-muted">Loading filings...</div>
                 <div id="filingNewsList" style="display: grid; gap: var(--space-sm);"></div>

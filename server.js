@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import zlib from 'zlib';
 import { processFilingForTicker } from './server/edgar/filingWorkflow.js';
 import { getRecentFilingEvents } from './server/edgar/edgarRegistry.js';
+import { searchCompaniesByName } from './server/edgar/edgarFundamentals.js';
 import { buildTickerViewModel } from './server/ticker/tickerAssembler.js';
 import { queryScreener, getScreenerMeta } from './server/screener/screenerService.js';
 import { startScreenerScheduler } from './server/screener/screenerScheduler.js';
@@ -774,6 +775,15 @@ async function handleApi(req, res, url) {
             const data = await queryScreener(url);
             return sendJson(req, res, 200, data);
         }
+        if (url.pathname === '/api/screener/find') {
+            const ticker = url.searchParams.get('ticker')?.toUpperCase();
+            if (!ticker) return sendJson(req, res, 400, { error: 'ticker param is required' });
+            const pageSizeParam = Number(url.searchParams.get('pageSize'));
+            const pageSize = Number.isFinite(pageSizeParam) ? Math.min(Math.max(pageSizeParam, 1), 200) : 50;
+            const { findTickerPosition } = await import('./server/screener/screenerService.js');
+            const result = await findTickerPosition(ticker, pageSize);
+            return sendJson(req, res, 200, result);
+        }
         if (url.pathname === '/api/compare') {
             const left = url.searchParams.get('left')?.toUpperCase();
             const right = url.searchParams.get('right')?.toUpperCase();
@@ -784,7 +794,10 @@ async function handleApi(req, res, url) {
         if (url.pathname === '/api/search') {
             const query = url.searchParams.get('query') || url.searchParams.get('q');
             if (!query) return sendJson(req, res, 400, { error: 'query param is required' });
-            const results = await callDataProvider('search-symbol', { query });
+            const limitParam = Number(url.searchParams.get('limit'));
+            const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 20) : 10;
+            // Use local SEC company directory - no network call, instant results
+            const results = await searchCompaniesByName(query, limit);
             return sendJson(req, res, 200, results);
         }
         if (url.pathname === '/api/filing-news') {
@@ -1028,7 +1041,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-    console.log(`Bullish and Foolish v1.21 is live on port ${PORT}`);
+    console.log(`Bullish and Foolish v1.30 is live on port ${PORT}`);
 });
 
 if (process.env.SCREENER_SCHEDULER_ENABLED === '1') {

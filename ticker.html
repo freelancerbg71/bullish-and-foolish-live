@@ -4,9 +4,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
     <title>Stock Analysis | Bullish and Foolish</title>
     <meta name="description"
         content="Detailed fundamental analysis and quality score for this stock, powered by SEC filings. View profitability, growth, solvency metrics and filing intelligence.">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bullishandfoolish.com/ticker.html">
+    <meta property="og:title" content="Stock Analysis | Bullish and Foolish">
+    <meta property="og:description"
+        content="Fundamental analysis and quality score powered by SEC filings. Profitability, growth, solvency metrics and filing intelligence.">
+    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Stock Analysis | Bullish and Foolish">
+    <meta name="twitter:description"
+        content="Fundamental analysis and quality score powered by SEC filings. Profitability, growth, solvency metrics and filing intelligence.">
+    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+
     <link rel="stylesheet" href="/style.css?v=20251224">
     <style>
         .pillar-grid {
@@ -251,6 +268,31 @@
                             Loading narrative...
                         </div>
                     </div>
+
+                    <!-- Risk Alerts Box (clickable, leads to Filing Intelligence) -->
+                    <div id="riskAlertsBox" class="card"
+                        style="margin-top: var(--space-md); padding: var(--space-md); display: none; background: rgba(255, 80, 80, 0.08); border: 1px solid rgba(255, 80, 80, 0.3); cursor: pointer;"
+                        onclick="document.getElementById('filingIntelligenceSection').scrollIntoView({behavior: 'smooth'});">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <span style="font-size: 1.25rem;">⚠️</span>
+                            <span class="label" style="font-size: 0.8rem; color: var(--negative);">Risk Alerts
+                                Detected</span>
+                        </div>
+                        <p id="riskAlertsText"
+                            style="font-size: 0.9rem; line-height: 1.5; margin: var(--space-sm) 0 0 0; color: var(--text-muted);">
+                        </p>
+                        <div style="font-size: 0.75rem; color: var(--accent); margin-top: var(--space-sm);">Click to
+                            view Filing Intelligence →</div>
+                    </div>
+
+                    <!-- View on Screener Link -->
+                    <div id="screenerLinkContainer" style="margin-top: var(--space-md); display: none;">
+                        <a id="screenerLink" href="/screener.html"
+                            style="display: inline-flex; align-items: center; gap: 8px; color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: 500;">
+                            <span>View peers on Screener →</span>
+                        </a>
+                    </div>
+
                     <div id="warningPanel" class="warning-panel" style="display: none;">
                         <div class="warning-panel-title">Alerts &amp; Data Quality</div>
                         <div id="warningItems" class="warning-items"></div>
@@ -269,59 +311,61 @@
                         <!-- Points Cards will be injected here -->
                     </div>
                 </div>
-            </section>
+        </div>
+        </section>
 
-            <!-- Signals -->
-            <section class="section" style="margin-bottom: var(--space-2xl); border-bottom: 1px solid var(--border);">
-                <div class="label" style="margin-bottom: var(--space-lg);">Filing Intelligence & Signals</div>
-                <div id="filingSignalsContainer" class="grid grid-2">
-                    <!-- Skeleton Layover -->
-                    <div class="card skeleton skeleton-card"></div>
-                    <div class="card skeleton skeleton-card"></div>
-                </div>
-            </section>
-            <section id="bioIntelSection" class="section" style="margin-bottom: var(--space-2xl); display: none;">
-                <div class="label" style="margin-bottom: var(--space-lg);">Biotech Intelligence</div>
-                <div id="bioIntelContainer" class="grid grid-2">
-                    <!-- Biotech signals will be injected here -->
-                </div>
-            </section>
+        <!-- Signals -->
+        <section id="filingIntelligenceSection" class="section"
+            style="margin-bottom: var(--space-2xl); border-bottom: 1px solid var(--border);">
+            <div class="label" style="margin-bottom: var(--space-lg);">Filing Intelligence & Signals</div>
+            <div id="filingSignalsContainer" class="grid grid-2">
+                <!-- Skeleton Layover -->
+                <div class="card skeleton skeleton-card"></div>
+                <div class="card skeleton skeleton-card"></div>
+            </div>
+        </section>
+        <section id="bioIntelSection" class="section" style="margin-bottom: var(--space-2xl); display: none;">
+            <div class="label" style="margin-bottom: var(--space-lg);">Biotech Intelligence</div>
+            <div id="bioIntelContainer" class="grid grid-2">
+                <!-- Biotech signals will be injected here -->
+            </div>
+        </section>
 
-            <!-- The Pillars (Reorganized) -->
-            <section class="section">
-                <div class="pillar-grid">
-                    <!-- Strategic Outlook -->
-                    <div class="card" style="grid-column: span 2;">
-                        <div class="pillar-title">Strategic Outlook</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);">
-                            <!-- Operational Momentum -->
-                            <div class="hero-stat-item" style="border: none;">
-                                <div class="hero-stat-label" style="font-size: 0.8rem;">Operational Momentum</div>
-                                <div id="opMomentum" style="font-size: 1.2rem; font-weight: 700; margin-top: 8px;">--
-                                </div>
-                                <div id="opMomentumDesc" class="text-muted"
-                                    style="font-size: 0.8rem; margin-top: 4px; min-height: 2.4em;">--</div>
-                                <div class="momentum-track">
-                                    <div id="opMomentumBar"
-                                        style="width: 0%; height: 100%; background: var(--text-muted); transition: width 0.5s ease;">
-                                    </div>
+        <!-- The Pillars (Reorganized) -->
+        <section class="section">
+            <div class="pillar-grid">
+                <!-- Strategic Outlook -->
+                <div class="card" style="grid-column: span 2;">
+                    <div class="pillar-title">Strategic Outlook</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);">
+                        <!-- Operational Momentum -->
+                        <div class="hero-stat-item" style="border: none;">
+                            <div class="hero-stat-label" style="font-size: 0.8rem;">Operational Momentum</div>
+                            <div id="opMomentum" style="font-size: 1.2rem; font-weight: 700; margin-top: 8px;">--
+                            </div>
+                            <div id="opMomentumDesc" class="text-muted"
+                                style="font-size: 0.8rem; margin-top: 4px; min-height: 2.4em;">--</div>
+                            <div class="momentum-track">
+                                <div id="opMomentumBar"
+                                    style="width: 0%; height: 100%; background: var(--text-muted); transition: width 0.5s ease;">
                                 </div>
                             </div>
-                            <!-- Trajectory -->
-                            <div class="hero-stat-item" style="border: none;">
-                                <div class="hero-stat-label" style="font-size: 0.8rem;">Trajectory</div>
-                                <div
-                                    style="font-size: 1.1rem; margin-top: 8px; line-height: 1.4; display: flex; align-items: center; gap: 8px;">
-                                    <div id="trajIcon" style="font-size: 1.2rem;"></div>
-                                    <span id="trajLabel" style="font-weight: 800; display: block;">--</span>
-                                </div>
-                                <span id="trajText" class="text-muted"
-                                    style="font-size: 0.9rem; margin-top: 4px; display: block;">--</span>
+                        </div>
+                        <!-- Trajectory -->
+                        <div class="hero-stat-item" style="border: none;">
+                            <div class="hero-stat-label" style="font-size: 0.8rem;">Trajectory</div>
+                            <div
+                                style="font-size: 1.1rem; margin-top: 8px; line-height: 1.4; display: flex; align-items: center; gap: 8px;">
+                                <div id="trajIcon" style="font-size: 1.2rem;"></div>
+                                <span id="trajLabel" style="font-weight: 800; display: block;">--</span>
                             </div>
+                            <span id="trajText" class="text-muted"
+                                style="font-size: 0.9rem; margin-top: 4px; display: block;">--</span>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
+        </section>
 
         </div>
     </main>
@@ -489,11 +533,15 @@
                 else iconEl.src = '/assets/images/foolish.webp';
 
                 const tierMap = {
-                    'bullish': 'Elite Compounder',
-                    'solid': 'Solid Compounder',
-                    'neutral': 'Investment Grade',
-                    'danger': 'High Risk',
-                    'bearish': 'High Risk'
+                    'elite': 'Elite Compounder',
+                    'bullish': 'High-Conviction Winner',
+                    'solid': 'Reliable Performer',
+                    'mixed': 'Balanced',
+                    'spec': 'High-Risk Upside Play',
+                    'danger': 'Likely Value Trap',
+                    'incomplete': 'Data Incomplete',
+                    'neutral': 'Balanced',
+                    'bearish': 'Likely Value Trap'
                 };
                 const rawTier = (data.ratingTierLabel || 'N/A').toLowerCase();
                 const baseTierLabel = tierMap[rawTier] || data.ratingTierLabel || 'N/A';
@@ -553,6 +601,28 @@
                 const narrative = data.narrative || 'Summary not available.';
                 const fmtNarrative = narrative.replace(/((?:High\s*risk|Speculative):)/gi, '<br>$1');
                 document.getElementById('narrativeDisplay').innerHTML = `"${fmtNarrative}"`;
+
+                // === RISK ALERTS BOX ===
+                const riskAlertsBox = document.getElementById('riskAlertsBox');
+                const riskAlertsText = document.getElementById('riskAlertsText');
+                const filingSignals = data.filingSignals || [];
+                const criticalSignals = filingSignals.filter(s =>
+                    ['going_concern', 'substantial_doubt', 'material_weakness', 'liquidity_shortage', 'reg_investigation', 'covenant_risk', 'reverse_split'].includes(s.id)
+                );
+
+                if (criticalSignals.length > 0) {
+                    const signalNames = criticalSignals.slice(0, 3).map(s => s.title || s.id).join(', ');
+                    riskAlertsText.textContent = `${criticalSignals.length} critical signal${criticalSignals.length > 1 ? 's' : ''} detected: ${signalNames}${criticalSignals.length > 3 ? '...' : ''}`;
+                    riskAlertsBox.style.display = 'block';
+                }
+
+                // === VIEW ON SCREENER LINK ===
+                const screenerLinkContainer = document.getElementById('screenerLinkContainer');
+                const screenerLink = document.getElementById('screenerLink');
+                // Build screener URL with highlight param - screener will scroll to this company
+                const screenerUrl = `/screener.html?highlight=${encodeURIComponent(ticker)}`;
+                screenerLink.href = screenerUrl;
+                screenerLinkContainer.style.display = 'block';
 
                 const warnings = [];
                 if (issuerType === 'foreign') {

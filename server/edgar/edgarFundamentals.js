@@ -1037,5 +1037,105 @@ export async function fetchCompanySubmissions(ticker, opts = {}) {
   return { submissions, cik, company };
 }
 
+/**
+ * Search companies by name or ticker (fuzzy matching).
+ * Uses the local SEC company directory - no network calls for search itself.
+ * @param {string} query - Search query (company name or ticker)
+ * @param {number} limit - Max results to return (default 10)
+ * @returns {Promise<Array<{ticker: string, name: string, exchange: string|null}>>}
+ */
+export async function searchCompaniesByName(query, limit = 10) {
+  if (!query || typeof query !== "string") return [];
+  const q = query.trim().toUpperCase();
+  if (!q) return [];
+
+  try {
+    const dir = await loadDirectory();
+    const fields = dir.fields || [];
+    const cikIdx = fields.indexOf("cik");
+    const nameIdx = fields.indexOf("name");
+    const tickerIdx = fields.indexOf("ticker");
+    const exchangeIdx = fields.indexOf("exchange");
+
+    const results = [];
+    const seenTickers = new Set();
+
+    // First pass: exact ticker match
+    for (const row of dir.data || []) {
+      const ticker = String(row[tickerIdx] || "").toUpperCase();
+      if (ticker === q && !seenTickers.has(ticker)) {
+        seenTickers.add(ticker);
+        results.push({
+          ticker,
+          name: row[nameIdx] || "",
+          exchange: exchangeIdx >= 0 ? row[exchangeIdx] : null,
+          cik: normalizeCik(row[cikIdx])
+        });
+      }
+    }
+
+    // Second pass: name starts with query
+    if (results.length < limit) {
+      for (const row of dir.data || []) {
+        if (results.length >= limit) break;
+        const ticker = String(row[tickerIdx] || "").toUpperCase();
+        const name = String(row[nameIdx] || "").toUpperCase();
+        if (seenTickers.has(ticker)) continue;
+        if (name.startsWith(q)) {
+          seenTickers.add(ticker);
+          results.push({
+            ticker,
+            name: row[nameIdx] || "",
+            exchange: exchangeIdx >= 0 ? row[exchangeIdx] : null,
+            cik: normalizeCik(row[cikIdx])
+          });
+        }
+      }
+    }
+
+    // Third pass: name contains query
+    if (results.length < limit) {
+      for (const row of dir.data || []) {
+        if (results.length >= limit) break;
+        const ticker = String(row[tickerIdx] || "").toUpperCase();
+        const name = String(row[nameIdx] || "").toUpperCase();
+        if (seenTickers.has(ticker)) continue;
+        if (name.includes(q)) {
+          seenTickers.add(ticker);
+          results.push({
+            ticker,
+            name: row[nameIdx] || "",
+            exchange: exchangeIdx >= 0 ? row[exchangeIdx] : null,
+            cik: normalizeCik(row[cikIdx])
+          });
+        }
+      }
+    }
+
+    // Fourth pass: ticker starts with query (for partial ticker matches)
+    if (results.length < limit) {
+      for (const row of dir.data || []) {
+        if (results.length >= limit) break;
+        const ticker = String(row[tickerIdx] || "").toUpperCase();
+        if (seenTickers.has(ticker)) continue;
+        if (ticker.startsWith(q) && ticker !== q) {
+          seenTickers.add(ticker);
+          results.push({
+            ticker,
+            name: row[nameIdx] || "",
+            exchange: exchangeIdx >= 0 ? row[exchangeIdx] : null,
+            cik: normalizeCik(row[cikIdx])
+          });
+        }
+      }
+    }
+
+    return results;
+  } catch (err) {
+    console.warn("[edgarFundamentals] searchCompaniesByName failed", err?.message || err);
+    return [];
+  }
+}
+
 // Lightweight exports for other EDGAR helpers
 export { limitedFetchJson, limitedFetch, lookupCompanyByTicker };

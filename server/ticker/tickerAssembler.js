@@ -3247,7 +3247,7 @@ export async function buildTickerViewModel(
     // Filter out boilerplate Going Concern flags for foreign issuers (not indicative of actual GC risk)
     const filteredFilingSignals = (resolvedFilingSignals || []).filter(
       (s) => !(issuerType === "foreign" && s?.id === "going_concern")
-    ).filter((s) => !(ticker.toUpperCase() === "PINS" && s?.id === "reg_investigation"));
+    );
 
     const filingSignalsAgeDays = (() => {
       if (!resolvedFilingCachedAt) return null;
@@ -3452,6 +3452,9 @@ export async function buildTickerViewModel(
       const isLargeCap = !isMegaCap && (marketCap > 10e9 || assetSize > 10e9);
       const isMidCap = !isLargeCap && (marketCap > 1e9 || assetSize > 500e6);
       const isSmallCap = !isMidCap && (marketCap > 200e6 || assetSize > 100e6);
+      // Accurate cap label for narrative templates
+      const capLabel = isMegaCap ? "Mega-cap" : isLargeCap ? "Large-cap" : isMidCap ? "Mid-cap" : isSmallCap ? "Small-cap" : "Micro-cap";
+      const isTrueMicroCap = !isMegaCap && !isLargeCap && !isMidCap && !isSmallCap;
 
       // ========== 1. EFFICIENCY / CASH FLOW NARRATIVE ==========
 
@@ -3685,31 +3688,44 @@ export async function buildTickerViewModel(
             ])
           );
         } else if (metrics.dilution > 50) {
+          // Use accurate cap terminology, not hardcoded "Micro-cap"
           parts.push(
-            pick("penny.dilutionHeavy", [
-              "Heavy dilution: Micro-cap structure relying heavily on equity financing.",
-              "Heavy dilution risk: Equity issuance appears to be a key funding lever.",
-              "Micro-cap funding risk: Significant dilution suggests frequent equity financing.",
-              "Dilution-heavy profile: Equity financing appears to play an outsized role."
-            ])
+            isTrueMicroCap
+              ? pick("penny.dilutionHeavy.micro", [
+                "Heavy dilution: Micro-cap structure relying heavily on equity financing.",
+                "Micro-cap funding risk: Significant dilution suggests frequent equity financing."
+              ])
+              : pick("penny.dilutionHeavy.other", [
+                "Heavy dilution risk: Equity issuance appears to be a key funding lever.",
+                "Dilution-heavy profile: Equity financing appears to play an outsized role.",
+                "Significant dilution suggests frequent equity financing needs."
+              ])
           );
         } else if (metrics.fcfMargin < -50) {
           parts.push(
-            pick("penny.highBurn", [
-              "Micro-cap profile: High volatility and burn rate create execution risk.",
-              "Micro-cap risk: High volatility and heavy burn increase execution risk.",
-              "Speculative micro-cap: High burn rate raises execution and financing risk.",
-              "High-risk micro-cap: Volatility and burn elevate downside risk."
-            ])
+            isTrueMicroCap
+              ? pick("penny.highBurn.micro", [
+                "Micro-cap profile: High volatility and burn rate create execution risk.",
+                "Speculative micro-cap: High burn rate raises execution and financing risk."
+              ])
+              : pick("penny.highBurn.other", [
+                "High cash burn: Heavy operating losses increase execution and financing risk.",
+                "Cash-burn risk: Negative cash flow profile elevates financing needs.",
+                "Elevated burn rate: Operating losses may require additional capital raises."
+              ])
           );
         } else {
           parts.push(
-            pick("penny.generic", [
-              "Micro-cap profile: Volatility expected, but balance sheet appears stable.",
-              "Micro-cap volatility expected; financial position looks broadly stable.",
-              "Micro-cap risk: Price volatility is likely, but finances appear stable.",
-              "Micro-cap characteristics: Volatile trading, with a relatively stable balance sheet."
-            ])
+            isTrueMicroCap
+              ? pick("penny.generic.micro", [
+                "Micro-cap profile: Volatility expected, but balance sheet appears stable.",
+                "Micro-cap volatility expected; financial position looks broadly stable."
+              ])
+              : pick("penny.generic.other", [
+                "Speculative profile: Volatility expected, but balance sheet appears stable.",
+                "Price volatility is likely given the risk profile, but finances appear stable.",
+                "Speculative characteristics present; financial position looks broadly stable."
+              ])
           );
         }
       } else if (scoreBand === 'danger' && !isMidCap && strategicOutlook?.trajectory?.regime !== "growth-phase") {
@@ -4268,7 +4284,7 @@ export async function buildScreenerRowForTicker(ticker) {
 
     const filteredSignals = (cachedSignals || []).filter(
       (s) => !(issuerType === "foreign" && s?.id === "going_concern")
-    ).filter((s) => !(key === "PINS" && s?.id === "reg_investigation"));
+    );
     const clinicalSetback = detectClinicalSetbackSignal(filteredSignals, sectorBucket);
     const filingSignalsFinal = clinicalSetback ? [...filteredSignals, clinicalSetback] : filteredSignals;
 

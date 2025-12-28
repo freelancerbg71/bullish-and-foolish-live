@@ -360,6 +360,66 @@ export async function getScreenerMeta() {
   };
 }
 
+/**
+ * Find the page number where a specific ticker appears in the default screener sort.
+ * Returns { found: true, page, row } if found, or { found: false } if not in index.
+ */
+export async function findTickerPosition(ticker, pageSize = 50) {
+  if (!ticker) return { found: false };
+  await ensureScreenerSchema();
+  const db = await getScreenerDb();
+  const normalizedTicker = String(ticker).trim().toUpperCase();
+
+  // First check if ticker exists in screener
+  const exists = db.prepare("SELECT 1 FROM screener_index WHERE ticker = ?").get(normalizedTicker);
+  if (!exists) return { found: false };
+
+  // Get the row number for this ticker in the default sort order (score DESC, ticker ASC)
+  // Use the same filtering as the main screener query to ensure consistency
+  const result = db.prepare(`
+    WITH ranked AS (
+      SELECT
+        ticker,
+        ROW_NUMBER() OVER (PARTITION BY name ORDER BY LENGTH(ticker), ticker) AS rn
+      FROM screener_index
+    ),
+    filtered AS (
+      SELECT s.ticker, s.score
+      FROM screener_index s
+      JOIN ranked r ON r.ticker = s.ticker
+      WHERE (
+        (
+          INSTR(s.ticker, '-') = 0
+          AND INSTR(s.ticker, '.') = 0
+          AND INSTR(s.ticker, '+') = 0
+          AND INSTR(s.ticker, ' ') = 0
+          AND NOT (length(s.ticker) >= 5 AND (s.ticker LIKE '%W' OR s.ticker LIKE '%U' OR s.ticker LIKE '%R'))
+        )
+        OR s.ticker IN ('GOOG', 'GOOGL', 'BRK.A', 'BRK.B', 'BRK-A', 'BRK-B')
+      )
+      AND (r.rn = 1 OR s.name IS NULL OR s.name = '' OR s.ticker IN ('GOOG', 'GOOGL', 'BRK.A', 'BRK.B', 'BRK-A', 'BRK-B'))
+    ),
+    sorted AS (
+      SELECT ticker, ROW_NUMBER() OVER (ORDER BY score DESC, ticker ASC) as row_num
+      FROM filtered
+    )
+    SELECT row_num FROM sorted WHERE ticker = ?
+  `).get(normalizedTicker);
+
+  if (!result?.row_num) return { found: false };
+
+  const rowNum = Number(result.row_num);
+  const page = Math.ceil(rowNum / pageSize);
+
+  return {
+    found: true,
+    ticker: normalizedTicker,
+    rowNumber: rowNum,
+    page,
+    pageSize
+  };
+}
+
 export async function refreshScreenerRow(ticker) {
   await ensureScreenerSchema();
   const row = await buildScreenerRowForTicker(ticker);

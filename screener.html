@@ -4,9 +4,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
     <title>Market Screener | Bullish and Foolish</title>
     <meta name="description"
         content="Screen US stocks by quality score, sector, market cap, and key financial metrics. Filter for elite compounders, undervalued quality, and growth opportunities.">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bullishandfoolish.com/screener.html">
+    <meta property="og:title" content="Market Screener | Bullish and Foolish">
+    <meta property="og:description"
+        content="Screen US stocks by quality score, sector, and market cap. Find elite compounders and undervalued opportunities.">
+    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Market Screener | Bullish and Foolish">
+    <meta name="twitter:description"
+        content="Screen US stocks by quality score, sector, and market cap. Find elite compounders and undervalued opportunities.">
+    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+
     <link rel="stylesheet" href="/style.css?v=20251224">
     <style>
         .filter-bar {
@@ -414,6 +431,7 @@
                 rows.forEach(row => {
                     const tr = document.createElement('tr');
                     tr.style.cursor = 'pointer';
+                    tr.dataset.ticker = row.ticker || '';
                     tr.addEventListener('click', (event) => {
                         if (event.target.closest('a')) return;
                         const target = encodeURIComponent(row.ticker || '');
@@ -512,6 +530,18 @@
                     document.getElementById('snapshotDate').textContent = 'Live';
                 }
 
+                // Handle highlight parameter - scroll to specific ticker
+                if (pendingHighlight) {
+                    const targetRow = document.querySelector(`tr[data-ticker="${pendingHighlight.toUpperCase()}"]`);
+                    if (targetRow) {
+                        targetRow.style.background = 'rgba(228, 179, 99, 0.15)';
+                        targetRow.style.boxShadow = 'inset 3px 0 0 var(--accent)';
+                        setTimeout(() => {
+                            targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100);
+                    }
+                }
+
             } catch (err) {
                 loading.innerHTML = `<div class="badge badge-bearish">Error: ${err.message}</div>`;
             }
@@ -519,12 +549,14 @@
 
         document.getElementById('applyFilters').addEventListener('click', () => {
             currentPage = 1;
+            pendingHighlight = null; // Clear highlight when applying new filters
             loadScreener();
         });
 
         document.getElementById('prevPage').addEventListener('click', () => {
             if (currentPage > 1) {
                 currentPage--;
+                pendingHighlight = null;
                 loadScreener();
                 window.scrollTo(0, 0);
             }
@@ -532,6 +564,7 @@
 
         document.getElementById('nextPage').addEventListener('click', () => {
             currentPage++;
+            pendingHighlight = null;
             loadScreener();
             window.scrollTo(0, 0);
         });
@@ -539,6 +572,7 @@
         document.getElementById('prevPageTop').addEventListener('click', () => {
             if (currentPage > 1) {
                 currentPage--;
+                pendingHighlight = null;
                 loadScreener();
                 window.scrollTo(0, 0);
             }
@@ -546,12 +580,40 @@
 
         document.getElementById('nextPageTop').addEventListener('click', () => {
             currentPage++;
+            pendingHighlight = null;
             loadScreener();
             window.scrollTo(0, 0);
         });
 
-        // Initialize with Large/Mid 80+ by default as per the select state
-        loadScreener();
+        // Track the ticker to highlight after page loads
+        let pendingHighlight = null;
+
+        // Initialize - check if we need to navigate to a specific ticker's page
+        async function initScreener() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const highlightTicker = urlParams.get('highlight');
+
+            if (highlightTicker) {
+                try {
+                    // Find which page this ticker is on
+                    const res = await fetch(`/api/screener/find?ticker=${encodeURIComponent(highlightTicker)}&pageSize=${pageSize}`);
+                    if (res.ok) {
+                        const result = await res.json();
+                        if (result.found && result.page) {
+                            currentPage = result.page;
+                            pendingHighlight = highlightTicker.toUpperCase();
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Could not find ticker position:', err);
+                }
+            }
+
+            // Load the screener (on the right page if highlight was found)
+            loadScreener();
+        }
+
+        initScreener();
     </script>
 </body>
 
