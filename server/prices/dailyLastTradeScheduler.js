@@ -123,12 +123,16 @@ export async function startDailyPricesScheduler() {
   const needsRefresh = forceOnStart || !info.exists || pricesStale || (weekday && missingToday);
 
   if (shouldWarm && needsRefresh) {
-    console.info("[dailyPricesScheduler] prices need refresh, starting job...", {
+    console.info("[dailyPricesScheduler] prices need refresh, starting job in 10s...", {
       reason: forceOnStart ? "forceOnStart" : !info.exists ? "missing" : pricesStale ? "stale" : "missingToday"
     });
-    // Force the job to bypass weekend check when prices are stale or missing
-    const force = forceOnStart || pricesStale || !info.exists || (weekday && missingToday);
-    spawnDailyLastTradeJob({ force });
+    // Delay spawn to let Railway networking stabilize after boot
+    setTimeout(() => {
+      console.info("[dailyPricesScheduler] spawning price refresh job now");
+      // Force the job to bypass weekend check when prices are stale or missing
+      const force = forceOnStart || pricesStale || !info.exists || (weekday && missingToday);
+      spawnDailyLastTradeJob({ force });
+    }, 10_000);
   } else if (shouldWarm) {
     console.info("[dailyPricesScheduler] prices are fresh, no refresh needed");
   }
