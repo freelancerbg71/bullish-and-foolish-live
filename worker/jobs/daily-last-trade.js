@@ -67,9 +67,13 @@ async function ensureLastTradeColumns(db) {
       lastTradePrice REAL,
       lastTradeAt TEXT,
       source TEXT,
+      marketCap REAL,
       updatedAt TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_ticker_last_trade_updatedAt ON ticker_last_trade (updatedAt DESC);
+    try {
+      db.prepare("ALTER TABLE ticker_last_trade ADD COLUMN marketCap REAL").run();
+    } catch (_) {}
   `);
 }
 
@@ -177,23 +181,25 @@ async function main() {
 
   const upsert = db
     ? db.prepare(`
-    INSERT INTO ticker_last_trade (ticker, lastTradePrice, lastTradeAt, source, updatedAt)
-    VALUES (@ticker, @lastTradePrice, @lastTradeAt, @source, @updatedAt)
+    INSERT INTO ticker_last_trade (ticker, lastTradePrice, lastTradeAt, source, marketCap, updatedAt)
+    VALUES (@ticker, @lastTradePrice, @lastTradeAt, @source, @marketCap, @updatedAt)
     ON CONFLICT(ticker) DO UPDATE SET
       lastTradePrice=excluded.lastTradePrice,
       lastTradeAt=excluded.lastTradeAt,
       source=excluded.source,
+      marketCap=excluded.marketCap,
       updatedAt=excluded.updatedAt
   `)
     : null;
 
   const upsertEod = db
     ? db.prepare(`
-    INSERT INTO prices_eod (ticker, date, close, source, createdAt, updatedAt)
-    VALUES (@ticker, @date, @close, @source, @createdAt, @updatedAt)
+    INSERT INTO prices_eod (ticker, date, close, source, marketCap, createdAt, updatedAt)
+    VALUES (@ticker, @date, @close, @source, @marketCap, @createdAt, @updatedAt)
     ON CONFLICT(ticker, date) DO UPDATE SET
       close=excluded.close,
       source=excluded.source,
+      marketCap=excluded.marketCap,
       updatedAt=excluded.updatedAt
   `)
     : null;
@@ -207,6 +213,7 @@ async function main() {
             ticker: row.ticker,
             date: todayDate,
             close: row.lastTradePrice,
+            marketCap: row.marketCap,
             source: row.source,
             createdAt: nowIso,
             updatedAt: nowIso
@@ -226,6 +233,7 @@ async function main() {
       ticker: ticker,
       lastTradePrice: hit.price,
       lastTradeAt: todayDate,
+      marketCap: hit.marketCap,
       source: hit.source,
       updatedAt: nowIso
     });
@@ -265,6 +273,7 @@ async function main() {
       patch[r.ticker] = {
         p: r.lastTradePrice,
         t: todayDate,
+        mc: r.marketCap,
         s: r.source
       };
     }

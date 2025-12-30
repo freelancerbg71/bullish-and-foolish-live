@@ -29,10 +29,15 @@ export async function fetchNasdaqBulkPrices(url, { maxRetries = 3, timeoutMs = 9
                 const priceRaw = String(r.lastsale || "").replace(/[$,]/g, "");
                 const price = Number(priceRaw);
 
+                // Market Cap looks like "39102999277.00"
+                const mcRaw = String(r.marketCap || "").replace(/[$,]/g, "");
+                const marketCap = Number(mcRaw);
+
                 if (Number.isFinite(price) && price > 0) {
                     map.set(symbol, {
                         ticker: symbol,
                         price,
+                        marketCap: Number.isFinite(marketCap) ? marketCap : null,
                         source: "NASDAQ-Public"
                     });
                 }

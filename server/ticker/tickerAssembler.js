@@ -2860,6 +2860,10 @@ export async function buildTickerViewModel(
     const patchPrice = Number(patchHit?.p);
     const patchTime = patchHit?.t || null;
     const patchDate = patchTime ? String(patchTime).slice(0, 10) : null;
+
+    if (patchHit?.mc && Number.isFinite(Number(patchHit.mc))) {
+      externalMarketCap = Number(patchHit.mc);
+    }
     const patchLooksFresh = !isPriceStale(patchDate, PRICE_PATCH_MAX_AGE_DAYS);
     if (Number.isFinite(patchPrice) && patchPrice > 0 && patchLooksFresh) {
       priceSummary.lastClose = patchPrice;
@@ -4150,7 +4154,23 @@ export async function buildScreenerRowForTicker(ticker) {
     );
 
     // Cached prices only: no enqueues, no outbound calls.
-    const latestCached = await getLatestCachedPrice(key);
+    const dbCached = await getLatestCachedPrice(key);
+    let latestCached = dbCached;
+
+    // OVERRIDE from static prices.json if available (Git-synced source of truth for Railway)
+    const patch = loadStaticPricePatch();
+    const hit = lookupPricePatch(patch, key);
+    if (hit && Number.isFinite(Number(hit.p))) {
+      latestCached = {
+        ticker: key,
+        date: hit.t,
+        close: Number(hit.p),
+        marketCap: hit.mc ? Number(hit.mc) : (dbCached?.marketCap || null),
+        currency: dbCached?.currency || "USD",
+        source: hit.s,
+        updatedAt: new Date().toISOString()
+      };
+    }
     const recent = await getRecentPrices(key, Number(process.env.SCREENER_PRICE_SERIES_LIMIT) || 260);
     const series = recent.map((p) => ({ date: p.date, close: p.close }));
     const pricePieces = series.length
