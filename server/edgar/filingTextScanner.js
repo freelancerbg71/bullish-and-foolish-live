@@ -87,6 +87,37 @@ const SEVERITY_LEVELS = {
   INFO: "info"
 };
 
+/**
+ * Signal conflicts: When a negative signal is detected, its positive counterpart should be suppressed.
+ * Map format: { negative_signal_id: positive_signal_id_to_suppress }
+ * 
+ * Logic: If we detect both the problem AND its resolution, we keep only the problem.
+ * This is conservative - better to flag risk than to assume it's fully resolved.
+ */
+const SIGNAL_CONFLICTS = {
+  // Internal control weakness vs remediation
+  material_weakness: "material_weakness_remediated",
+
+  // Clinical failure/negative vs clinical positive (pipeline quality)
+  clinical_failure: "clinical_positive",
+  clinical_negative: "clinical_positive",
+
+  // Regulatory setback vs regulatory positive
+  regulatory_setback: "regulatory_positive",
+  regulatory_negative: "regulatory_positive",
+
+  // Safety concerns vs favorable safety
+  safety_bad: "safety_good",
+
+  // Going concern vs debt refinanced (if company has going concern, debt refinance doesn't matter much)
+  going_concern: "debt_refinance",
+
+  // Covenant risk vs credit upgrade
+  covenant_risk: "credit_upgrade",
+
+  // Leadership turnover vs governance signals (not a direct conflict, but keep both)
+};
+
 function formMatches(candidate, allowed) {
   const upper = (candidate || "").toUpperCase();
   const cleaned = upper.trim();
@@ -1220,6 +1251,16 @@ export async function scanFilingForSignals(ticker, opts = {}) {
   const isForeign = issuerProfile?.issuerType === "foreign";
   if (isForeign) {
     dedupedSignals.delete("going_concern");
+  }
+
+  // ========== Signal Conflict Resolution ==========
+  // When both a negative signal and its positive counterpart are detected,
+  // suppress the positive one. Better to flag risk than to assume resolution.
+  for (const [negativeId, positiveIdToSuppress] of Object.entries(SIGNAL_CONFLICTS)) {
+    if (dedupedSignals.has(negativeId) && dedupedSignals.has(positiveIdToSuppress)) {
+      console.log(`[filingTextScanner] suppressing conflicting signal: ${positiveIdToSuppress} (due to ${negativeId})`);
+      dedupedSignals.delete(positiveIdToSuppress);
+    }
   }
 
   let signals = Array.from(dedupedSignals.values());

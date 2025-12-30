@@ -16,7 +16,9 @@
     "worker:daily-last-trade": "node worker/jobs/daily-last-trade.js",
     "ingest:companyfacts:test": "node scripts/ingest_companyfacts_dir.js --limit 20 --concurrency 1",
     "build:screener:static:test": "node scripts/build_screener_static_local.js --limit 20 --keepDb",
-    "test:prices": "node server/prices/priceFetcher.test.js && node server/prices/priceStore.test.js"
+    "test:prices": "node server/prices/priceFetcher.test.js && node server/prices/priceStore.test.js",
+    "test:engine": "node engine/tests/utils.test.js",
+    "test": "npm run test:engine && npm run test:prices"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0"

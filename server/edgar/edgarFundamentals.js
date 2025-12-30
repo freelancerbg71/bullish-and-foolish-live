@@ -14,7 +14,7 @@ export const EDGAR_USER_AGENT =
   process.env.EDGAR_USER_AGENT ||
   process.env.DATA_USER_AGENT ||
   process.env.SEC_EDGAR_TOOLKIT_USER_AGENT ||
-  "BullishAndFoolish/1.0 (freelancer.bg@gmail.com)";
+  "BullishAndFoolish/1.0 (contact via GitHub)";
 
 const OUTBOUND_SPACING_MS = Number(process.env.EDGAR_REQUEST_SPACING_MS) || 400; // ~2-3 rps to stay polite
 const OUTBOUND_MAX_RETRIES = 3;

@@ -6,13 +6,21 @@ import { getLatestCachedPrice, getRecentPrices } from "../prices/priceStore.js";
 import { classifySector } from "../sector/sectorClassifier.js";
 import { normalize } from "./tickerUtils.js";
 import { fetchShortInterest } from "../prices/shortInterestFetcher.js";
+import { rules } from "../../scripts/shared-rules.js";
 import {
-  rules,
   applySectorRuleAdjustments,
   resolveSectorBucket,
   percentToNumber,
-  isFintech
-} from "../../scripts/shared-rules.js";
+  isFintech,
+  isFiniteValue,
+  safeDiv,
+  clamp,
+  RISK_FREE_RATE_PCT as ENGINE_RISK_FREE_RATE_PCT,
+  SAFE_DIVISION_THRESHOLD,
+  ONE_YEAR_MS,
+  TOLERANCE_30D_MS,
+  STALE_DATA_THRESHOLD_MS
+} from "../../engine/index.js";
 import { scanFilingForSignals } from "../edgar/filingTextScanner.js";
 import { enqueueFundamentalsJob, getJobState } from "../edgar/edgarQueue.js";
 
@@ -23,18 +31,12 @@ const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH |
 const EDGAR_DIR = path.join(DATA_DIR, "edgar");
 const STATIC_PRICE_PATCH_PATH = path.join(DATA_DIR, "prices.json");
 const PRICE_PATCH_MAX_AGE_DAYS = Number(process.env.PRICE_PATCH_MAX_AGE_DAYS) || 2;
-const RISK_FREE_RATE_PCT = 4.5; // Placeholder for 10Y Treasury Yield or similar
+const RISK_FREE_RATE_PCT = ENGINE_RISK_FREE_RATE_PCT;
 const priceLogCache = new Map(); // throttle noisy price logs per ticker
 const staticPricePatchCache = { loadedAt: 0, data: null };
 
-const SAFE_THRESHOLD = 0.000001;
+const SAFE_THRESHOLD = SAFE_DIVISION_THRESHOLD;
 const tickerDebug = process.env.TICKER_DEBUG === '1';
-
-function isFiniteValue(val) {
-  if (val === null || val === undefined) return false;
-  const num = Number(val);
-  return Number.isFinite(num);
-}
 
 function logPriceOnce(kind, ticker, msg, windowMs = 60_000) {
   const key = `${kind}-${ticker}`;
@@ -45,18 +47,6 @@ function logPriceOnce(kind, ticker, msg, windowMs = 60_000) {
   console.warn(msg);
 }
 
-function safeDiv(a, b) {
-  const x = Number(a);
-  const y = Number(b);
-  if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(y) < SAFE_THRESHOLD) return null;
-  return x / y;
-}
-
-function clamp(min, val, max) {
-  const n = Number(val);
-  if (!Number.isFinite(n)) return null;
-  return Math.max(min, Math.min(max, n));
-}
 
 function inferTaxRateFromPeriods({ ttm, latestAnnual }) {
   const candidates = [
@@ -108,8 +98,8 @@ function findComparableYearAgo(seriesAsc = [], latestPeriodEnd) {
   // With only 4 quarters, any fallback would be a wrong "YoY" comparison.
   if ((seriesAsc || []).length < 5) return null;
 
-  const target = latestTs - 31536000000; // ~365d
-  const windowMs = 2600000000; // ~30d
+  const target = latestTs - ONE_YEAR_MS; // ~365d
+  const windowMs = TOLERANCE_30D_MS; // ~30d
   const inWindow = seriesAsc.find((p) => {
     const ts = Date.parse(p.periodEnd);
     return Number.isFinite(ts) && Math.abs(ts - target) < windowMs;
@@ -604,7 +594,7 @@ function computeShareChangeWithSplitGuard(quartersDesc) {
   const yearAgo = series.find(q => {
     const d1 = new Date(latest.periodEnd);
     const d2 = new Date(q.periodEnd);
-    return Math.abs(d1 - d2 - 31536000000) < 2600000000; // ~365 days +/- 30 days
+    return Math.abs(d1 - d2 - ONE_YEAR_MS) < TOLERANCE_30D_MS; // ~365 days +/- 30 days
   }) || series[4] || null;
   const rawQoQ = pctChange(
     Number(latest?.sharesOutstanding ?? latest?.shares),
@@ -734,7 +724,7 @@ function calcTrend(quarters, field) {
   const priorY = quarters.find(q => {
     const d1 = new Date(latestQ.periodEnd);
     const d2 = new Date(q.periodEnd);
-    return Math.abs(d1 - d2 - 31536000000) < 2600000000; // rough 1 year check
+    return Math.abs(d1 - d2 - ONE_YEAR_MS) < TOLERANCE_30D_MS; // rough 1 year check
   });
 
   if (!priorY) return null;
@@ -3847,6 +3837,8 @@ export async function buildTickerViewModel(
       lastFilingDate: latestFiledDate,
       priceAsOf: priceSummary?.lastCloseDate ?? null,
       sector: sector || null,
+      sectorBucket: sectorBucket || null,
+      isFintech: isFintech({ ticker: ticker.toUpperCase(), sector, sectorBucket }),
       sic: baseSic ?? null,
       narrative: narrativeWrapper,
       momentumScore,

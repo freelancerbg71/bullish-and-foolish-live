@@ -13,9 +13,20 @@ The goal: **signal over noise** — a transparent, rules-based view of financial
 
 ## How It Works (High Level)
 
-- Rules live in `scripts/shared-rules.js`.
-- Server-side assembly and scoring live in `server/ticker/tickerAssembler.js`.
-- The server entrypoint is `server.js`.
+### Core Engine
+
+The fundamentals engine lives in `engine/`:
+
+- `engine/constants.js` - All constants and thresholds (market cap tiers, scoring ranges, etc.)
+- `engine/utils.js` - Pure utility functions (math, formatting, sector classification)
+- `engine/ruleExplainers.js` - Human-readable explanations for each scoring rule
+- `engine/index.js` - Main entry point exporting all public APIs
+
+### Scoring Rules
+
+- Rules are defined in `scripts/shared-rules.js` (imports core utilities from `engine/`)
+- Server-side assembly and scoring live in `server/ticker/tickerAssembler.js`
+- The server entrypoint is `server.js`
 
 ### Daily EOD price patch
 

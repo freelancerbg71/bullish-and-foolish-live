@@ -1,131 +1,38 @@
-// Sector-aware scoring using only EDGAR + Yahoo-safe inputs.
-function toNumber(val) {
-  if (val === null || val === undefined) return null;
-  if (typeof val === "number") {
-    if (Number.isFinite(val)) return val;
-    if (val === Infinity || val === -Infinity) return val;
-    return null;
-  }
-  if (typeof val === "string") {
-    const cleaned = val.replace(/[%,$,]/g, "").trim();
-    const mult = cleaned.endsWith("B") ? 1e9 : cleaned.endsWith("M") ? 1e6 : cleaned.endsWith("K") ? 1e3 : 1;
-    const num = parseFloat(cleaned.replace(/[BMK]$/i, ""));
-    return isFinite(num) ? num * mult : null;
-  }
-  return null;
-}
+/**
+ * @fileoverview Sector-aware scoring rules using only EDGAR + Yahoo-safe inputs.
+ * 
+ * This file imports core utilities from the engine module and focuses
+ * only on defining the actual scoring rules.
+ */
 
-export function percentToNumber(val) {
-  const num = toNumber(val);
-  return num === null ? null : num;
-}
+// Import core utilities from the engine (used internally in this file)
+import {
+  toNumber,
+  percentToNumber,
+  bandScore,
+  missing,
+  fmtPct,
+  fmtMoney,
+  SECTOR_BUCKETS,
+  resolveSectorBucket,
+  isFintech
+} from "../engine/index.js";
 
-function bandScore(value, bands) {
-  for (const band of bands) {
-    if (value >= band.min) return band.score;
-  }
-  return bands[bands.length - 1]?.score ?? 0;
-}
+// Re-export from engine for backward compatibility with existing imports
+// These are direct re-exports (zero overhead) rather than wrapper functions
+export {
+  percentToNumber,
+  resolveSectorBucket,
+  applySectorRuleAdjustments,
+  isFintech,
+  ruleExplainers,
+  ruleRegistry,
+  coverageMap
+} from "../engine/index.js";
 
-function missing(message, notApplicable = false) {
-  return { score: 0, message, missing: true, notApplicable };
-}
-
-const fmtPct = (num) => {
-  if (!Number.isFinite(num)) return "n/a";
-  return `${Number(num).toFixed(2)}%`;
-};
-
-const fmtMoney = (num) => {
-  const n = Number(num);
-  if (!Number.isFinite(n)) return "n/a";
-  const abs = Math.abs(n);
-  if (abs >= 1e12) return `$${(abs / 1e12).toFixed(2)}T`;
-  if (abs >= 1e9) return `$${(abs / 1e9).toFixed(2)}B`;
-  if (abs >= 1e6) return `$${(abs / 1e6).toFixed(2)}M`;
-  if (abs >= 1e3) return `$${(abs / 1e3).toFixed(1)}K`;
-  return `$${abs.toFixed(0)}`;
-};
-
-const DEFAULT_SECTOR_BUCKET = "Other";
-const sectorAliases = {
-  biotech: "Biotech/Pharma",
-  pharma: "Biotech/Pharma",
-  pharmaceutical: "Biotech/Pharma",
-  financial: "Financials",
-  bank: "Financials",
-  finance: "Financials",
-  insurance: "Financials",
-  tech: "Tech/Internet",
-  technology: "Tech/Internet",
-  internet: "Tech/Internet",
-  software: "Tech/Internet",
-  consumer: "Retail",
-  "consumer & services": "Retail",
-  retail: "Retail",
-  energy: "Energy/Materials",
-  materials: "Energy/Materials",
-  industrial: "Industrial/Cyclical",
-  cyclical: "Industrial/Cyclical",
-  real: "Real Estate",
-  reit: "Real Estate"
-};
-
-export function resolveSectorBucket(raw) {
-  if (!raw) return DEFAULT_SECTOR_BUCKET;
-  const norm = String(raw).trim();
-  if (!norm) return DEFAULT_SECTOR_BUCKET;
-  const lower = norm.toLowerCase();
-  for (const [needle, bucket] of Object.entries(sectorAliases)) {
-    if (lower.includes(needle)) return bucket;
-  }
-  return norm;
-}
-
-export function applySectorRuleAdjustments(_ruleName, baseScore, sector) {
-  return { score: baseScore, skipped: false, bucket: resolveSectorBucket(sector), multiplier: 1 };
-}
-
-export const ruleExplainers = {
-  "Revenue growth YoY": { pos: "Sales are growing vs. last year.", neg: "Sales are shrinking vs. last year." },
-  "Gross margin": { pos: "High profit on every product sold.", neg: "Low profit per product sold." },
-  "Gross margin (health)": { pos: "Strong margins support R&D.", neg: "Margins are squeezed." },
-  "Gross margin trend": { pos: "Business is becoming more efficient.", neg: "Profitability per unit is dropping." },
-  "Operating leverage": { pos: "Converts gross profit into operating profit efficiently.", neg: "Overhead eats into gross profit." },
-  "Gross margin (industrial)": { pos: "Healthy markup on goods.", neg: "Low markup suggests commodity pricing." },
-  "FCF margin": { pos: "Business generates extra cash for growth.", neg: "Burning cash to operate." },
-  "Cash Runway (years)": { pos: "Enough cash for the long haul.", neg: "Might need to raise money soon." },
-  "Shares dilution YoY": { pos: "Share count is stable.", neg: "New shares reduce your ownership slice." },
-  "Capital Return": { pos: "Returns cash to shareholders via buybacks and dividends.", neg: "Capital return is limited or constrained by weak cash generation." },
-  "Working Capital": { pos: "Efficient cash cycle; sales turn into cash quickly.", neg: "Cash cycle is inefficient; working capital can trap cash." },
-  "Effective Tax Rate": { pos: "Tax rate looks within a normal operating range.", neg: "Tax rate looks distorted (often one-time items or mix effects)." },
-  "Debt / Equity": { pos: "Conservative debt levels.", neg: "High debt increases risk." },
-  "Net Debt / FCF": { pos: "Debt can be paid off quickly.", neg: "Debt burden is heavy relative to cash flow." },
-  "Debt Maturity Runway": {
-    pos: "More long-term debt reduces near-term refinancing risk.",
-    neg: "More short-term debt increases refinancing risk."
-  },
-  "Interest coverage": { pos: "Profits easily cover interest payments.", neg: "Struggling to pay interest costs." },
-  "Capex intensity": { pos: "Efficient spending on assets.", neg: "Heavy spending required to maintain business." },
-  "Revenue growth (small)": { pos: "Sales are climbing.", neg: "Sales are declining." },
-  "ROE": { pos: "Efficiently using shareholder money.", neg: "Low return on shareholder capital." },
-  "ROE quality": { pos: "High quality returns.", neg: "Weak returns on capital." },
-  "ROIC": { pos: "Creating value on every dollar invested.", neg: "Returns are lower than the cost of capital." },
-  "Asset Efficiency": { pos: "Assets are being put to work efficiently.", neg: "Assets are under-productive relative to revenue." },
-  "Dividend coverage": { pos: "Dividend is safe and funded by cash.", neg: "Dividend costs more than the cash earned." },
-  "Net income trend": { pos: "Profits are trending up.", neg: "Profits are shrinking." },
-  "Revenue CAGR (3Y)": { pos: "Consistent long-term growth.", neg: "Growth has stalled over time." },
-  "EPS CAGR (3Y)": { pos: "Earnings are compounding.", neg: "Earnings have stagnated." },
-  "R&D intensity": { pos: "Investing heavily in the future.", neg: "Spending little on innovation." },
-};
-
-export const ruleRegistry = {};
-export const coverageMap = {};
 
 // Metric helpers
-function revenueGrowth(stock) {
-  return percentToNumber(stock?.growth?.revenueGrowthTTM);
-}
+
 function fcfMargin(stock) {
   return percentToNumber(stock?.profitMargins?.fcfMargin);
 }
@@ -189,31 +96,21 @@ function roaPct(stock) {
   return (ni / assets) * 100;
 }
 
-// Fintech Detection Helper for companies like SOFI
-export function isFintech(stock) {
-  const name = String(stock?.companyName || stock?.ticker || "").toLowerCase();
-  const sicDesc = String(stock?.sicDescription || "").toLowerCase();
-  const sector = String(stock?.sector || stock?.sectorBucket || "").toLowerCase();
 
-  // Explicit ticker checks for known fintechs
-  const ticker = String(stock?.ticker || "").toUpperCase();
-  if (["SOFI", "UPST", "AFRM", "SQ", "PYPL", "LC"].includes(ticker)) return true;
-
-  // Name-based detection
-  if (/sofi|upstart|affirm|square|paypal|lendingclub|robinhood|chime|coinbase/i.test(name)) return true;
-
-  // SIC/Sector-based detection
-  if (/fintech|digital.?bank|neo.?bank|online.?lend|peer.?to.?peer|payment.?platform|mobile.?pay/i.test(sicDesc)) return true;
-  if (/fintech/i.test(sector)) return true;
-
-  return false;
-}
 
 function assetTurnover(stock) {
   const revenue = percentToNumber(stock?.revenueTtm ?? stock?.revenueLatest);
   const assets = percentToNumber(stock?.financialPosition?.totalAssets);
   if (revenue === null || assets === null || assets === 0) return null;
   return revenue / assets;
+}
+
+function revenueGrowth(stock) {
+  return percentToNumber(
+    stock?.snapshot?.revenueYoYPct ??
+    stock?.growth?.revenueGrowthYoY ??
+    stock?.growth?.revenueGrowthTTM
+  );
 }
 
 // === NEW HELPER FUNCTIONS FOR GROWTH COMPANIES & FINTECHS ===
