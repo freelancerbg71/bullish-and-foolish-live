@@ -94,8 +94,40 @@ function spawnDailyLastTradeJob({ force = false } = {}) {
   return true;
 }
 
+function syncBundledPrices() {
+  const bundledPath = path.join(ROOT, "data", "prices.json");
+
+  // If running locally where DATA_DIR is just "data", paths might be identical
+  if (path.resolve(bundledPath) === path.resolve(PRICE_PATCH_PATH)) return;
+
+  try {
+    const bundledInfo = summarizePricePatch(bundledPath);
+    if (!bundledInfo.exists) return;
+
+    const targetInfo = summarizePricePatch(PRICE_PATCH_PATH);
+
+    // If target missing, or bundled is strictly newer
+    const bundledTs = bundledInfo.newestAt ? Date.parse(bundledInfo.newestAt) : 0;
+    const targetTs = targetInfo.newestAt ? Date.parse(targetInfo.newestAt) : 0;
+
+    if (!targetInfo.exists || bundledTs > targetTs) {
+      console.info("[dailyPricesScheduler] bundled prices.json is newer, syncing to persistent volume", {
+        bundled: bundledInfo.newestDate,
+        target: targetInfo.newestDate
+      });
+      fs.copyFileSync(bundledPath, PRICE_PATCH_PATH);
+    }
+  } catch (err) {
+    console.warn("[dailyPricesScheduler] failed to sync bundled prices", err.message);
+  }
+}
+
 export async function startDailyPricesScheduler() {
   const staleAfterMs = Number(process.env.PRICES_PATCH_MAX_AGE_MS) || 48 * 60 * 60 * 1000;
+
+  // Attempt to sync bundled prices (e.g. from git push) before checking status
+  syncBundledPrices();
+
   const warmOnStart = process.env.PRICES_WARM_ON_START !== "0";
   const forceOnStart = process.env.PRICES_FORCE_RUN_ON_START === "1";
   const runOnWeekends = process.env.PRICES_RUN_ON_WEEKENDS === "1";
