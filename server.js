@@ -534,6 +534,16 @@ async function getCachedViewModel(symbol) {
     const cachePath = path.join(VM_CACHE_DIR, `${symbol.toUpperCase()}.json`);
     try {
         const stats = await fsPromises.stat(cachePath);
+
+        // Invalidate if prices.json is newer than this cache entry
+        try {
+            const pricesPath = path.join(DATA_DIR, 'prices.json');
+            const pricesStats = await fsPromises.stat(pricesPath);
+            if (pricesStats.mtimeMs > stats.mtimeMs) {
+                return null;
+            }
+        } catch (_) { }
+
         const age = Date.now() - stats.mtimeMs;
         if (age < VM_CACHE_TTL_MS) {
             const data = await fsPromises.readFile(cachePath, 'utf8');
