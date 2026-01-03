@@ -71,10 +71,10 @@ async function ensureLastTradeColumns(db) {
       updatedAt TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_ticker_last_trade_updatedAt ON ticker_last_trade (updatedAt DESC);
-    try {
-      db.prepare("ALTER TABLE ticker_last_trade ADD COLUMN marketCap REAL").run();
-    } catch (_) {}
   `);
+  try {
+    db.prepare("ALTER TABLE ticker_last_trade ADD COLUMN marketCap REAL").run();
+  } catch (_) { }
 }
 
 async function ensurePricesEodTable(db) {

@@ -19,8 +19,9 @@ export async function fetchText(url, { timeoutMs = 45_000 } = {}) {
       method: "GET",
       headers: {
         "User-Agent": resolveUserAgent(),
-        "Accept-Encoding": "gzip, deflate, br",
-        "Accept": "*/*"
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.nasdaq.com/"
       },
       signal: controller.signal
     });
