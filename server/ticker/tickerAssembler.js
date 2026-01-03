@@ -5,9 +5,10 @@ import { getFundamentalsForTicker } from "../edgar/fundamentalsStore.js";
 import { getLatestCachedPrice, getRecentPrices } from "../prices/priceStore.js";
 import { classifySector } from "../sector/sectorClassifier.js";
 import { normalize } from "./tickerUtils.js";
-import { fetchShortInterest } from "../prices/shortInterestFetcher.js";
-import { rules } from "../../scripts/shared-rules.js";
+// import { fetchShortInterest } from "../prices/shortInterestFetcher.js"; // Removed
+
 import {
+  rules,
   applySectorRuleAdjustments,
   resolveSectorBucket,
   percentToNumber,
@@ -15,11 +16,36 @@ import {
   isFiniteValue,
   safeDiv,
   clamp,
+  clamp01,
+  avg,
   RISK_FREE_RATE_PCT as ENGINE_RISK_FREE_RATE_PCT,
   SAFE_DIVISION_THRESHOLD,
   ONE_YEAR_MS,
   TOLERANCE_30D_MS,
-  STALE_DATA_THRESHOLD_MS
+  STALE_DATA_THRESHOLD_MS,
+  normalizeRuleScore,
+  getScoreBand,
+  pctChange,
+  toNumber,
+  calcMargin,
+  calcFcf,
+  calcCagr,
+  pctFromRatio,
+  formatQuarterLabel,
+  isDateStale,
+  sortByPeriodEndAsc,
+  lastNPeriods,
+  findComparableYearAgo,
+  toQuarterlySeries,
+  buildTtmFromQuarters,
+  inferTaxRate,
+  computeInterestCoverageTtm,
+  computeInterestCoverageAnnual,
+  computeRunwayYears,
+  detectLikelySplit,
+  detectLikelyReverseSplit,
+  computeShareChangeWithSplitGuard,
+  buildStockForRules
 } from "../../engine/index.js";
 import { scanFilingForSignals } from "../edgar/filingTextScanner.js";
 import { enqueueFundamentalsJob, getJobState } from "../edgar/edgarQueue.js";
@@ -48,203 +74,21 @@ function logPriceOnce(kind, ticker, msg, windowMs = 60_000) {
 }
 
 
-function inferTaxRateFromPeriods({ ttm, latestAnnual }) {
-  const candidates = [
-    {
-      pretax: ttm?.incomeBeforeIncomeTaxes,
-      tax: ttm?.incomeTaxExpenseBenefit
-    },
-    {
-      pretax: latestAnnual?.incomeBeforeIncomeTaxes,
-      tax: latestAnnual?.incomeTaxExpenseBenefit
-    }
-  ];
-  for (const c of candidates) {
-    const pretax = Number(c?.pretax);
-    const tax = Number(c?.tax);
-    if (!Number.isFinite(pretax) || !Number.isFinite(tax) || pretax === 0) continue;
-    const rate = tax / pretax;
-    const clamped = clamp(0, rate, 0.5);
-    if (clamped != null) return clamped;
-  }
-  return null;
-}
 
-function formatQuarterLabel(dateStr) {
-  const d = new Date(dateStr);
-  if (!Number.isFinite(d.getTime())) return dateStr;
-  const month = d.getUTCMonth();
-  const year = d.getUTCFullYear();
-  const q = Math.floor(month / 3) + 1;
-  return `Q${q} ${year}`;
-}
 
-function sortByPeriodEndAsc(series = []) {
-  return [...(series || [])]
-    .filter((p) => p && p.periodEnd)
-    .sort((a, b) => Date.parse(a.periodEnd) - Date.parse(b.periodEnd));
-}
 
-function lastNPeriods(series = [], n = 4) {
-  const asc = sortByPeriodEndAsc(series);
-  return asc.slice(-n);
-}
 
-function findComparableYearAgo(seriesAsc = [], latestPeriodEnd) {
-  const latestTs = Date.parse(latestPeriodEnd);
-  if (!Number.isFinite(latestTs)) return null;
 
-  // Need at least 5 quarters to reasonably compute a year-ago comparable.
-  // With only 4 quarters, any fallback would be a wrong "YoY" comparison.
-  if ((seriesAsc || []).length < 5) return null;
 
-  const target = latestTs - ONE_YEAR_MS; // ~365d
-  const windowMs = TOLERANCE_30D_MS; // ~30d
-  const inWindow = seriesAsc.find((p) => {
-    const ts = Date.parse(p.periodEnd);
-    return Number.isFinite(ts) && Math.abs(ts - target) < windowMs;
-  });
-  if (inWindow) return inWindow;
 
-  const latestIdx = seriesAsc.findIndex((p) => p.periodEnd === latestPeriodEnd);
-  if (latestIdx >= 0) return seriesAsc[Math.max(0, latestIdx - 4)] || null;
-  return seriesAsc[Math.max(0, seriesAsc.length - 5)] || null;
-}
 
-function toQuarterlySeries(periods = []) {
-  const quarters = (periods || [])
-    .filter((p) => (p.periodType || "").toLowerCase() === "quarter")
-    .filter((p) => p.periodEnd)
-    .sort((a, b) => Date.parse(a.periodEnd) - Date.parse(b.periodEnd));
-  return quarters.map((p) => {
-    const fcf =
-      p.freeCashFlow != null
-        ? p.freeCashFlow
-        : p.operatingCashFlow != null
-          ? p.operatingCashFlow - Math.abs(p.capex ?? 0) // Assume 0 if capex is null but OCF exists
-          : null;
-    const costOfRevenue = p.costOfRevenue ?? null;
-    const derivedRevenue = p.revenue ?? (p.grossProfit != null && costOfRevenue != null ? p.grossProfit + costOfRevenue : null);
-    const derivedGross = p.grossProfit == null && derivedRevenue != null && costOfRevenue != null
-      ? derivedRevenue - costOfRevenue
-      : p.grossProfit ?? null;
-    return {
-      periodEnd: p.periodEnd,
-      label: formatQuarterLabel(p.periodEnd),
-      sector: p.sector ?? null,
-      sic: p.sic ?? null,
-      sicDescription: p.sicDescription ?? null,
-      revenue: derivedRevenue ?? null,
-      grossProfit: derivedGross,
-      costOfRevenue: costOfRevenue ?? null,
-      operatingExpenses: p.operatingExpenses ?? null,
-      operatingIncome: p.operatingIncome ?? null,
-      incomeBeforeIncomeTaxes: p.incomeBeforeIncomeTaxes ?? null,
-      incomeTaxExpenseBenefit: p.incomeTaxExpenseBenefit ?? null,
-      netIncome: p.netIncome ?? null,
-      epsBasic: p.epsBasic ?? null,
-      sharesOutstanding: p.sharesOutstanding ?? p.shares ?? null,
-      totalAssets: p.totalAssets ?? null,
-      currentAssets: p.currentAssets ?? null,
-      totalLiabilities: p.totalLiabilities ?? null,
-      currentLiabilities: p.currentLiabilities ?? null,
-      totalEquity: p.totalEquity ?? null,
-      totalDebt: p.totalDebt ?? null,
-      financialDebt: p.financialDebt ?? null,
-      shortTermDebt: p.shortTermDebt ?? null,
-      longTermDebt: p.longTermDebt ?? null,
-      leaseLiabilities: p.leaseLiabilities ?? null,
-      shortTermInvestments: p.shortTermInvestments ?? null,
-      deposits: p.deposits ?? null,
-      customerDeposits: p.customerDeposits ?? null,
-      totalDeposits: p.totalDeposits ?? null,
-      depositLiabilities: p.depositLiabilities ?? null,
-      interestIncome: p.interestIncome ?? null,
-      interestExpense: p.interestExpense ?? null,
-      cash: p.cashAndCashEquivalents ?? p.cash ?? null,
-      accountsReceivable: p.accountsReceivable ?? null,
-      inventories: p.inventories ?? null,
-      accountsPayable: p.accountsPayable ?? null,
-      operatingCashFlow: p.operatingCashFlow ?? null,
-      capex: p.capex ?? null,
-      depreciationDepletionAndAmortization: p.depreciationDepletionAndAmortization ?? null,
-      shareBasedCompensation: p.shareBasedCompensation ?? null,
-      researchAndDevelopmentExpenses: p.researchAndDevelopmentExpenses ?? null,
-      technologyExpenses: p.technologyExpenses ?? null,
-      softwareExpenses: p.softwareExpenses ?? null,
-      treasuryStockRepurchased: p.treasuryStockRepurchased ?? null,
-      dividendsPaid: p.dividendsPaid ?? null,
-      deferredRevenue: p.deferredRevenue ?? null,
-      contractWithCustomerLiability: p.contractWithCustomerLiability ?? null,
-      freeCashFlow: fcf
-    };
-  });
-}
 
-function buildTtmFromQuarters(quarters) {
-  const latest4 = quarters.slice(-4);
-  if (latest4.length < 4) return null;
 
-  const sumIfComplete = (field) => {
-    let acc = 0;
-    for (const q of latest4) {
-      if (!isFiniteValue(q?.[field])) return null;
-      acc += Number(q[field]);
-    }
-    return acc;
-  };
 
-  // TTM must be a true 4-quarter aggregate; avoid partial-TTM when any quarter is missing.
-  const revenue = sumIfComplete("revenue");
-  const netIncome = sumIfComplete("netIncome");
-  if (revenue == null || netIncome == null) return null;
 
-  const grossProfit = sumIfComplete("grossProfit");
-  const operatingIncome = sumIfComplete("operatingIncome");
-  const incomeBeforeIncomeTaxes = sumIfComplete("incomeBeforeIncomeTaxes");
-  const incomeTaxExpenseBenefit = sumIfComplete("incomeTaxExpenseBenefit");
-  const operatingCashFlow = sumIfComplete("operatingCashFlow");
-  const capex = sumIfComplete("capex");
 
-  const freeCashFlow = (() => {
-    let acc = 0;
-    for (const q of latest4) {
-      const explicit = isFiniteValue(q?.freeCashFlow) ? Number(q.freeCashFlow) : null;
-      const derived =
-        explicit == null && isFiniteValue(q?.operatingCashFlow) && isFiniteValue(q?.capex)
-          ? Number(q.operatingCashFlow) - Math.abs(Number(q.capex))
-          : null;
-      const val = explicit ?? derived;
-      if (!Number.isFinite(val)) return null;
-      acc += val;
-    }
-    return acc;
-  })();
 
-  // EPS TTM is only valid if all 4 quarters have EPS reported; otherwise leave null.
-  const epsBasic = sumIfComplete("epsBasic");
-  const asOf = latest4[latest4.length - 1].periodEnd;
-  return {
-    asOf,
-    revenue,
-    grossProfit,
-    operatingIncome,
-    incomeBeforeIncomeTaxes,
-    incomeTaxExpenseBenefit,
-    netIncome,
-    epsBasic,
-    operatingCashFlow,
-    capex,
-    freeCashFlow
-  };
-}
 
-function calcCagr(latest, older, years) {
-  const a = Number(latest);
-  const b = Number(older);
-  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= 0 || years <= 0) return null;
-  return Math.pow(a / b, 1 / years) - 1;
-}
 
 function computeGrowth(periods) {
   const years = periods
@@ -397,13 +241,7 @@ function lookupPricePatch(patch, ticker) {
   return null;
 }
 
-function isPriceStale(dateStr, maxAgeDays = 1) {
-  if (!dateStr) return true;
-  const ts = Date.parse(dateStr);
-  if (!Number.isFinite(ts)) return true;
-  const ageMs = Date.now() - ts;
-  return ageMs > maxAgeDays * 24 * 60 * 60 * 1000;
-}
+
 
 function classifyTrend(values) {
   const filtered = values.filter((v) => Number.isFinite(v));
@@ -423,208 +261,279 @@ function slope(values) {
   return filtered[filtered.length - 1] - filtered[0];
 }
 
-function clamp01(val) {
-  if (val === null || val === undefined) return null;
-  const num = Number(val);
-  if (!Number.isFinite(num)) return null;
-  return Math.max(0, Math.min(1, num));
-}
+function buildPriceSummaryAt(prices, asOfDate) {
+  if (!asOfDate) return { priceSummary: emptyPriceSummary(), priceHistory: [] };
+  const asOf = Date.parse(asOfDate);
+  if (!Number.isFinite(asOf)) return { priceSummary: emptyPriceSummary(), priceHistory: [] };
 
-function avg(values) {
-  const filtered = values.filter((v) => Number.isFinite(v));
-  if (!filtered.length) return null;
-  return filtered.reduce((acc, v) => acc + v, 0) / filtered.length;
-}
+  const history = (prices || [])
+    .filter((p) => p?.date && Date.parse(p.date) <= asOf)
+    .sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+  if (!history.length) return { priceSummary: emptyPriceSummary(), priceHistory: [] };
 
-function computeInterestCoverageTtm(quarters) {
-  const sorted = [...(quarters || [])]
-    .filter((q) => q && q.periodEnd)
-    .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))
-    .slice(0, 4);
-
-  const ebitQuarters = sorted.filter((q) => Number.isFinite(q?.operatingIncome));
-  if (ebitQuarters.length < 2) return { value: null, periods: ebitQuarters.length, status: "insufficient-data" };
-  const ebitTtm = ebitQuarters.reduce((acc, q) => acc + Number(q.operatingIncome), 0);
-
-  const interestQuarters = sorted.filter((q) => Number.isFinite(q?.interestExpense));
-  const interestSum = interestQuarters.reduce((acc, q) => acc + Math.abs(Number(q.interestExpense)), 0);
-
-  // If interest is effectively zero/missing, check debt to distinguish "debt-free" vs missing extraction.
-  if (interestQuarters.length === 0 || !Number.isFinite(interestSum) || interestSum < 1) {
-    const lastQ = sorted[0] || null;
-    const debt = Number(lastQ?.totalDebt || 0);
-    if (Number.isFinite(debt) && debt < 1e6) return { value: Infinity, periods: ebitQuarters.length, status: "debt-free" };
-    return { value: null, periods: ebitQuarters.length, status: "missing-interest" };
-  }
-
-  // If we only have 1–3 quarters of interest expense, annualize the available quarters rather than treating missing as zero.
-  const interestTtm = interestQuarters.length < 4 ? (interestSum / interestQuarters.length) * 4 : interestSum;
-  if (!Number.isFinite(ebitTtm) || !Number.isFinite(interestTtm) || interestTtm === 0) {
-    return { value: null, periods: ebitQuarters.length, status: "insufficient-data" };
-  }
+  const last = history[history.length - 1];
+  const prev = history[history.length - 2] || null;
+  const lastClose = last ? Number(last.close) : null;
+  const prevClose = prev ? Number(prev.close) : null;
+  const dayChangeAbs =
+    lastClose != null && prevClose != null ? Number((lastClose - prevClose).toFixed(4)) : null;
+  const dayChangePct =
+    lastClose != null && prevClose != null && prevClose !== 0
+      ? Number(((lastClose - prevClose) / prevClose).toFixed(4))
+      : null;
 
   return {
-    value: ebitTtm / interestTtm,
-    periods: interestQuarters.length,
-    status: interestQuarters.length < 4 ? "annualized-interest" : "ok"
+    priceHistory: history.slice(-5).map((p) => ({ date: p.date, close: Number(p.close) })),
+    priceSummary: {
+      lastClose: lastClose ?? null,
+      lastCloseDate: last?.date ?? null,
+      prevClose: prevClose ?? null,
+      dayChangeAbs,
+      dayChangePct
+    }
   };
 }
 
-function computeInterestCoverageAnnual(latest) {
-  const row = latest || null;
-  if (!row) return { value: null, periods: 0, status: "insufficient-data" };
+function deriveQuarterFromAnnual(latestAnnual, quartersAsc) {
+  if (!latestAnnual?.periodEnd) return null;
+  const endMs = Date.parse(latestAnnual.periodEnd);
+  if (!Number.isFinite(endMs)) return null;
+  const windowStart = endMs - (ONE_YEAR_MS + TOLERANCE_30D_MS);
+  const candidates = (quartersAsc || []).filter((q) => {
+    if (!q?.periodEnd) return false;
+    const ts = Date.parse(q.periodEnd);
+    return Number.isFinite(ts) && ts <= endMs && ts >= windowStart;
+  });
+  if (candidates.length < 3) return null;
+  const last3 = candidates.slice(-3);
 
-  const ebit = Number(row.operatingIncome);
-  const interest = Math.abs(Number(row.interestExpense || 0));
+  const sumField = (field) => {
+    let acc = 0;
+    for (const q of last3) {
+      const val = Number(q?.[field]);
+      if (!Number.isFinite(val)) return null;
+      acc += val;
+    }
+    return acc;
+  };
 
-  if (!Number.isFinite(ebit)) return { value: null, periods: 0, status: "insufficient-data" };
+  const sumFcf = () => {
+    let acc = 0;
+    for (const q of last3) {
+      const explicit = Number(q?.freeCashFlow);
+      const derived =
+        Number.isFinite(Number(q?.operatingCashFlow)) && Number.isFinite(Number(q?.capex))
+          ? Number(q.operatingCashFlow) - Math.abs(Number(q.capex))
+          : null;
+      const val = Number.isFinite(explicit) ? explicit : derived;
+      if (!Number.isFinite(val)) return null;
+      acc += val;
+    }
+    return acc;
+  };
 
-  // If interest is effectively zero/missing, check debt to decide if "debt-free" vs "missing-interest".
-  if (!Number.isFinite(interest) || interest < 1) {
-    const debt = Number(row.totalDebt || 0);
-    if (Number.isFinite(debt) && debt < 1e6) return { value: Infinity, periods: 1, status: "debt-free" };
-    return { value: null, periods: 1, status: "missing-interest" };
+  const annualVal = (field) => {
+    const v = Number(latestAnnual?.[field]);
+    return Number.isFinite(v) ? v : null;
+  };
+
+  const revenue = annualVal("revenue");
+  const netIncome = annualVal("netIncome");
+  if (!Number.isFinite(revenue) || !Number.isFinite(netIncome)) return null;
+
+  const revSum = sumField("revenue");
+  const niSum = sumField("netIncome");
+  if (!Number.isFinite(revSum) || !Number.isFinite(niSum)) return null;
+
+  const derived = {
+    periodEnd: latestAnnual.periodEnd,
+    derived: true,
+    revenue: revenue - revSum,
+    netIncome: netIncome - niSum
+  };
+
+  const gpAnnual = annualVal("grossProfit");
+  const gpSum = sumField("grossProfit");
+  if (Number.isFinite(gpAnnual) && Number.isFinite(gpSum)) derived.grossProfit = gpAnnual - gpSum;
+
+  const opAnnual = annualVal("operatingIncome");
+  const opSum = sumField("operatingIncome");
+  if (Number.isFinite(opAnnual) && Number.isFinite(opSum)) derived.operatingIncome = opAnnual - opSum;
+
+  const pretaxAnnual = annualVal("incomeBeforeIncomeTaxes");
+  const pretaxSum = sumField("incomeBeforeIncomeTaxes");
+  if (Number.isFinite(pretaxAnnual) && Number.isFinite(pretaxSum)) {
+    derived.incomeBeforeIncomeTaxes = pretaxAnnual - pretaxSum;
   }
 
-  return { value: ebit / interest, periods: 1, status: "ok" };
+  const taxAnnual = annualVal("incomeTaxExpenseBenefit");
+  const taxSum = sumField("incomeTaxExpenseBenefit");
+  if (Number.isFinite(taxAnnual) && Number.isFinite(taxSum)) {
+    derived.incomeTaxExpenseBenefit = taxAnnual - taxSum;
+  }
+
+  const ocfAnnual = annualVal("operatingCashFlow");
+  const ocfSum = sumField("operatingCashFlow");
+  if (Number.isFinite(ocfAnnual) && Number.isFinite(ocfSum)) {
+    derived.operatingCashFlow = ocfAnnual - ocfSum;
+  }
+
+  const capexAnnual = annualVal("capex");
+  const capexSum = sumField("capex");
+  if (Number.isFinite(capexAnnual) && Number.isFinite(capexSum)) {
+    derived.capex = capexAnnual - capexSum;
+  }
+
+  const annualFcf =
+    Number.isFinite(annualVal("freeCashFlow"))
+      ? annualVal("freeCashFlow")
+      : Number.isFinite(ocfAnnual) && Number.isFinite(capexAnnual)
+        ? ocfAnnual - Math.abs(capexAnnual)
+        : null;
+  const fcfSum = sumFcf();
+  if (Number.isFinite(annualFcf) && Number.isFinite(fcfSum)) {
+    derived.freeCashFlow = annualFcf - fcfSum;
+  }
+
+  return derived;
 }
 
-function detectLikelySplit(quartersDesc, { tolerance = 0.25, minRatio = 2, epsFloor = 0.01 } = {}) {
-  const series = [...(quartersDesc || [])].filter((q) => q && q.periodEnd);
-  for (let i = 0; i < series.length - 1; i += 1) {
-    const curr = series[i];
-    const prev = series[i + 1];
-    const sharesCurr = Number(curr?.sharesOutstanding ?? curr?.shares);
-    const sharesPrev = Number(prev?.sharesOutstanding ?? prev?.shares);
-    if (!Number.isFinite(sharesCurr) || !Number.isFinite(sharesPrev) || sharesPrev === 0) continue;
-    const sharesRatio = sharesCurr / sharesPrev;
-    if (!Number.isFinite(sharesRatio) || sharesRatio < minRatio) continue;
-    const epsCurr = Number(curr?.epsBasic);
-    const epsPrev = Number(prev?.epsBasic);
-    if (
-      !Number.isFinite(epsCurr) ||
-      !Number.isFinite(epsPrev) ||
-      epsCurr === 0 ||
-      epsPrev === 0 ||
-      Math.sign(epsCurr) !== Math.sign(epsPrev) ||
-      Math.abs(epsCurr) < epsFloor ||
-      Math.abs(epsPrev) < epsFloor
-    ) {
-      continue;
-    }
-    const epsRatio = epsCurr / epsPrev;
-    const inverseProduct = Math.abs(sharesRatio * epsRatio - 1);
-    if (inverseProduct <= tolerance) {
-      const niCurr = Number(curr?.netIncome);
-      const niPrev = Number(prev?.netIncome);
-      const niStable =
-        Number.isFinite(niCurr) &&
-        Number.isFinite(niPrev) &&
-        Math.abs(niPrev) > 1e-6 &&
-        Math.abs(niCurr / niPrev - 1) < 0.35;
-      if (niStable === false) continue;
-      return {
-        flagged: true,
-        sharesRatio,
-        epsRatio,
-        inverseProduct,
-        currentPeriod: curr.periodEnd,
-        priorPeriod: prev.periodEnd,
-        netIncomeStable: niStable
-      };
-    }
-  }
-  return null;
-}
+function buildTtmWithDerived({ quartersAsc, latestAnnual }) {
+  // Step 1: Check for gaps in the most recent quarters that could be filled by derivation.
+  // Q4 often isn't filed separately (included in 10-K), so derive Q4 = Annual - (Q1+Q2+Q3)
+  let workingQuarters = [...(quartersAsc || [])];
 
-function detectLikelyReverseSplit(quartersDesc, { tolerance = 0.25, minRatio = 4, epsFloor = 0.01 } = {}) {
-  const series = [...(quartersDesc || [])].filter((q) => q && q.periodEnd);
-  for (let i = 0; i < series.length - 1; i += 1) {
-    const curr = series[i];
-    const prev = series[i + 1];
-    const sharesCurr = Number(curr?.sharesOutstanding ?? curr?.shares);
-    const sharesPrev = Number(prev?.sharesOutstanding ?? prev?.shares);
-    if (!Number.isFinite(sharesCurr) || !Number.isFinite(sharesPrev) || sharesCurr === 0) continue;
-    const reverseRatio = sharesPrev / sharesCurr;
-    if (!Number.isFinite(reverseRatio) || reverseRatio < minRatio) continue;
-    const epsCurr = Number(curr?.epsBasic);
-    const epsPrev = Number(prev?.epsBasic);
-    if (
-      !Number.isFinite(epsCurr) ||
-      !Number.isFinite(epsPrev) ||
-      epsCurr === 0 ||
-      epsPrev === 0 ||
-      Math.sign(epsCurr) !== Math.sign(epsPrev) ||
-      Math.abs(epsCurr) < epsFloor ||
-      Math.abs(epsPrev) < epsFloor
-    ) {
-      continue;
-    }
-    const epsRatio = epsCurr / epsPrev;
-    const inverseProduct = Math.abs(epsRatio / reverseRatio - 1);
-    if (inverseProduct <= tolerance) {
-      const niCurr = Number(curr?.netIncome);
-      const niPrev = Number(prev?.netIncome);
-      const niStable =
-        Number.isFinite(niCurr) &&
-        Number.isFinite(niPrev) &&
-        Math.abs(niPrev) > 1e-6 &&
-        Math.abs(niCurr / niPrev - 1) < 0.35;
-      if (niStable === false) continue;
-      return {
-        flagged: true,
-        sharesRatio: reverseRatio,
-        epsRatio,
-        inverseProduct,
-        currentPeriod: curr.periodEnd,
-        priorPeriod: prev.periodEnd,
-        netIncomeStable: niStable
-      };
-    }
-  }
-  return null;
-}
+  // Look through all annual periods and try to derive missing Q4s
+  if (latestAnnual?.periodEnd) {
+    const annualEnd = Date.parse(latestAnnual.periodEnd);
+    if (Number.isFinite(annualEnd)) {
+      // Check if we have an incomplete quarter at the annual period end
+      const existingQ4 = workingQuarters.find((q) =>
+        q?.periodEnd && Math.abs(Date.parse(q.periodEnd) - annualEnd) < 5 * 24 * 60 * 60 * 1000
+      );
+      const q4IsIncomplete = !existingQ4 ||
+        !Number.isFinite(Number(existingQ4.revenue)) ||
+        !Number.isFinite(Number(existingQ4.netIncome));
 
-function computeShareChangeWithSplitGuard(quartersDesc) {
-  const series = [...(quartersDesc || [])]
-    .filter((q) => q && q.periodEnd && Number.isFinite(q.sharesOutstanding ?? q.shares))
-    .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd));
-  const latest = series[0] || null;
-  const prev = series[1] || null;
-  const yearAgo = series.find(q => {
-    const d1 = new Date(latest.periodEnd);
-    const d2 = new Date(q.periodEnd);
-    return Math.abs(d1 - d2 - ONE_YEAR_MS) < TOLERANCE_30D_MS; // ~365 days +/- 30 days
-  }) || series[4] || null;
-  const rawQoQ = pctChange(
-    Number(latest?.sharesOutstanding ?? latest?.shares),
-    Number(prev?.sharesOutstanding ?? prev?.shares)
-  );
-  const rawYoY = yearAgo
-    ? pctChange(
-      Number(latest?.sharesOutstanding ?? latest?.shares),
-      Number(yearAgo?.sharesOutstanding ?? yearAgo?.shares)
-    )
-    : rawQoQ;
-  const splitSignal = detectLikelySplit(series);
-  const reverseSplitSignal = detectLikelyReverseSplit(series);
-  let adjustedYoY = rawYoY;
-  const ratioFromSignal = splitSignal?.sharesRatio ?? null;
-  if (ratioFromSignal && ratioFromSignal >= 2 && rawYoY != null) {
-    adjustedYoY = null; // treat as split-driven jump; skip dilution penalty
+      if (q4IsIncomplete) {
+        const derivedQ4 = deriveQuarterFromAnnual(latestAnnual, workingQuarters);
+        if (derivedQ4) {
+          // Replace incomplete Q4 with derived one, or add if missing
+          if (existingQ4) {
+            workingQuarters = workingQuarters.filter((q) => q !== existingQ4);
+          }
+          workingQuarters.push(derivedQ4);
+          workingQuarters = sortByPeriodEndAsc(workingQuarters);
+        }
+      }
+    }
   }
-  if (reverseSplitSignal && rawYoY != null) {
-    // Reverse splits can look like buybacks; neutralize change to avoid +score credits.
-    adjustedYoY = null;
+
+  // Step 2: Now try to build TTM with potentially augmented quarters
+  const ttmWithDerived = buildTtmFromQuarters(workingQuarters);
+  if (ttmWithDerived) {
+    const usedDerived = workingQuarters.some((q) => q?.derived === true);
+    return {
+      ttm: { ...ttmWithDerived, basis: usedDerived ? "derived" : "ttm" },
+      basis: usedDerived ? "derived" : "ttm"
+    };
   }
+
+  // Step 3: Original fallback - try deriving if buildTtmFromQuarters still fails
+  const derivedQuarter = deriveQuarterFromAnnual(latestAnnual, quartersAsc);
+  if (derivedQuarter) {
+    const existingAnnualQuarter = (quartersAsc || []).find((q) =>
+      q?.periodEnd && latestAnnual?.periodEnd && Date.parse(q.periodEnd) === Date.parse(latestAnnual.periodEnd)
+    );
+    const existingIncomplete = existingAnnualQuarter
+      ? !Number.isFinite(Number(existingAnnualQuarter.revenue)) || !Number.isFinite(Number(existingAnnualQuarter.netIncome))
+      : false;
+    const augmented = existingAnnualQuarter
+      ? [
+        ...(quartersAsc || []).filter((q) => q !== existingAnnualQuarter),
+        ...(existingIncomplete ? [derivedQuarter] : [])
+      ]
+      : [...(quartersAsc || []), derivedQuarter];
+    const ttmDerived = buildTtmFromQuarters(sortByPeriodEndAsc(augmented));
+    if (ttmDerived) return { ttm: { ...ttmDerived, basis: "derived" }, basis: "derived" };
+  }
+
+  if (!latestAnnual) return { ttm: null, basis: null };
+
+  const annualFcf =
+    Number.isFinite(Number(latestAnnual?.freeCashFlow))
+      ? Number(latestAnnual.freeCashFlow)
+      : Number.isFinite(Number(latestAnnual?.operatingCashFlow)) && Number.isFinite(Number(latestAnnual?.capex))
+        ? Number(latestAnnual.operatingCashFlow) - Math.abs(Number(latestAnnual.capex))
+        : null;
+
   return {
-    changeQoQ: rawQoQ,
-    changeYoY: adjustedYoY,
-    rawYoY,
-    splitSignal,
-    reverseSplitSignal
+    ttm: {
+      asOf: latestAnnual.periodEnd || null,
+      revenue: latestAnnual.revenue ?? null,
+      grossProfit: latestAnnual.grossProfit ?? null,
+      operatingIncome: latestAnnual.operatingIncome ?? null,
+      incomeBeforeIncomeTaxes: latestAnnual.incomeBeforeIncomeTaxes ?? null,
+      incomeTaxExpenseBenefit: latestAnnual.incomeTaxExpenseBenefit ?? null,
+      netIncome: latestAnnual.netIncome ?? null,
+      epsBasic: latestAnnual.epsBasic ?? (
+        (latestAnnual.netIncome != null && latestAnnual.sharesOutstanding > 0)
+          ? latestAnnual.netIncome / latestAnnual.sharesOutstanding
+          : null
+      ),
+      operatingCashFlow: latestAnnual.operatingCashFlow ?? null,
+      capex: latestAnnual.capex ?? null,
+      freeCashFlow: annualFcf,
+      basis: "annual"
+    },
+    basis: "annual"
   };
 }
+
+function computePriorTtmMeta({ quartersAsc, annualSeries }) {
+  const quarters = sortByPeriodEndAsc(quartersAsc || []);
+  if (quarters.length < 8) return null;
+
+  const priorSlice = quarters.slice(0, -4);
+  if (priorSlice.length < 4) return null;
+  const priorEnd = priorSlice[priorSlice.length - 1]?.periodEnd || null;
+  if (!priorEnd) return null;
+
+  const annuals = Array.isArray(annualSeries) ? annualSeries : [];
+  const priorAnnual = [...annuals]
+    .filter((p) => p?.periodEnd && Date.parse(p.periodEnd) <= Date.parse(priorEnd))
+    .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0] || null;
+
+  const ttmMeta = buildTtmWithDerived({
+    quartersAsc: priorSlice,
+    latestAnnual: priorAnnual
+  });
+
+  const priorWindow = priorSlice.slice(-4);
+  const periodStart = priorWindow[0]?.periodEnd || null;
+  const periodEnd = priorWindow[priorWindow.length - 1]?.periodEnd || null;
+
+  return {
+    ttm: ttmMeta?.ttm ?? null,
+    basis: ttmMeta?.basis ?? null,
+    periodStart,
+    periodEnd
+  };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ---------- Rating helpers (shared-rule pipeline on the server) ----------
 // Recommended normalization: wider bounds to avoid easy 100/100 scores.
@@ -632,638 +541,20 @@ const RATING_MIN = -60; // Captures truly distressed companies
 const RATING_MAX = 100; // Reserves 100/100 for near-perfect execution
 const RATING_RANGE = RATING_MAX - RATING_MIN || 1;
 
-function normalizeRuleScore(score) {
-  const num = Number(score);
-  if (!Number.isFinite(num)) return null;
-
-  const normalized = ((num - RATING_MIN) / RATING_RANGE) * 100;
-  return Math.round(Math.max(0, Math.min(100, normalized)));
-}
-
-function getScoreBand(val) {
-  const v = Number(val) || 0;
-  // Align to the public score bands used in the screener UI:
-  // Elite: 91-100, Bullish: 76-90, Solid: 61-75, Average: 46-60, Speculative: 31-45, Distressed: 0-30
-  if (v >= 91) return "elite";
-  if (v >= 76) return "bullish";
-  if (v >= 61) return "solid";
-  if (v >= 46) return "mixed";
-  if (v >= 31) return "spec";
-  return "danger";
-}
-
-function pctChange(curr, prev) {
-  if (!Number.isFinite(curr) || !Number.isFinite(prev) || prev === 0) return null;
-  return ((curr - prev) / Math.abs(prev)) * 100;
-}
-
-function calcMargin(num, den) {
-  if (!Number.isFinite(num) || !Number.isFinite(den) || den <= 0) return null;
-  return (num / den) * 100;
-}
-
-function calcFcf(row) {
-  if (!row) return null;
-  const cfo = Number(row.netCashProvidedByOperatingActivities ?? row.operatingCashFlow);
-  const capex = Number(row.capitalExpenditure ?? row.capex);
-  if (!Number.isFinite(cfo) || !Number.isFinite(capex)) return null;
-  return cfo + capex;
-}
-
-const toNumber = (val) => {
-  const num = percentToNumber(val);
-  return num === null ? null : num;
-};
-
-const pctFromRatio = (val) => {
-  const num = percentToNumber(val);
-  if (num === null) return null;
-  return Math.abs(num) <= 1 ? num * 100 : num;
-};
-
-function computeRunwayYearsVm(vm) {
-  if (!vm) return null;
-  const sectorBucket = resolveSectorBucket(vm?.sector || vm?.sectorBucket);
-  if (sectorBucket === "Financials") return null; // Lending cash flows distort runway math
-  const series = (vm.quarterlySeries && vm.quarterlySeries.length ? vm.quarterlySeries : vm.annualSeries || []);
-  const latest = [...series]
-    .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0] || {};
-
-  const cash = toNumber(latest.cash ?? latest.cashAndCashEquivalents);
-  const sti = toNumber(latest.shortTermInvestments);
-
-  // If both are missing (null), and we have no other balance sheet data, return null.
-  // We used to fallback if TotalAssets existed, but that leads to Cash=0 assumption which is wrong.
-  if (cash === null && sti === null) return null;
-
-  const cashTotal = (Number.isFinite(cash) ? cash : 0) + (Number.isFinite(sti) ? sti : 0);
-  const fcf = toNumber(vm.snapshot?.freeCashFlowTTM ?? vm.ttm?.freeCashFlow);
-
-  if (!Number.isFinite(cashTotal)) return null;
-
-  // Infinite runway cases
-  if (Number.isFinite(fcf) && fcf >= 0) return Infinity; // Burn is 0 or positive cash flow
-
-  // If FCF is missing but we are profitable (net income > 0), assume infinite runway
-  const ni = toNumber(vm.ttm?.netIncome);
-  if (!Number.isFinite(fcf) && Number.isFinite(ni) && ni > 0) return Infinity;
-
-  if (Number.isFinite(fcf) && fcf < 0) {
-    if (cashTotal <= 0) return 0; // No cash left
-    return cashTotal / Math.abs(fcf);
-  }
-
-  return null;
-}
-
-function calcTrend(quarters, field) {
-  if (!quarters || quarters.length < 2) return null;
-  // Assumes quarters are ASCENDING (oldest -> newest)
-  const latestQ = quarters[quarters.length - 1];
-  // Find same quarter last year
-  const priorY = quarters.find(q => {
-    const d1 = new Date(latestQ.periodEnd);
-    const d2 = new Date(q.periodEnd);
-    return Math.abs(d1 - d2 - ONE_YEAR_MS) < TOLERANCE_30D_MS; // rough 1 year check
-  });
-
-  if (!priorY) return null;
-
-  if (!isFiniteValue(latestQ[field]) || !isFiniteValue(priorY[field])) return null;
-  const valNow = Number(latestQ[field]);
-  const valPrior = Number(priorY[field]);
-
-  if (!Number.isFinite(valNow) || !Number.isFinite(valPrior) || valPrior === 0) return null;
-  return (valNow - valPrior) / Math.abs(valPrior);
-}
-
-function buildStockForRules(vm) {
-  const series = (vm.quarterlySeries && vm.quarterlySeries.length ? vm.quarterlySeries : vm.annualSeries || []);
-  const annualMode = vm?.annualMode === true || vm?.snapshot?.basis === "annual";
-  const quartersAsc = [...series].sort((a, b) => Date.parse(a.periodEnd) - Date.parse(b.periodEnd));
-  const quartersDesc = [...quartersAsc].reverse();
-  const income = quartersDesc.map((q) => ({
-    date: q.periodEnd,
-    revenue: q.revenue,
-    grossProfit: q.grossProfit,
-    costOfRevenue: q.costOfRevenue,
-    operatingIncome: q.operatingIncome,
-    operatingExpenses: q.operatingExpenses,
-    netIncome: q.netIncome,
-    researchAndDevelopmentExpenses: q.researchAndDevelopmentExpenses,
-    interestIncome: q.interestIncome,
-    interestAndDividendIncome: q.interestAndDividendIncome,
-    interestExpense: q.interestExpense,
-    technologyExpenses: q.technologyExpenses,
-    softwareExpenses: q.softwareExpenses,
-    depreciationDepletionAndAmortization: q.depreciationDepletionAndAmortization,
-    eps: q.epsBasic,
-    epsdiluted: q.epsBasic,
-    epsDiluted: q.epsBasic
-  }));
-  const balance = quartersDesc.map((q) => ({
-    date: q.periodEnd,
-    cashAndCashEquivalents: q.cash ?? q.cashAndCashEquivalents,
-    totalDebt: q.totalDebt,
-    financialDebt: q.financialDebt,
-    shortTermDebt: q.shortTermDebt,
-    longTermDebt: q.longTermDebt,
-    leaseLiabilities: q.leaseLiabilities,
-    totalStockholdersEquity: q.totalEquity,
-    totalAssets: q.totalAssets,
-    totalLiabilities: q.totalLiabilities,
-    currentAssets: q.currentAssets,
-    currentLiabilities: q.currentLiabilities,
-    commonStockSharesOutstanding: q.sharesOutstanding,
-    shortTermInvestments: q.shortTermInvestments,
-    accountsReceivable: q.accountsReceivable,
-    deferredRevenue: q.deferredRevenue,
-    contractWithCustomerLiability: q.contractWithCustomerLiability,
-    deposits: q.deposits,
-    customerDeposits: q.customerDeposits,
-    totalDeposits: q.totalDeposits,
-    depositLiabilities: q.depositLiabilities,
-    interestExpense: q.interestExpense ?? null
-  }));
-  const cashArr = quartersDesc.map((q) => ({
-    date: q.periodEnd,
-    netCashProvidedByOperatingActivities: q.operatingCashFlow,
-    operatingCashFlow: q.operatingCashFlow,
-    capitalExpenditure: q.capex,
-    freeCashFlow: q.freeCashFlow,
-    depreciationDepletionAndAmortization: q.depreciationDepletionAndAmortization,
-    treasuryStockRepurchased: q.treasuryStockRepurchased,
-    dividendsPaid: q.dividendsPaid,
-    fcfComputed:
-      q.freeCashFlow != null
-        ? q.freeCashFlow
-        : q.operatingCashFlow != null && q.capex != null
-          ? q.operatingCashFlow - Math.abs(q.capex ?? 0)
-          : null
-  }));
-  // EDGAR can include period-tagged "as-of" rows (often shares-only) that should not drive growth/margin rules.
-  // Use the latest *valid* rows for each statement rather than assuming adjacent indices match.
-  const incomeValid = income.filter((i) =>
-    Number.isFinite(i.revenue) || Number.isFinite(i.operatingIncome) || Number.isFinite(i.netIncome)
-  );
-  const balanceValid = balance.filter((b) =>
-    Number.isFinite(b.totalAssets) || Number.isFinite(b.totalDebt) || Number.isFinite(b.cashAndCashEquivalents)
-  );
-  const cashValid = cashArr.filter((c) =>
-    Number.isFinite(c.operatingCashFlow) || Number.isFinite(c.capitalExpenditure) || Number.isFinite(c.fcfComputed)
-  );
-
-  const curInc = incomeValid[0] || {};
-  const prevInc = incomeValid[1] || {};
-  const curBal = balanceValid[0] || {};
-  const prevBal = balanceValid[1] || {};
-  const curCf = cashValid[0] || {};
-  const prevCf = cashValid[1] || {};
-
-  // If EDGAR includes "as-of" placeholder periods (often shares-only), incomeValid[0] may not align to index 0.
-  // Keep the index aligned to the underlying series so any statement-level metrics use the same period row.
-  const effectiveIncIndex = (() => {
-    const idx = income.indexOf(curInc);
-    return idx >= 0 ? idx : 0;
-  })();
-
-  const shareChangeMeta = computeShareChangeWithSplitGuard(quartersDesc);
-  const interestCoverageMeta = annualMode
-    ? computeInterestCoverageAnnual(quartersDesc[effectiveIncIndex] || null)
-    : computeInterestCoverageTtm(quartersDesc);
-  const revGrowth = pctChange(toNumber(curInc.revenue), toNumber(prevInc.revenue));
-  const sharesChange = shareChangeMeta.changeQoQ;
-  const sharesChangeYoY = shareChangeMeta.changeYoY;
-  const fcf = calcFcf(curCf);
-  const ttmRevenue = toNumber(vm?.ttm?.revenue);
-  const ttmFcf = toNumber(vm?.ttm?.freeCashFlow);
-  const ttmNetIncome = toNumber(vm?.ttm?.netIncome);
-  const annualizedRevenue =
-    !annualMode && Number.isFinite(toNumber(curInc.revenue)) ? toNumber(curInc.revenue) * 4 : null;
-  const annualizedFcf = !annualMode && Number.isFinite(fcf) ? fcf * 4 : null;
-  const annualizedNetIncome =
-    !annualMode && Number.isFinite(toNumber(curInc.netIncome)) ? toNumber(curInc.netIncome) * 4 : null;
-  const sumAbsLast4 = (field) => {
-    if (!quartersAsc || quartersAsc.length < 4) return null;
-    const latest4 = quartersAsc.slice(-4);
-    let used = 0;
-    let acc = 0;
-    for (const q of latest4) {
-      const v = Number(q?.[field]);
-      if (!Number.isFinite(v)) continue;
-      used += 1;
-      acc += Math.abs(v);
-    }
-    return used ? acc : null;
-  };
-  const buybacksTtm = sumAbsLast4("treasuryStockRepurchased");
-  const dividendsTtm = sumAbsLast4("dividendsPaid");
-  const shareholderReturnTtm =
-    Number.isFinite(buybacksTtm) || Number.isFinite(dividendsTtm)
-      ? (Number.isFinite(buybacksTtm) ? buybacksTtm : 0) + (Number.isFinite(dividendsTtm) ? dividendsTtm : 0)
-      : null;
-  const buybacksPctFcf =
-    Number.isFinite(buybacksTtm) && Number.isFinite(ttmFcf) && ttmFcf > 0 ? buybacksTtm / ttmFcf : null;
-  const totalReturnPctFcf =
-    Number.isFinite(shareholderReturnTtm) && Number.isFinite(ttmFcf) && ttmFcf > 0
-      ? shareholderReturnTtm / ttmFcf
-      : null;
-  const rdSpendTtm = sumAbsLast4("researchAndDevelopmentExpenses");
-  const rdToRevenueTtm = Number.isFinite(rdSpendTtm) && Number.isFinite(ttmRevenue) && ttmRevenue !== 0
-    ? (rdSpendTtm / ttmRevenue) * 100
-    : null;
-  const ar = toNumber(curBal.accountsReceivable);
-  const inv = toNumber(curBal.inventories);
-  const ap = toNumber(curBal.accountsPayable);
-  const cogsTtm = (() => {
-    const rev = toNumber(vm?.ttm?.revenue);
-    const gp = toNumber(vm?.ttm?.grossProfit);
-    if (Number.isFinite(rev) && Number.isFinite(gp)) return rev - gp;
-    return null;
-  })();
-  const dsoDays =
-    Number.isFinite(ar) && Number.isFinite(ttmRevenue) && ttmRevenue > 0 ? (ar / ttmRevenue) * 365 : null;
-  const dioDays =
-    Number.isFinite(inv) && Number.isFinite(cogsTtm) && cogsTtm > 0 ? (inv / cogsTtm) * 365 : null;
-  const dpoDays =
-    Number.isFinite(ap) && Number.isFinite(cogsTtm) && cogsTtm > 0 ? (ap / cogsTtm) * 365 : null;
-  const cashConversionCycleDays =
-    Number.isFinite(dsoDays) && Number.isFinite(dpoDays)
-      ? dsoDays + (Number.isFinite(dioDays) ? dioDays : 0) - dpoDays
-      : null;
-  const effectiveTaxRateTTM = inferTaxRateFromPeriods({ ttm: vm?.ttm, latestAnnual: null });
-  const operatingLeverage = (() => {
-    const op = toNumber(vm?.ttm?.operatingIncome);
-    const gp = toNumber(vm?.ttm?.grossProfit);
-    if (!Number.isFinite(op) || !Number.isFinite(gp) || gp === 0) return null;
-    return op / gp;
-  })();
-
-  const fcfMarginTtmPct =
-    Number.isFinite(ttmFcf) && Number.isFinite(ttmRevenue) && ttmRevenue !== 0
-      ? (ttmFcf / ttmRevenue) * 100
-      : null;
-  const fcfMargin = fcfMarginTtmPct ?? calcMargin(fcf, toNumber(curInc.revenue));
-  const prevFcf = calcFcf(prevCf);
-  const prevFcfMargin = prevCf ? calcMargin(prevFcf, toNumber(prevInc.revenue)) : null;
-  const profitGrowth =
-    calcTrend(quartersAsc, "netIncome") ?? pctChange(toNumber(curInc.netIncome), toNumber(prevInc.netIncome));
-  const fcfTrend = pctChange(fcfMargin, prevFcfMargin);
-  const periodToAnnualMultiplier = annualMode ? 1 : 4;
-  const debtTotal = (() => {
-    const totalDebt = toNumber(curBal.totalDebt);
-    const finDebt = toNumber(curBal.financialDebt);
-    const stDebt = toNumber(curBal.shortTermDebt);
-    const lease = toNumber(curBal.leaseLiabilities);
-    const parts = [finDebt, stDebt, lease].filter((v) => Number.isFinite(v));
-    const partsSum = parts.length ? parts.reduce((acc, v) => acc + Number(v), 0) : null;
-    if (Number.isFinite(totalDebt) && Number.isFinite(partsSum)) return Math.max(totalDebt, partsSum);
-    return Number.isFinite(totalDebt) ? totalDebt : partsSum;
-  })();
-  const fcfYears =
-    fcf && Number.isFinite(debtTotal) && fcf > 0
-      ? debtTotal / (fcf * periodToAnnualMultiplier)
-      : null;
-  const roe = (() => {
-    const ni = Number.isFinite(ttmNetIncome) ? ttmNetIncome : annualMode ? toNumber(curInc.netIncome) : annualizedNetIncome;
-    const eq = toNumber(curBal.totalStockholdersEquity);
-    if (!Number.isFinite(ni) || !Number.isFinite(eq) || eq === 0) return null;
-    return (ni / eq) * 100;
-  })();
-  const taxRate = inferTaxRateFromPeriods({ ttm: vm?.ttm, latestAnnual: vm?.annualSeries?.[0] });
-  const ebitTtm = toNumber(vm?.ttm?.operatingIncome);
-  const nopatTtm =
-    Number.isFinite(ebitTtm)
-      ? ebitTtm * (1 - (taxRate ?? 0.21))
-      : null;
-  const debtForIc = (b) => {
-    const totalDebt = toNumber(b?.totalDebt);
-    const finDebt = toNumber(b?.financialDebt);
-    const stDebt = toNumber(b?.shortTermDebt);
-    const lease = toNumber(b?.leaseLiabilities);
-    const parts = [finDebt, stDebt, lease].filter((v) => Number.isFinite(v));
-    const partsSum = parts.length ? parts.reduce((acc, v) => acc + Number(v), 0) : null;
-    if (Number.isFinite(totalDebt) && Number.isFinite(partsSum)) return Math.max(totalDebt, partsSum);
-    if (Number.isFinite(totalDebt)) return totalDebt;
-    return Number.isFinite(partsSum) ? partsSum : null;
-  };
-  const investedCapitalForBal = (b) => {
-    const eq = toNumber(b?.totalStockholdersEquity);
-    const debt = debtForIc(b);
-    const cash = toNumber(b?.cashAndCashEquivalents);
-    const sti = toNumber(b?.shortTermInvestments);
-    if (!Number.isFinite(eq) || !Number.isFinite(debt) || !Number.isFinite(cash)) return null;
-    return eq + debt - cash - (Number.isFinite(sti) ? sti : 0);
-  };
-  const investedCapitalNow = investedCapitalForBal(curBal);
-  const investedCapitalPrev = investedCapitalForBal(prevBal);
-  const avgInvestedCapital =
-    Number.isFinite(investedCapitalNow) && Number.isFinite(investedCapitalPrev)
-      ? (investedCapitalNow + investedCapitalPrev) / 2
-      : investedCapitalNow ?? investedCapitalPrev ?? null;
-  const roic = (() => {
-    if (!Number.isFinite(nopatTtm) || !Number.isFinite(avgInvestedCapital) || avgInvestedCapital === 0) return null;
-    return (nopatTtm / avgInvestedCapital) * 100;
-  })();
-  const interestCoverage =
-    interestCoverageMeta.value != null
-      ? interestCoverageMeta.value
-      : (() => {
-        const ttmOpInc = toNumber(vm?.ttm?.operatingIncome);
-        const latestAnnual = Array.isArray(vm?.annualSeries)
-          ? [...vm.annualSeries]
-            .filter((p) => String(p?.periodType || "").toLowerCase() === "year" && p?.periodEnd)
-            .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0] || null
-          : null;
-        const annualInterest = toNumber(latestAnnual?.interestExpense);
-        if (Number.isFinite(ttmOpInc) && Number.isFinite(annualInterest) && annualInterest !== 0) {
-          return ttmOpInc / Math.abs(annualInterest);
-        }
-        const quarterInterest = toNumber(curBal.interestExpense);
-        if (Number.isFinite(ttmOpInc) && Number.isFinite(quarterInterest) && quarterInterest !== 0) {
-          return ttmOpInc / Math.abs(quarterInterest * 4);
-        }
-        return vm?.snapshot?.interestCoverage ?? null;
-      })();
-  const capexToRev = calcMargin(toNumber(curCf.capitalExpenditure), toNumber(curInc.revenue));
-  const grossMargin = (() => {
-    const gpTtm = toNumber(vm?.ttm?.grossProfit);
-    const revTtm = toNumber(vm?.ttm?.revenue);
-    const ttm = calcMargin(gpTtm, revTtm);
-    if (ttm != null) return ttm;
-    return calcMargin(toNumber(curInc.grossProfit), toNumber(curInc.revenue));
-  })();
-  const opMargin = (() => {
-    const opTtm = toNumber(vm?.ttm?.operatingIncome);
-    const revTtm = toNumber(vm?.ttm?.revenue);
-    const ttm = calcMargin(opTtm, revTtm);
-    if (ttm != null) return ttm;
-    return calcMargin(toNumber(curInc.operatingIncome), toNumber(curInc.revenue));
-  })();
-  const prevOpMargin = calcMargin(Number(prevInc.operatingIncome), Number(prevInc.revenue));
-  // Use percentage-points change (not % change of a %), to avoid extreme swings at low margins.
-  const marginTrend = Number.isFinite(opMargin) && Number.isFinite(prevOpMargin) ? opMargin - prevOpMargin : null;
-  const netMargin = (() => {
-    const niTtm = Number.isFinite(ttmNetIncome) ? ttmNetIncome : null;
-    const revTtm = toNumber(vm?.ttm?.revenue);
-    const ttm = calcMargin(niTtm, revTtm);
-    if (ttm != null) return ttm;
-    return calcMargin(toNumber(curInc.netIncome), toNumber(curInc.revenue));
-  })();
-  // Check for mismatched reporting periods (Income vs Balance Sheet)
-  const incomeDate = curInc.date ? new Date(curInc.date) : null;
-  const balanceDate = curBal.date ? new Date(curBal.date) : null;
-  // Use a 65-day tolerance (allows for same-quarter alignment even if dates slightly drift, but flags mixed quarters)
-  const temporalMismatch = incomeDate && balanceDate && Math.abs(incomeDate - balanceDate) > 65 * 24 * 60 * 60 * 1000;
-
-  const dataQuality = {
-    mismatchedPeriods: temporalMismatch,
-    incomeDate: curInc.date,
-    balanceDate: curBal.date,
-    defaultsUsed: [],
-    inferredValues: [],
-    materialMismatches: []
-  };
-
-  if (temporalMismatch) {
-    dataQuality.materialMismatches.push({
-      metric: "Financial Position",
-      issue: "Statement Mismatch",
-      details: `Income statement (${curInc.date}) and Balance Sheet (${curBal.date}) are from different periods.`,
-      severity: "material"
-    });
-  }
-
-  const annualDateRaw = vm?.annualSeries?.[0]?.periodEnd || vm?.annualSeries?.[0]?.date || null;
-  const annualDate = annualDateRaw ? new Date(annualDateRaw) : null;
-  const latestReportMs = Math.max(
-    incomeDate ? incomeDate.getTime() : 0,
-    balanceDate ? balanceDate.getTime() : 0,
-    annualDate ? annualDate.getTime() : 0
-  );
-  const daysSinceReport = latestReportMs ? (Date.now() - latestReportMs) / (1000 * 60 * 60 * 24) : null;
-  if (daysSinceReport && daysSinceReport > 180) {
-    dataQuality.materialMismatches.push({
-      metric: "Financials",
-      issue: "Stale Data",
-      details: `Latest income statement is ${Math.round(daysSinceReport)} days old.`,
-      severity: "material"
-    });
-  }
-
-  const netDebt = (() => {
-    const cashBal = toNumber(curBal.cashAndCashEquivalents);
-    const stiBal = toNumber(curBal.shortTermInvestments);
-    const debtBal = debtTotal;
-    if (!Number.isFinite(debtBal)) return null;
-    const cashKnown = Number.isFinite(cashBal);
-    const stiKnown = Number.isFinite(stiBal);
-    const cashTotal = (cashKnown ? cashBal : 0) + (stiKnown ? stiBal : 0);
-
-    if (!cashKnown && !stiKnown) {
-      if (debtBal === 0) {
-        dataQuality.defaultsUsed.push({ field: "netDebt", reason: "Net debt treated as zero due to no reported debt", value: 0 });
-        return 0;
-      }
-      return null;
-    }
-    return debtBal - cashTotal;
-  })();
-  const debtToEquity = toNumber(
-    Number.isFinite(debtTotal) && curBal.totalStockholdersEquity
-      ? debtTotal / curBal.totalStockholdersEquity
-      : null
-  );
-  const netDebtToEquity =
-    Number.isFinite(netDebt) && Number.isFinite(toNumber(curBal.totalStockholdersEquity))
-      ? netDebt / toNumber(curBal.totalStockholdersEquity)
-      : debtToEquity;
+// Local definitions of normalizeRuleScore, getScoreBand, and pctChange removed.
+// They are now imported from engine/index.js
 
 
-  const lastClose = vm?.priceSummary?.lastClose != null ? Number(vm.priceSummary.lastClose) : null;
-  const marketCap = vm?.snapshot?.marketCap != null ? Number(vm.snapshot.marketCap) : (lastClose != null && curBal.commonStockSharesOutstanding != null ? lastClose * curBal.commonStockSharesOutstanding : null);
-  const revenueForValuation =
-    annualMode
-      ? toNumber(curInc.revenue)
-      : Number.isFinite(ttmRevenue)
-        ? ttmRevenue
-        : annualizedRevenue;
-  const fcfForValuation =
-    annualMode
-      ? Number.isFinite(fcf) ? fcf : null
-      : Number.isFinite(ttmFcf)
-        ? ttmFcf
-        : annualizedFcf;
-  const netIncomeForValuation = annualMode
-    ? toNumber(curInc.netIncome)
-    : Number.isFinite(ttmNetIncome)
-      ? ttmNetIncome
-      : annualizedNetIncome;
 
-  return {
-    ticker: vm.ticker,
-    companyName: vm.companyName,
-    sector: vm.sector,
-    sic: vm.sic ?? vm.snapshot?.sic,
-    sicDescription: vm.sicDescription ?? vm.snapshot?.sicDescription,
-    marketCap,
-    sectorBucket: resolveSectorBucket(vm.sector),
-    issuerType: vm.issuerType ?? vm.snapshot?.issuerType ?? null,
-    quarterCount: quartersDesc.length,
-    ttm: vm.ttm ?? null,  // Pass through TTM for EPS checks in valuation rules
-    growth: {
-      // Store growth fields as percent (not ratios), to align with the rest of the model and UI thresholds.
-      revenueGrowthTTM: (() => {
-        const trendRatio = calcTrend(quartersAsc, "revenue");
-        if (trendRatio == null) return revGrowth;
-        return trendRatio * 100;
-      })(),
-      revenueCagr3y: pctFromRatio(vm?.snapshot?.revenueCAGR3Y ?? vm?.growth?.revenueCagr3y),
-      epsCagr3y: pctFromRatio(vm?.growth?.epsCagr3y),
-      perShareGrowth: null
-    },
-    momentum: {
-      marginTrend,
-      fcfTrend,
-      grossMarginPrev: null,
-      burnTrend: calcTrend(quartersAsc, 'freeCashFlow'),
-      rndTrend: calcTrend(quartersAsc, 'researchAndDevelopmentExpenses'),
-      revenueTrend: calcTrend(quartersAsc, 'revenue'),
-      sgaTrend: calcTrend(quartersAsc, 'sellingGeneralAndAdministrativeExpenses')
-    },
-    profitGrowthTTM: profitGrowth,
-    stability: { growthYearsCount: null, fcfPositiveYears: cashArr.filter((r) => calcFcf(r) > 0).length },
-    profitMargins: {
-      grossMargin,
-      operatingMargin: opMargin,
-      profitMargin: netMargin,
-      operatingLeverage,
-      fcfMargin,
-      netIncome: Number.isFinite(ttmNetIncome) ? ttmNetIncome : annualMode ? toNumber(curInc.netIncome) : annualizedNetIncome
-    },
-    revenueLatest: toNumber(curInc.revenue),
-    revenueTtm: toNumber(vm.ttm?.revenue),
-    financialPosition: {
-      currentRatio: null,
-      quickRatio: null,
-      debtToEquity,
-      netDebtToEquity,
-      debtToEbitda: null,
-      debtToFCF: null,
-      interestCoverage,
-      interestCoverageStatus: interestCoverageMeta.status ?? null,
-      interestCoveragePeriods: interestCoverageMeta.periods ?? null,
-      dsoDays,
-      cashConversionCycleDays,
-      netDebtToFcfYears:
-        Number.isFinite(vm?.snapshot?.netDebtToFcfYears)
-          ? vm.snapshot.netDebtToFcfYears
-          : (netDebt != null && Number.isFinite(fcfForValuation) && fcfForValuation > 0
-            ? netDebt / fcfForValuation
-            : fcfYears),
-      netCashToPrice: null,
-      runwayYears: computeRunwayYearsVm(vm),
-      totalDebt: Number.isFinite(debtTotal) ? debtTotal : curBal.totalDebt,
-      financialDebt: curBal.financialDebt,
-      leaseLiabilities: curBal.leaseLiabilities,
-      shortTermDebt: curBal.shortTermDebt,
-      longTermDebt: curBal.longTermDebt,
-      totalAssets: curBal.totalAssets,
-      currentAssets: curBal.currentAssets,
-      currentLiabilities: curBal.currentLiabilities,
-      cash: curBal.cashAndCashEquivalents,
-      accountsReceivable: curBal.accountsReceivable,
-      inventories: curBal.inventories,
-      accountsPayable: curBal.accountsPayable,
-      interestExpense: curBal.interestExpense,
-      debtReported: Number.isFinite(curBal.totalDebt),
-      cashReported: Number.isFinite(curBal.cashAndCashEquivalents) || Number.isFinite(curBal.cash),
-      netDebtAssumedZeroCash: !Number.isFinite(curBal.cashAndCashEquivalents) && !Number.isFinite(curBal.shortTermInvestments) && Number.isFinite(curBal.totalDebt),
-      debtIsZero: Number.isFinite(curBal.totalDebt) && curBal.totalDebt === 0
-    },
-    returns: { roe, roic },
-    cash: {
-      cashConversion:
-        fcf != null && toNumber(curInc.netIncome) ? fcf / toNumber(curInc.netIncome) : null,
-      capexToRevenue: capexToRev,
-      shareBuybacksTTM: buybacksTtm,
-      dividendsPaidTTM: dividendsTtm,
-      shareholderReturnTTM: shareholderReturnTtm,
-      buybacksPctFcf,
-      totalReturnPctFcf,
-      freeCashFlowTTM: ttmFcf
-    },
-    taxes: { effectiveTaxRateTTM },
-    shareStats: {
-      sharesOutstanding: curBal.commonStockSharesOutstanding,
-      sharesChangeYoY,
-      sharesChangeQoQ: sharesChange,
-      sharesChangeYoYRaw: shareChangeMeta.rawYoY,
-      likelySplit: !!shareChangeMeta.splitSignal,
-      likelyReverseSplit: !!shareChangeMeta.reverseSplitSignal,
-      insiderOwnership: toNumber(vm?.snapshot?.heldPercentInsiders),
-      institutionOwnership: null,
-      float: null
-    },
-    valuationRatios: {
-      peRatio:
-        (() => {
-          const eps = Number(vm?.ttm?.epsBasic);
-          if (lastClose != null && Number.isFinite(eps) && eps > 0) return lastClose / eps;
-          // Fallback: infer P/E from market cap and net income if EPS is missing/incomplete.
-          if (marketCap != null && Number.isFinite(netIncomeForValuation) && netIncomeForValuation > 0) {
-            return marketCap / netIncomeForValuation;
-          }
-          return null;
-        })(),
-      forwardPE: null,
-      psRatio:
-        marketCap != null && Number.isFinite(revenueForValuation) && revenueForValuation > 0
-          ? marketCap / revenueForValuation
-          : null,
-      forwardPS: null,
-      pbRatio:
-        lastClose != null &&
-          curBal.totalStockholdersEquity &&
-          curBal.commonStockSharesOutstanding
-          ? lastClose /
-          (curBal.totalStockholdersEquity / curBal.commonStockSharesOutstanding)
-          : null,
-      pfcfRatio:
-        marketCap != null && Number.isFinite(fcfForValuation) && fcfForValuation > 0
-          ? marketCap / fcfForValuation
-          : null,
-      pegRatio: null,
-      evToEbitda: null,
-      fcfYield:
-        marketCap != null && Number.isFinite(fcfForValuation)
-          ? fcfForValuation / marketCap
-          : null
-    },
-    expenses: {
-      rdToRevenue: calcMargin(
-        Number.isFinite(rdSpendTtm) ? rdSpendTtm : toNumber(curInc.researchAndDevelopmentExpenses),
-        Number.isFinite(ttmRevenue) ? ttmRevenue : toNumber(curInc.revenue)
-      ),
-      rdSpend: Number.isFinite(rdSpendTtm) ? rdSpendTtm : toNumber(curInc.researchAndDevelopmentExpenses),
-      rdSpendTTM: rdSpendTtm,
-      rdToRevenueTTM: rdToRevenueTtm,
-      revenue: Number.isFinite(ttmRevenue) ? ttmRevenue : toNumber(curInc.revenue)
-    },
-    capitalReturns: { shareholderYield: null, totalYield: null },
-    dividends: { payoutToFcf: null, growthYears: null },
-    priceStats: {}, // decouple rating from price-derived momentum while price worker is beta
-    scores: { altmanZ: null, piotroskiF: null },
-    ownerEarnings: null,
-    ownerIncomeBase: Number.isFinite(ttmNetIncome) ? ttmNetIncome : annualMode ? toNumber(curInc.netIncome) : annualizedNetIncome,
-    lastUpdated: curInc.date || "n/a",
-    dataQuality,
-    // Arrays for time-series analysis in rules
-    balance: balance,
-    income: income,
-    cashFlows: cashArr
-  };
-}
+
+
+
+
+
+
+
+
+
 
 function detectClinicalSetbackSignal(filingSignals = [], sectorBucket) {
   const bucket = resolveSectorBucket(sectorBucket);
@@ -1361,7 +652,13 @@ function computeRuleRating({
       normalizationApplied
     });
 
-    const incomeBasis = annualMode ? "Annual" : (ttm?.asOf ? "TTM" : "Annualized");
+    const incomeBasis = (() => {
+      if (annualMode) return "Annual";
+      if (ttm?.basis === "derived") return "Derived TTM";
+      if (ttm?.basis === "ttm") return "TTM";
+      if (ttm?.basis === "annual") return "Annual";
+      return "Quarterly";
+    })();
     const incomePeriodEnd = annualMode
       ? (latestSeries?.periodEnd ?? null)
       : (ttm?.asOf ?? latestSeries?.periodEnd ?? null);
@@ -1400,22 +697,22 @@ function computeRuleRating({
         );
       case "Capital Return":
         return simple(
-          "TTM",
+          incomeBasis === "Quarterly" ? "Quarterly" : incomeBasis,
           [
-            { field: "treasuryStockRepurchased", basis: "TTM", periodEnd: incomePeriodEnd },
-            { field: "dividendsPaid", basis: "TTM", periodEnd: incomePeriodEnd },
-            { field: "freeCashFlow", basis: "TTM", periodEnd: incomePeriodEnd }
+            { field: "treasuryStockRepurchased", basis: incomeBasis, periodEnd: incomePeriodEnd },
+            { field: "dividendsPaid", basis: incomeBasis, periodEnd: incomePeriodEnd },
+            { field: "freeCashFlow", basis: incomeBasis, periodEnd: incomePeriodEnd }
           ],
-          "Capital return = buybacks + dividends (TTM); scored as a % of TTM FCF."
+          "Capital return = buybacks + dividends; scored as a % of FCF."
         );
       case "Effective Tax Rate":
         return simple(
-          "TTM",
+          incomeBasis === "Quarterly" ? "Quarterly" : incomeBasis,
           [
-            { field: "incomeTaxExpenseBenefit", basis: "TTM", periodEnd: incomePeriodEnd },
-            { field: "incomeBeforeIncomeTaxes", basis: "TTM", periodEnd: incomePeriodEnd }
+            { field: "incomeTaxExpenseBenefit", basis: incomeBasis, periodEnd: incomePeriodEnd },
+            { field: "incomeBeforeIncomeTaxes", basis: incomeBasis, periodEnd: incomePeriodEnd }
           ],
-          "ETR = income tax expense / pretax income (TTM); clamped to a reasonable range."
+          "ETR = income tax expense / pretax income; clamped to a reasonable range."
         );
       case "Working Capital":
         return simple(
@@ -1431,12 +728,12 @@ function computeRuleRating({
         );
       case "FCF margin":
         return simple(
-          incomeBasis === "Annual" ? "Annual" : "TTM",
+          incomeBasis === "Quarterly" ? "Quarterly" : incomeBasis,
           [
             { field: "freeCashFlow", basis: incomeBasis, periodEnd: incomePeriodEnd },
             { field: "revenue", basis: incomeBasis, periodEnd: incomePeriodEnd }
           ],
-          incomeBasis === "Annualized" ? "FCF margin computed as (annualized FCF / annualized revenue)." : ratioNorm
+          ratioNorm
         );
       case "Cash Runway (years)":
         return simple(
@@ -1460,14 +757,14 @@ function computeRuleRating({
             { field: "netDebt", basis: seriesBasisLabel, periodEnd: latestSeries?.periodEnd ?? null },
             { field: "freeCashFlow", basis: incomeBasis, periodEnd: incomePeriodEnd }
           ],
-          incomeBasis === "Annualized" ? "FCF denominator annualized as (latest quarterly FCF * 4)." : ratioNorm
+          ratioNorm
         );
       case "Interest coverage":
         return simple(
-          incomeBasis === "Annual" ? "Annual" : "TTM",
+          incomeBasis === "Quarterly" ? "Quarterly" : incomeBasis,
           [
-            { field: "operatingIncome", basis: incomeBasis === "Annual" ? "Annual" : "TTM", periodEnd: incomePeriodEnd },
-            { field: "interestExpense", basis: incomeBasis === "Annual" ? "Annual" : "TTM", periodEnd: incomePeriodEnd }
+            { field: "operatingIncome", basis: incomeBasis, periodEnd: incomePeriodEnd },
+            { field: "interestExpense", basis: incomeBasis, periodEnd: incomePeriodEnd }
           ],
           incomeBasis === "Annual" ? ratioNorm : `Computed from sum of up to the last ${ttmQuarters.length || "few"} quarters.`
         );
@@ -1482,9 +779,7 @@ function computeRuleRating({
             { field: "netIncome", basis: incomeBasis, periodEnd: incomePeriodEnd },
             { field: "balanceSheet", basis: seriesBasisLabel, periodEnd: latestSeries?.periodEnd ?? null }
           ],
-          incomeBasis === "Annualized"
-            ? "Uses annualized net income (latest quarter * 4) against end-of-period balance sheet."
-            : ratioNorm
+          ratioNorm
         );
       case "Net income trend":
         return simple(
@@ -1525,6 +820,20 @@ function computeRuleRating({
           null
         );
     }
+  };
+
+  const formatBasisLabel = (ruleName, basisMeta) => {
+    const timeBasis = basisMeta?.timeBasis ?? "Mixed";
+    const rule = String(ruleName || "");
+    if (/cagr|3y/i.test(rule)) return "CAGR";
+    if (timeBasis === "Filings") return "Filings";
+    if (timeBasis === "Strategic") return "Model";
+    if (timeBasis === "Derived TTM") return "Derived TTM";
+    if (timeBasis === "TTM") return "TTM";
+    if (timeBasis === "Annual") return "Annual";
+    if (timeBasis === "Quarterly") return "Quarterly";
+    if (timeBasis === "Mixed") return "Mixed";
+    return timeBasis;
   };
 
   const cleanDisclosureText = (text) => {
@@ -1867,6 +1176,7 @@ function computeRuleRating({
     if (skipped && !notApplicable) missingCount += 1;
 
     const basisMeta = basisMetaForRule(rule.name);
+    const basisLabel = formatBasisLabel(rule.name, basisMeta);
     reasons.push({
       name: rule.name,
       score: appliedScore,
@@ -1876,7 +1186,8 @@ function computeRuleRating({
       weight: rule.weight,
       timeBasis: basisMeta?.timeBasis ?? null,
       sourcePeriods: basisMeta?.components ?? [],
-      normalizationApplied: cleanDisclosureText(basisMeta?.normalizationApplied)
+      normalizationApplied: cleanDisclosureText(basisMeta?.normalizationApplied),
+      basisLabel
     });
   });
 
@@ -2426,7 +1737,7 @@ function buildSnapshot({ ttm, quarterlySeries, annualSeries, annualMode, keyMetr
       ? dsoDays + (Number.isFinite(dioDays) ? dioDays : 0) - dpoDays
       : null;
 
-  const effectiveTaxRateTTM = inferTaxRateFromPeriods({ ttm, latestAnnual: (Array.isArray(annualSeries) ? annualSeries[0] : null) });
+  const effectiveTaxRateTTM = inferTaxRate({ ttm, latestAnnual: (Array.isArray(annualSeries) ? annualSeries[0] : null) });
 
   return {
     netMarginTTM,
@@ -2864,7 +2175,7 @@ export async function buildTickerViewModel(
     if (patchHit?.mc && Number.isFinite(Number(patchHit.mc))) {
       externalMarketCap = Number(patchHit.mc);
     }
-    const patchLooksFresh = !isPriceStale(patchDate, PRICE_PATCH_MAX_AGE_DAYS);
+    const patchLooksFresh = !isDateStale(patchDate, PRICE_PATCH_MAX_AGE_DAYS);
     if (Number.isFinite(patchPrice) && patchPrice > 0 && patchLooksFresh) {
       priceSummary.lastClose = patchPrice;
       priceSummary.lastCloseDate = patchDate;
@@ -2881,7 +2192,7 @@ export async function buildTickerViewModel(
       !Number.isFinite(priceSummary.lastClose) ||
       priceSummary.lastClose <= 0 ||
       !priceHistory.length ||
-      isPriceStale(priceSummary.lastCloseDate, 5);
+      isDateStale(priceSummary.lastCloseDate, 5);
     if (looksImplausible) {
       const localPrices = loadLocalPriceHistory(ticker);
       if (localPrices && localPrices.length) {
@@ -2890,10 +2201,10 @@ export async function buildTickerViewModel(
         priceHistory = fallbackPieces.priceHistory;
         logPriceOnce("local-fallback", ticker, `[tickerAssembler] using local price fallback for ${ticker}`);
         // If we have a usable local close, don't show "pending" in the UI.
-        if (Number.isFinite(priceSummary?.lastClose) && !isPriceStale(priceSummary?.lastCloseDate, 7)) {
+        if (Number.isFinite(priceSummary?.lastClose) && !isDateStale(priceSummary?.lastCloseDate, 7)) {
           pricePending = false;
         }
-      } else if (isPriceStale(priceSummary.lastCloseDate, 5)) {
+      } else if (isDateStale(priceSummary.lastCloseDate, 5)) {
         // Stale and no fallback. If we have a stale patch price, keep it as best-effort.
         pricePending = true;
         if (!Number.isFinite(priceSummary?.lastClose) || priceSummary.lastClose <= 0) {
@@ -3111,27 +2422,11 @@ export async function buildTickerViewModel(
       .filter((p) => (p.periodType || "").toLowerCase() === "year")
       .sort((a, b) => Date.parse(b.periodEnd || 0) - Date.parse(a.periodEnd || 0));
     const latestAnnual = annualSeries[0] || null;
-    const ttmFromQuarters = buildTtmFromQuarters(statementQuarterlySeries);
-    const ttm =
-      ttmFromQuarters ||
-      (latestAnnual
-        ? {
-          asOf: latestAnnual.periodEnd || null,
-          revenue: latestAnnual.revenue ?? null,
-          netIncome: latestAnnual.netIncome ?? null,
-          epsBasic: latestAnnual.epsBasic ?? (
-            // Infer EPS for foreign issuers if explicit field missing but Net Income exists
-            (latestAnnual.netIncome != null && latestAnnual.sharesOutstanding > 0)
-              ? latestAnnual.netIncome / latestAnnual.sharesOutstanding
-              : null
-          ),
-          freeCashFlow:
-            latestAnnual.freeCashFlow ??
-            (Number.isFinite(latestAnnual.operatingCashFlow) && Number.isFinite(latestAnnual.capex)
-              ? latestAnnual.operatingCashFlow - Math.abs(latestAnnual.capex ?? 0)
-              : null)
-        }
-        : null);
+    const ttmMeta = buildTtmWithDerived({
+      quartersAsc: sortByPeriodEndAsc(statementQuarterlySeries),
+      latestAnnual
+    });
+    const ttm = ttmMeta.ttm;
     const growth = computeGrowth(fundamentals);
     const baseSic = fundamentals.find((p) => Number.isFinite(p.sic))?.sic ?? null;
     const baseSector = fundamentals.find((p) => p.sector)?.sector || null;
@@ -3168,14 +2463,8 @@ export async function buildTickerViewModel(
     });
 
     const currency = fundamentals[0]?.currency || null;
-    const shortInterest = null;
-    /* 
-    // Disabled per user request
-    await fetchShortInterest(ticker).catch((err) => {
-      console.warn("[tickerAssembler] short interest fetch failed", ticker, err?.message || err);
-      return null;
-    }); 
-    */
+    // shortInterest logic removed
+
     // Load existing data first to support fallback
     let existing = {};
     try {
@@ -3263,8 +2552,10 @@ export async function buildTickerViewModel(
       keyMetrics,
       growth,
       latestBalance,
-      shortInterest
+      shortInterest: null
     });
+    // Propagate NASDAQ-provided market cap to snapshot so stockBuilder uses it for valuation ratios
+    snapshot.marketCap = keyMetrics.marketCap;
     snapshot.currencyMismatch = currencyMismatch;
     snapshot.reportingCurrency = reportingCurrency || null;
     snapshot.priceCurrency = priceCurrency || null;
@@ -3286,6 +2577,46 @@ export async function buildTickerViewModel(
       projections,
       issuerType
     });
+
+    const priorTtmMeta = computePriorTtmMeta({
+      quartersAsc: statementQuarterlySeries,
+      annualSeries
+    });
+    let pastRating = null;
+    if (priorTtmMeta?.ttm && priorTtmMeta?.periodEnd) {
+      const priorQuarterly = statementQuarterlySeries.filter(
+        (q) => q?.periodEnd && Date.parse(q.periodEnd) <= Date.parse(priorTtmMeta.periodEnd)
+      );
+      const priorAnnual = annualSeries.filter(
+        (p) => p?.periodEnd && Date.parse(p.periodEnd) <= Date.parse(priorTtmMeta.periodEnd)
+      );
+      const priceAt = buildPriceSummaryAt(priceHistory, priorTtmMeta.periodEnd);
+      const ratingPast = computeRuleRating({
+        ticker: ticker.toUpperCase(),
+        sector,
+        quarterlySeries: priorQuarterly.length ? priorQuarterly : priorAnnual,
+        annualSeries: priorAnnual,
+        annualMode,
+        snapshot,
+        ttm: priorTtmMeta.ttm,
+        priceSummary: priceAt.priceSummary,
+        priceHistory: priceAt.priceHistory,
+        growth,
+        filingSignals: filingSignalsFinal,
+        projections,
+        issuerType
+      });
+      if (ratingPast) {
+        pastRating = {
+          score: ratingPast.normalizedScore ?? null,
+          tier: ratingPast.tierLabel ?? null,
+          rawScore: ratingPast.rawScore ?? null,
+          periodStart: priorTtmMeta.periodStart ?? null,
+          periodEnd: priorTtmMeta.periodEnd ?? null,
+          basis: priorTtmMeta.basis ?? null
+        };
+      }
+    }
     // Filing intelligence handled inside rating now
     let ratingNotes = Array.isArray(rating.missingNotes) ? rating.missingNotes.slice() : [];
     if (snapshot.shareChangeLikelySplit) {
@@ -3315,7 +2646,7 @@ export async function buildTickerViewModel(
       ratingNotes.push(`Filing intelligence is stale (${Math.round(filingSignalsAgeDays)} days); refresh pending.`);
     }
     rating.missingNotes = ratingNotes;
-    const runwayYearsVm = computeRunwayYearsVm({ quarterlySeries: financialSeriesForRules, snapshot, ttm, sector });
+    const runwayYearsVm = computeRunwayYears({ quarterlySeries: financialSeriesForRules, snapshot, ttm, sector });
     const pennyStockCheck = {
       priceUnder5: (Number.isFinite(priceSummary?.lastClose) && priceSummary.lastClose < 5),
       mcapUnder200M: (Number.isFinite(keyMetrics?.marketCap) && keyMetrics.marketCap < 200_000_000),
@@ -3819,6 +3150,10 @@ export async function buildTickerViewModel(
       ratingUpdatedAt: rating.updatedAt,
       ratingReasons: rating.reasons,
       ratingCompleteness: rating.completeness,
+      pastRating,
+      pastRatingDelta: (pastRating?.score != null && rating.normalizedScore != null)
+        ? Number(rating.normalizedScore - pastRating.score)
+        : null,
       ratingBasis: annualMode ? "annual" : "quarterly",
       annualMode,
       ratingNotes,
@@ -4129,7 +3464,7 @@ function readFundamentalsCache(ticker) {
   }
 }
 
-export async function buildScreenerRowForTicker(ticker) {
+export async function buildScreenerRowForTicker(ticker, { allowFilingScan = false } = {}) {
   try {
     const key = String(ticker || "").toUpperCase().trim();
     if (!key) return null;
@@ -4211,26 +3546,11 @@ export async function buildScreenerRowForTicker(ticker) {
       .filter((p) => (p.periodType || "").toLowerCase() === "year")
       .sort((a, b) => Date.parse(b.periodEnd || 0) - Date.parse(a.periodEnd || 0));
     const latestAnnual = annualSeries[0] || null;
-    const ttmFromQuarters = buildTtmFromQuarters(statementQuarterlySeries);
-    const ttm =
-      ttmFromQuarters ||
-      (latestAnnual
-        ? {
-          asOf: latestAnnual.periodEnd || null,
-          revenue: latestAnnual.revenue ?? null,
-          netIncome: latestAnnual.netIncome ?? null,
-          epsBasic: latestAnnual.epsBasic ?? (
-            (latestAnnual.netIncome != null && latestAnnual.sharesOutstanding > 0)
-              ? latestAnnual.netIncome / latestAnnual.sharesOutstanding
-              : null
-          ),
-          freeCashFlow:
-            latestAnnual.freeCashFlow ??
-            (Number.isFinite(latestAnnual.operatingCashFlow) && Number.isFinite(latestAnnual.capex)
-              ? latestAnnual.operatingCashFlow - Math.abs(latestAnnual.capex ?? 0)
-              : null)
-        }
-        : null);
+    const ttmMeta = buildTtmWithDerived({
+      quartersAsc: sortByPeriodEndAsc(statementQuarterlySeries),
+      latestAnnual
+    });
+    const ttm = ttmMeta.ttm;
 
     const growth = computeGrowth(fundamentals);
     const baseSic = fundamentals.find((p) => Number.isFinite(p.sic))?.sic ?? null;
@@ -4260,14 +3580,28 @@ export async function buildScreenerRowForTicker(ticker) {
       growth
     });
 
-    // Foreign issuer handling (from cached filing meta only; never fetch filings here).
+    // Filing intelligence: optional scan with fallback to cache.
+    let filingSignals = null;
+    if (allowFilingScan) {
+      try {
+        const maxFilings = Number(process.env.FILING_SIGNALS_MAX_FILINGS_DEEP) || 10;
+        filingSignals = await scanFilingForSignals(key, { deep: true, maxFilings });
+      } catch (err) {
+        console.warn("[tickerAssembler] filing signal scan failed", key, err?.message || err);
+      }
+    }
+
+    const resolvedFilingSignals = filingSignals?.signals || cachedSignals || [];
+    const resolvedFilingMeta = filingSignals?.meta || cachedMeta || null;
+
+    // Foreign issuer handling (from filing meta when available).
     const defaultFilingProfile = { annual: "10-K", interim: "10-Q", current: "8-K" };
     const filingProfile =
-      cachedMeta?.filingProfile ||
-      (cachedMeta?.latestForm === "20-F" ? { annual: "20-F", interim: "6-K", current: "6-K" } : null) ||
+      resolvedFilingMeta?.filingProfile ||
+      (resolvedFilingMeta?.latestForm === "20-F" ? { annual: "20-F", interim: "6-K", current: "6-K" } : null) ||
       defaultFilingProfile;
     const issuerType =
-      cachedMeta?.issuerType ||
+      resolvedFilingMeta?.issuerType ||
       (filingProfile?.annual === "20-F" || filingProfile?.interim === "6-K" ? "foreign" : "domestic");
     const annualMode = issuerType === "foreign" && quarterlySeries.length < 2 && annualSeries.length > 0;
 
@@ -4294,7 +3628,7 @@ export async function buildScreenerRowForTicker(ticker) {
     });
     const projections = buildProjections({ snapshot, growth, quarterlySeries, annualSeries, annualMode, keyMetrics });
 
-    const filteredSignals = (cachedSignals || []).filter(
+    const filteredSignals = (resolvedFilingSignals || []).filter(
       (s) => !(issuerType === "foreign" && s?.id === "going_concern")
     );
     const clinicalSetback = detectClinicalSetbackSignal(filteredSignals, sectorBucket);

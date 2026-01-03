@@ -123,6 +123,12 @@ function syncBundledPrices() {
 }
 
 export async function startDailyPricesScheduler() {
+  // Allow disabling the scheduler entirely (e.g., when NASDAQ blocks Railway IPs)
+  if (process.env.PRICES_SCHEDULER_DISABLED === "1") {
+    console.info("[dailyPricesScheduler] scheduler disabled via PRICES_SCHEDULER_DISABLED=1, skipping");
+    return;
+  }
+
   const staleAfterMs = Number(process.env.PRICES_PATCH_MAX_AGE_MS) || 48 * 60 * 60 * 1000;
 
   // Attempt to sync bundled prices (e.g. from git push) before checking status

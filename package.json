@@ -6,7 +6,7 @@
     "node": ">=18.18.0"
   },
   "scripts": {
-    "start": "node server.js",
+    "start": "node scripts/start.js",
     "dump:meta": "node scripts/dumpMetaFacts.js",
     "edgar:ingest": "node scripts/edgarIngest.js",
     "edgar:refresh-directory": "node scripts/refreshDirectory.js",
@@ -16,8 +16,9 @@
     "worker:daily-last-trade": "node worker/jobs/daily-last-trade.js",
     "ingest:companyfacts:test": "node scripts/ingest_companyfacts_dir.js --limit 20 --concurrency 1",
     "build:screener:static:test": "node scripts/build_screener_static_local.js --limit 20 --keepDb",
-    "test:prices": "node server/prices/priceFetcher.test.js && node server/prices/priceStore.test.js",
-    "test:engine": "node engine/tests/utils.test.js",
+    "test:prices": "node server/prices/priceStore.test.js",
+    "test:engine": "node engine/tests/utils.test.js && node engine/tests/rules.test.js",
+    "engine:demo": "node engine/cli.js",
     "test": "npm run test:engine && npm run test:prices"
   },
   "dependencies": {

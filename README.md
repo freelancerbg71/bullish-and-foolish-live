@@ -17,14 +17,29 @@ The goal: **signal over noise** — a transparent, rules-based view of financial
 
 The fundamentals engine lives in `engine/`:
 
-- `engine/constants.js` - All constants and thresholds (market cap tiers, scoring ranges, etc.)
+- `engine/index.js` - Main entry point exporting all public APIs
+- `engine/rules.js` - 28+ scoring rules with sector-aware thresholds
+- `engine/calculations.js` - Financial calculations (FCF, runway, coverage ratios)
+- `engine/stockBuilder.js` - Builds normalized stock object for rule evaluation
+- `engine/stockAdjustments.js` - Split detection, share change guards
+- `engine/constants.js` - All constants and thresholds
 - `engine/utils.js` - Pure utility functions (math, formatting, sector classification)
 - `engine/ruleExplainers.js` - Human-readable explanations for each scoring rule
-- `engine/index.js` - Main entry point exporting all public APIs
+
+### Contextual Intelligence
+
+Financial analysis isn't black and white. The engine applies **contextual guards** that recognize when standard rules don't apply:
+
+- **Stock splits** detected via EPS inverse correlation (not penalized as dilution)
+- **Fintech companies** flagged separately from traditional banks
+- **Pre-revenue biotechs** evaluated on runway and pipeline, not revenue growth
+- **Hypergrowth burn** distinguished from operational losses
+
+See `engine/METHODOLOGY.md` for the full philosophy and examples.
 
 ### Scoring Rules
 
-- Rules are defined in `scripts/shared-rules.js` (imports core utilities from `engine/`)
+- Rules are defined in `engine/rules.js` (imports core utilities from `engine/`)
 - Server-side assembly and scoring live in `server/ticker/tickerAssembler.js`
 - The server entrypoint is `server.js`
 

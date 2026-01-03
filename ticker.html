@@ -220,7 +220,7 @@
         <div id="loading" class="section" style="text-align: center; padding-top: 10vh;">
             <div class="label" style="font-size: 1.1rem; letter-spacing: 0.05em; color: var(--text-primary);"
                 id="loadingStatus">
-                Assembling Financial Intelligence...
+                Assembling Financial Data...
             </div>
             <div id="scanningNotice"
                 style="font-size: 0.85rem; color: var(--text-muted); margin-top: 12px; display: none;">
@@ -248,11 +248,12 @@
                         <div class="hero-stat-item">
                             <div class="hero-stat-label">Quality Score</div>
                             <div id="scoreDisplay" class="hero-stat-value">--</div>
+                            <div id="pastRatingMeta" class="text-muted" style="margin-top: 8px; display: none;"></div>
                             <div style="font-size: 0.65rem; margin-top: 8px; font-weight: 500; line-height: 1.3;">
                                 Find this useful? <br>
                                 <a href="javascript:void(0)" onclick="showSupportModal()"
                                     style="color: var(--accent); text-decoration: none; font-weight: 700;">Support the
-                                    project →</a>
+                                    project -></a>
                             </div>
                         </div>
                         <div class="hero-stat-item">
@@ -282,14 +283,14 @@
                             style="font-size: 0.9rem; line-height: 1.5; margin: var(--space-sm) 0 0 0; color: var(--text-muted);">
                         </p>
                         <div style="font-size: 0.75rem; color: var(--accent); margin-top: var(--space-sm);">Click to
-                            view Filing Intelligence →</div>
+                            view Filing Signals -></div>
                     </div>
 
                     <!-- View on Screener Link -->
                     <div id="screenerLinkContainer" style="margin-top: var(--space-md); display: none;">
                         <a id="screenerLink" href="/screener.html"
                             style="display: inline-flex; align-items: center; gap: 8px; color: var(--accent); text-decoration: none; font-size: 0.85rem; font-weight: 500;">
-                            <span>View peers on Screener →</span>
+                            <span>View peers on Screener -></span>
                         </a>
                     </div>
 
@@ -317,7 +318,7 @@
         <!-- Signals -->
         <section id="filingIntelligenceSection" class="section"
             style="margin-bottom: var(--space-2xl); border-bottom: 1px solid var(--border);">
-            <div class="label" style="margin-bottom: var(--space-lg);">Filing Intelligence & Signals</div>
+            <div class="label" style="margin-bottom: var(--space-lg);">Filing Text Signals</div>
             <div id="filingSignalsContainer" class="grid grid-2">
                 <!-- Skeleton Layover -->
                 <div class="card skeleton skeleton-card"></div>
@@ -520,6 +521,39 @@
                 document.getElementById('scoreDisplay').textContent = score ?? '--';
                 const scoreColor = score >= 70 ? 'var(--accent)' : (score < 40 ? 'var(--danger)' : 'var(--warning)');
                 document.getElementById('scoreDisplay').style.color = scoreColor;
+                const pastMeta = document.getElementById('pastRatingMeta');
+                const past = data.pastRating || null;
+                const delta = Number(data.pastRatingDelta);
+                const isPos = delta > 0;
+                const isNeg = delta < 0;
+                const deltaClass = isPos ? 'positive' : (isNeg ? 'negative' : 'neutral');
+                const deltaIcon = isPos ? '▲' : (isNeg ? '▼' : '');
+                const deltaValue = Number.isFinite(delta) ? `${delta > 0 ? '+' : ''}${delta}` : '--';
+
+                if (past && Number.isFinite(past.score) && past.periodStart && past.periodEnd) {
+                    pastMeta.innerHTML = `
+                        <div class="score-trend-container">
+                            <div class="momentum-label">Quality Momentum</div>
+                            <div class="momentum-pill">
+                                <div class="momentum-score-comparison">
+                                    <span style="opacity: 0.7;">${past.score}</span>
+                                    <span style="opacity: 0.3;">→</span>
+                                    <span class="current-score">${score ?? '--'}</span>
+                                </div>
+                                <div class="delta-badge ${deltaClass}">
+                                    <span style="font-size: 0.6rem;">${deltaIcon}</span>
+                                    <span>${deltaValue}</span>
+                                </div>
+                            </div>
+                            <div class="momentum-period">
+                                Prior: ${past.periodStart} → ${past.periodEnd}
+                            </div>
+                        </div>
+                    `;
+                    pastMeta.style.display = 'block';
+                } else {
+                    pastMeta.style.display = 'none';
+                }
 
                 // Sync header score
                 const headerScore = document.getElementById('headerScore');
@@ -533,15 +567,15 @@
                 else iconEl.src = '/assets/images/foolish.webp';
 
                 const tierMap = {
-                    'elite': 'Elite Compounder',
-                    'bullish': 'High-Conviction Winner',
-                    'solid': 'Reliable Performer',
-                    'mixed': 'Balanced',
-                    'spec': 'High-Risk Upside Play',
-                    'danger': 'Likely Value Trap',
+                    'elite': 'Elite Fundamentals',
+                    'bullish': 'Strong Fundamentals',
+                    'solid': 'Solid / Reliable',
+                    'mixed': 'Mixed Data',
+                    'spec': 'Speculative / Volatile',
+                    'danger': 'Distressed / Caution',
                     'incomplete': 'Data Incomplete',
-                    'neutral': 'Balanced',
-                    'bearish': 'Likely Value Trap'
+                    'neutral': 'Mixed Data',
+                    'bearish': 'Distressed / Caution'
                 };
                 const rawTier = (data.ratingTierLabel || 'N/A').toLowerCase();
                 const baseTierLabel = tierMap[rawTier] || data.ratingTierLabel || 'N/A';
@@ -592,7 +626,9 @@
                 document.getElementById('priceDisplay').innerHTML = `
                     <div class="price-stat-value">$${formatNum(price, 2)}</div>
                     <div style="font-size: 0.8rem; line-height: 1.4; color: var(--text-muted);">
-                        Price last updated: ${data.priceSummary?.lastCloseDate ? data.priceSummary.lastCloseDate.split('T')[0] : '--'} • official Daily Close<br>
+                        Price last updated:<br>
+                        ${data.priceSummary?.lastCloseDate ? data.priceSummary.lastCloseDate.split('T')[0] : '--'} •<br>
+                        official Daily Close<br>
                         Bullish And Foolish uses official EOD data from Nasdaq.
                     </div>
                 `;
@@ -697,8 +733,6 @@
 
                     const explainer = ruleExplainers[r.name] ? (r.score >= 0 ? ruleExplainers[r.name].pos : ruleExplainers[r.name].neg) : '';
 
-                    const basis = data.ratingBasis || 'Mixed';
-                    let displayBasis = basis;
                     let displayName = r.name;
 
                     // Restore old naming convention (Strip YoY, TTM)
@@ -713,13 +747,18 @@
                         ? (r.score >= 0 ? ruleExplainers[explainerKey].pos : ruleExplainers[explainerKey].neg)
                         : (ruleExplainers[displayName] ? (r.score >= 0 ? ruleExplainers[displayName].pos : ruleExplainers[displayName].neg) : '');
 
-                    if (r.name.toLowerCase().includes('pe ratio') || r.name.toLowerCase().includes('p/e') || r.name.toLowerCase().includes('price /')) {
-                        displayBasis = 'Market';
-                    } else if (r.name.toLowerCase().includes('trend') || r.name.toLowerCase().includes('cagr')) {
-                        displayBasis = 'Mixed';
-                    } else if (r.name.toLowerCase() === 'revenue growth yoy') {
-                        displayBasis = 'Quarterly';
-                    }
+                    const basisLabel = r.basisLabel || r.timeBasis || data.ratingBasis || 'Mixed';
+                    const periodEnds = (r.sourcePeriods || [])
+                        .map(p => p && p.periodEnd ? String(p.periodEnd) : '')
+                        .filter(Boolean)
+                        .sort();
+                    const periodLabel = (() => {
+                        if (!periodEnds.length) return '';
+                        const start = periodEnds[0];
+                        const end = periodEnds[periodEnds.length - 1];
+                        if (start === end) return `As of ${end}`;
+                        return `${start} -> ${end}`;
+                    })();
 
                     return `
                         <div class="points-card ${typeClass}">
@@ -730,7 +769,8 @@
                             <p class="points-desc">${(r.message || '').replace(/\n/g, '<br>').replace(/(-?\d+(\.\d+)?%?|\$\d+(\.\d+)?[BMT]?)/g, '<strong>$1</strong>')}</p>
                             <div class="points-footer">
                                 ${explanationText ? `<p class="points-explainer">${explanationText}</p>` : ''}
-                                <div class="basis-pointer">Basis: ${displayBasis}</div>
+                                <div class="basis-pointer">Basis: ${basisLabel}</div>
+                                ${periodLabel ? `<div class="period-pointer">Period: ${periodLabel}</div>` : ''}
                             </div>
                             ${hasStaleData ? `<div class="dq-badge">Stale Data (&gt;180d)</div>` : ''}
                             <div class="indicator-track">
@@ -949,7 +989,13 @@
                     Past performance is not indicative of future results.
                     We make no representation or warranty as to the accuracy or completeness of the information.
                     Always perform your own due diligence before making investment decisions.</p>
-                <p style="margin-top: var(--space-md);">© 2025 Bullish and Foolish. All rights reserved.</p>
+                <p style="margin-top: var(--space-md);">
+                    <strong>Open Source:</strong> This software is licensed under
+                    <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">AGPL-3.0</a>.
+                    <a href="https://github.com/freelancerbg71/bullish-and-foolish-live" target="_blank"
+                        rel="noopener">View Source Code</a>.
+                </p>
+                <p style="margin-top: var(--space-sm);">© 2025 Bullish and Foolish. All rights reserved.</p>
             </div>
         </div>
     </footer>

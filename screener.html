@@ -7,21 +7,21 @@
     <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
     <title>Market Screener | Bullish and Foolish</title>
     <meta name="description"
-        content="Screen US stocks by quality score, sector, market cap, and key financial metrics. Filter for elite compounders, undervalued quality, and growth opportunities.">
+        content="Screen US stocks by quality score, sector, market cap, and key financial metrics. Filter for elite fundamentals, undervalued quality, and growth opportunities.">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://bullishandfoolish.com/screener.html">
     <meta property="og:title" content="Market Screener | Bullish and Foolish">
     <meta property="og:description"
-        content="Screen US stocks by quality score, sector, and market cap. Find elite compounders and undervalued opportunities.">
+        content="Screen US stocks by quality score, sector, and market cap. Find elite fundamentals and undervalued opportunities.">
     <meta property="og:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Market Screener | Bullish and Foolish">
     <meta name="twitter:description"
-        content="Screen US stocks by quality score, sector, and market cap. Find elite compounders and undervalued opportunities.">
+        content="Screen US stocks by quality score, sector, and market cap. Find elite fundamentals and undervalued opportunities.">
     <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
 
     <link rel="stylesheet" href="/style.css?v=20251224">
@@ -161,9 +161,9 @@
                     <option value="all" selected>All</option>
                     <option value="0-30">Distressed (0-30)</option>
                     <option value="31-45">Speculative (31-45)</option>
-                    <option value="46-60">Average (46-60)</option>
+                    <option value="46-60">Mixed (46-60)</option>
                     <option value="61-75">Solid (61-75)</option>
-                    <option value="76-90">Bullish (76-90)</option>
+                    <option value="76-90">Strong (76-90)</option>
                     <option value="91-100">Elite (91-100)</option>
                 </select>
             </div>
@@ -195,7 +195,7 @@
 
     <main class="container" style="padding-bottom: var(--space-2xl);">
         <div id="loading" class="section" style="text-align: center;">
-            <div class="label">Querying Market Intelligence...</div>
+            <div class="label">Querying Market Data...</div>
         </div>
 
         <div style="margin-bottom: var(--space-md); font-size: 0.85rem; line-height: 1.4; display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); flex-wrap: wrap;"
@@ -268,7 +268,13 @@
                     Past performance is not indicative of future results.
                     We make no representation or warranty as to the accuracy or completeness of the information.
                     Always perform your own due diligence before making investment decisions.</p>
-                <p style="margin-top: var(--space-md);">© 2025 Bullish and Foolish. All rights reserved.</p>
+                <p style="margin-top: var(--space-md);">
+                    <strong>Open Source:</strong> This software is licensed under
+                    <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">AGPL-3.0</a>.
+                    <a href="https://github.com/freelancerbg71/bullish-and-foolish-live" target="_blank"
+                        rel="noopener">View Source Code</a>.
+                </p>
+                <p style="margin-top: var(--space-sm);">© 2025 Bullish and Foolish. All rights reserved.</p>
             </div>
         </div>
     </footer>
@@ -613,7 +619,26 @@
             loadScreener();
         }
 
+
+
         initScreener();
+
+        // Method to try loading local extensions (for development/experiments)
+        (async function loadLocalExtensions() {
+            if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') return;
+            try {
+                const res = await fetch('/api/local/screener-extension.js');
+                if (res.ok) {
+                    const scriptText = await res.text();
+                    const script = document.createElement('script');
+                    script.textContent = scriptText;
+                    document.body.appendChild(script);
+                    console.log('Local screener extension loaded');
+                }
+            } catch (err) {
+                // Ignore errors - file likely doesn't exist
+            }
+        })();
     </script>
 </body>
 

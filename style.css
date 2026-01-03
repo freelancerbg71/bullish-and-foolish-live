@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
 
 :root {
   /* Color System - Financial Paper Theme */
@@ -561,6 +561,13 @@ a:hover {
   margin-top: 2px;
 }
 
+.period-pointer {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+
 .indicator-track {
   position: absolute;
   bottom: 0;
@@ -822,4 +829,79 @@ a:hover {
   font-size: 0.9rem;
   cursor: pointer;
   padding: 8px;
+}
+/* Score Trend / Momentum Styling */
+.score-trend-container {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.momentum-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.momentum-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.momentum-score-comparison {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+}
+
+.momentum-score-comparison .current-score {
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.delta-badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.delta-badge.positive {
+  background: rgba(5, 150, 105, 0.15);
+  color: #059669;
+}
+
+.delta-badge.negative {
+  background: rgba(225, 29, 72, 0.15);
+  color: #E11D48;
+}
+
+.delta-badge.neutral {
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+}
+
+.momentum-period {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
 }

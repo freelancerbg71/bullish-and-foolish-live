@@ -1,4 +1,20 @@
 /**
+ * Open Fundamentals Engine
+ * Copyright (C) 2024-2025 Bullish & Foolish Contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
  * @fileoverview Core utility functions for the Bullish & Foolish fundamentals engine.
  * These are pure functions with no side effects, designed for reusability.
  */
@@ -14,7 +30,9 @@ import {
     TIER_LABELS,
     KNOWN_FINTECH_TICKERS,
     FINTECH_NAME_PATTERNS,
-    FINTECH_SIC_PATTERNS
+    FINTECH_SIC_PATTERNS,
+    ONE_YEAR_MS,
+    TOLERANCE_30D_MS
 } from "./constants.js";
 
 // ============================================================================
@@ -355,4 +373,191 @@ export function isDateStale(dateStr, maxAgeDays = 1) {
     if (!Number.isFinite(ts)) return true;
     const ageMs = Date.now() - ts;
     return ageMs > maxAgeDays * 24 * 60 * 60 * 1000;
+}
+
+/**
+ * Sorts a series by periodEnd ascending.
+ * @param {Array} series
+ * @returns {Array}
+ */
+export function sortByPeriodEndAsc(series = []) {
+    return [...(series || [])]
+        .filter((p) => p && p.periodEnd)
+        .sort((a, b) => Date.parse(a.periodEnd) - Date.parse(b.periodEnd));
+}
+
+/**
+ * Returns the last N periods from a series, sorted ascending.
+ * @param {Array} series
+ * @param {number} n
+ * @returns {Array}
+ */
+export function lastNPeriods(series = [], n = 4) {
+    const asc = sortByPeriodEndAsc(series);
+    return asc.slice(-n);
+}
+
+/**
+ * Finds a comparable period from one year ago (within tolerance).
+ * @param {Array} seriesAsc - Series sorted ascending
+ * @param {string} latestPeriodEnd - Date string of the target period
+ * @returns {Object|null}
+ */
+export function findComparableYearAgo(seriesAsc = [], latestPeriodEnd) {
+    const latestTs = Date.parse(latestPeriodEnd);
+    if (!Number.isFinite(latestTs)) return null;
+
+    // Need at least 5 quarters to reasonably compute a year-ago comparable.
+    // With only 4 quarters, any fallback would be a wrong "YoY" comparison.
+    if ((seriesAsc || []).length < 5) return null;
+
+    const target = latestTs - ONE_YEAR_MS; // ~365d
+    const windowMs = TOLERANCE_30D_MS; // ~30d
+    const inWindow = seriesAsc.find((p) => {
+        const ts = Date.parse(p.periodEnd);
+        return Number.isFinite(ts) && Math.abs(ts - target) < windowMs;
+    });
+    if (inWindow) return inWindow;
+
+    const latestIdx = seriesAsc.findIndex((p) => p.periodEnd === latestPeriodEnd);
+    if (latestIdx >= 0) return seriesAsc[Math.max(0, latestIdx - 4)] || null;
+    return seriesAsc[Math.max(0, seriesAsc.length - 5)] || null;
+}
+
+/**
+ * Converts raw EDGAR periods to a normalized quarterly series.
+ * @param {Array} periods
+ * @returns {Array}
+ */
+export function toQuarterlySeries(periods = []) {
+    const quarters = (periods || [])
+        .filter((p) => (p.periodType || "").toLowerCase() === "quarter")
+        .filter((p) => p.periodEnd)
+        .sort((a, b) => Date.parse(a.periodEnd) - Date.parse(b.periodEnd));
+    return quarters.map((p) => {
+        const fcf =
+            p.freeCashFlow != null
+                ? p.freeCashFlow
+                : p.operatingCashFlow != null
+                    ? p.operatingCashFlow - Math.abs(p.capex ?? 0) // Assume 0 if capex is null but OCF exists
+                    : null;
+        const costOfRevenue = p.costOfRevenue ?? null;
+        const derivedRevenue = p.revenue ?? (p.grossProfit != null && costOfRevenue != null ? p.grossProfit + costOfRevenue : null);
+        const derivedGross = p.grossProfit == null && derivedRevenue != null && costOfRevenue != null
+            ? derivedRevenue - costOfRevenue
+            : p.grossProfit ?? null;
+        return {
+            periodEnd: p.periodEnd,
+            label: formatQuarterLabel(p.periodEnd),
+            sector: p.sector ?? null,
+            sic: p.sic ?? null,
+            sicDescription: p.sicDescription ?? null,
+            revenue: derivedRevenue ?? null,
+            grossProfit: derivedGross,
+            costOfRevenue: costOfRevenue ?? null,
+            operatingExpenses: p.operatingExpenses ?? null,
+            operatingIncome: p.operatingIncome ?? null,
+            incomeBeforeIncomeTaxes: p.incomeBeforeIncomeTaxes ?? null,
+            incomeTaxExpenseBenefit: p.incomeTaxExpenseBenefit ?? null,
+            netIncome: p.netIncome ?? null,
+            epsBasic: p.epsBasic ?? null,
+            sharesOutstanding: p.sharesOutstanding ?? p.shares ?? null,
+            totalAssets: p.totalAssets ?? null,
+            currentAssets: p.currentAssets ?? null,
+            totalLiabilities: p.totalLiabilities ?? null,
+            currentLiabilities: p.currentLiabilities ?? null,
+            totalEquity: p.totalEquity ?? null,
+            totalDebt: p.totalDebt ?? null,
+            financialDebt: p.financialDebt ?? null,
+            shortTermDebt: p.shortTermDebt ?? null,
+            longTermDebt: p.longTermDebt ?? null,
+            leaseLiabilities: p.leaseLiabilities ?? null,
+            shortTermInvestments: p.shortTermInvestments ?? null,
+            deposits: p.deposits ?? null,
+            customerDeposits: p.customerDeposits ?? null,
+            totalDeposits: p.totalDeposits ?? null,
+            depositLiabilities: p.depositLiabilities ?? null,
+            interestIncome: p.interestIncome ?? null,
+            interestExpense: p.interestExpense ?? null,
+            cash: p.cashAndCashEquivalents ?? p.cash ?? null,
+            accountsReceivable: p.accountsReceivable ?? null,
+            inventories: p.inventories ?? null,
+            accountsPayable: p.accountsPayable ?? null,
+            operatingCashFlow: p.operatingCashFlow ?? null,
+            capex: p.capex ?? null,
+            depreciationDepletionAndAmortization: p.depreciationDepletionAndAmortization ?? null,
+            shareBasedCompensation: p.shareBasedCompensation ?? null,
+            researchAndDevelopmentExpenses: p.researchAndDevelopmentExpenses ?? null,
+            technologyExpenses: p.technologyExpenses ?? null,
+            softwareExpenses: p.softwareExpenses ?? null,
+            treasuryStockRepurchased: p.treasuryStockRepurchased ?? null,
+            dividendsPaid: p.dividendsPaid ?? null,
+            deferredRevenue: p.deferredRevenue ?? null,
+            contractWithCustomerLiability: p.contractWithCustomerLiability ?? null,
+            freeCashFlow: fcf
+        };
+    });
+}
+
+/**
+ * Builds a TTM object from the latest 4 quarters.
+ * @param {Array} quarters
+ * @returns {Object|null}
+ */
+export function buildTtmFromQuarters(quarters) {
+    const latest4 = quarters.slice(-4);
+    if (latest4.length < 4) return null;
+
+    const sumIfComplete = (field) => {
+        let acc = 0;
+        for (const q of latest4) {
+            if (!isFiniteValue(q?.[field])) return null;
+            acc += Number(q[field]);
+        }
+        return acc;
+    };
+
+    // TTM must be a true 4-quarter aggregate; avoid partial-TTM when any quarter is missing.
+    const revenue = sumIfComplete("revenue");
+    const netIncome = sumIfComplete("netIncome");
+    if (revenue == null || netIncome == null) return null;
+
+    const grossProfit = sumIfComplete("grossProfit");
+    const operatingIncome = sumIfComplete("operatingIncome");
+    const incomeBeforeIncomeTaxes = sumIfComplete("incomeBeforeIncomeTaxes");
+    const incomeTaxExpenseBenefit = sumIfComplete("incomeTaxExpenseBenefit");
+    const operatingCashFlow = sumIfComplete("operatingCashFlow");
+    const capex = sumIfComplete("capex");
+
+    const freeCashFlow = (() => {
+        let acc = 0;
+        for (const q of latest4) {
+            const explicit = isFiniteValue(q?.freeCashFlow) ? Number(q.freeCashFlow) : null;
+            const derived =
+                explicit == null && isFiniteValue(q?.operatingCashFlow) && isFiniteValue(q?.capex)
+                    ? Number(q.operatingCashFlow) - Math.abs(Number(q.capex))
+                    : null;
+            const val = explicit ?? derived;
+            if (!Number.isFinite(val)) return null;
+            acc += val;
+        }
+        return acc;
+    })();
+
+    // EPS TTM is only valid if all 4 quarters have EPS reported; otherwise leave null.
+    const epsBasic = sumIfComplete("epsBasic");
+    const asOf = latest4[latest4.length - 1].periodEnd;
+    return {
+        asOf,
+        revenue,
+        grossProfit,
+        operatingIncome,
+        incomeBeforeIncomeTaxes,
+        incomeTaxExpenseBenefit,
+        netIncome,
+        epsBasic,
+        operatingCashFlow,
+        capex,
+        freeCashFlow
+    };
 }

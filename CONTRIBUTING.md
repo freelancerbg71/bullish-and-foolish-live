@@ -27,8 +27,44 @@ By default, the server uses `./data` for persisted state.
 
 ## Where the rating logic lives
 
-- Rules + sector-aware scoring: `scripts/shared-rules.js`
+- Rules + sector-aware scoring: `engine/rules.js`
+- Financial calculations: `engine/calculations.js`
+- Stock split detection: `engine/stockAdjustments.js`
+- Stock object builder: `engine/stockBuilder.js`
 - Server-side rating assembly: `server/ticker/tickerAssembler.js`
+
+## Reporting Scoring Anomalies (Edge Cases)
+
+Found a company that scores unexpectedly high or low? This is valuable feedback!
+
+### Open an Issue With:
+
+```
+**Ticker**: [e.g., SOFI]
+**Expected Score Range**: [e.g., 60-75, "solid growth company"]
+**Actual Score**: [e.g., 35]
+**Why It Seems Wrong**: [e.g., "It's a fintech being penalized by bank capital ratios"]
+```
+
+### Why This Matters
+
+Financial analysis isn't black and white - it's 50 shades of grey. Our goal is to build **contextual intelligence** that handles edge cases gracefully:
+
+- Stock splits vs. genuine dilution
+- Fintech companies misclassified as traditional banks
+- Pre-revenue biotechs with strong cash runways
+- REITs with "high" payout ratios (required by structure)
+- Hypergrowth companies investing heavily (burn ≠ failure)
+
+See `engine/METHODOLOGY.md` → "Contextual Intelligence" for our philosophy.
+
+### Propose a Fix
+
+If you've identified a systematic pattern:
+
+1. **Describe the pattern**: "Pre-revenue biotechs with >$500M cash are penalized for zero revenue"
+2. **Propose the guard**: "Skip revenue growth rule if sector is Biotech AND cash runway > 3 years"
+3. **Provide test cases**: List 3-5 tickers that would benefit
 
 ## Design rules for contributions
 
@@ -99,3 +135,7 @@ npm run test:prices
 - No ticker-specific scoring logic added
 - Any new env vars are documented in this file
 - If you changed tier thresholds or labels, update both backend and UI mappings
+
+## Governance
+
+Please see [GOVERNANCE.md](./GOVERNANCE.md) for details on project roles, decision making, and our code of conduct.

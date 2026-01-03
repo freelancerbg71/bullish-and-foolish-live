@@ -1,3 +1,23 @@
+/**
+ * Bullish & Foolish - Open Fundamentals Demo
+ * Copyright (C) 2024-2025 Bullish & Foolish Contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ * @fileoverview Main HTTP server for the Bullish & Foolish web application.
+ */
+
 import http from 'http';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
@@ -756,7 +776,16 @@ async function handleApi(req, res, url) {
                             const cachedAt = cached?.filingSignalsCachedAt ? Date.parse(cached.filingSignalsCachedAt) : NaN;
                             // If the cached VM predates filingSignalsCachedAt support, rebuild once so filing cards can render.
                             if (Number.isFinite(cachedAt)) {
-                                return sendJson(req, res, 200, cached);
+                                const cachedSignals = Array.isArray(cached?.filingSignals) ? cached.filingSignals : [];
+                                if (cachedSignals.length === 0) {
+                                    const snap = await loadFundamentalsSnapshot(ticker);
+                                    const snapSignals = Array.isArray(snap?.data?.filingSignals) ? snap.data.filingSignals : [];
+                                    if (snapSignals.length === 0) {
+                                        return sendJson(req, res, 200, cached);
+                                    }
+                                } else {
+                                    return sendJson(req, res, 200, cached);
+                                }
                             }
                         }
                     }
@@ -784,6 +813,59 @@ async function handleApi(req, res, url) {
         if (url.pathname === '/api/screener') {
             const data = await queryScreener(url);
             return sendJson(req, res, 200, data);
+        }
+        // Local experiments: Serve extension JS directly to avoid plugin loading issues
+        if (url.pathname === '/api/local/screener-extension.js') {
+            const extPath = path.join(PROJECT_ROOT, '.local', 'screener-extension.js');
+            try {
+                const content = await fsPromises.readFile(extPath, 'utf8');
+                res.writeHead(200, { 'Content-Type': 'application/javascript' });
+                res.end(content);
+                return;
+            } catch (err) {
+                return sendJson(req, res, 404, { error: 'Extension not found' });
+            }
+        }
+
+        // Local experiments: Delegate all other /api/local requests to .local/plugin.js
+        if (url.pathname.startsWith('/api/local/')) {
+            const pluginPath = path.join(PROJECT_ROOT, '.local', 'plugin.js');
+            try {
+                // Check if plugin file exists
+                await fsPromises.access(pluginPath);
+
+                // Import the plugin module
+                const { pathToFileURL } = await import('url');
+                // Timestamp to bust cache
+                const pluginUrl = pathToFileURL(pluginPath).href + '?t=' + Date.now();
+                const { handleRequest } = await import(pluginUrl);
+
+                // Delegate handling
+                const result = await handleRequest(url, req, {
+                    fs: fsPromises,
+                    path,
+                    ROOT: PROJECT_ROOT,
+                    buildTickerPayload, // Pass server internals needed by plugin
+                    sendJson
+                });
+
+                if (result) {
+                    if (result.headers) {
+                        res.writeHead(result.status || 200, result.headers);
+                        res.end(result.data);
+                        return;
+                    }
+                    return sendJson(req, res, result.status || 200, result.data);
+                }
+                // If plugin returns null, fall through 
+            } catch (err) {
+                if (err.code !== 'ENOENT') {
+                    console.error('[local-plugin] error', err);
+                    return sendJson(req, res, 500, { error: 'Plugin error: ' + err.message });
+                }
+                // Plugin doesn't exist, return 404 for this route
+                return sendJson(req, res, 404, { error: 'Local plugin not found' });
+            }
         }
         if (url.pathname === '/api/screener/find') {
             const ticker = url.searchParams.get('ticker')?.toUpperCase();
@@ -1060,12 +1142,18 @@ if (process.env.SCREENER_SCHEDULER_ENABLED === '1') {
     });
 }
 
+// Price scheduler: respect PRICES_SCHEDULER_DISABLED first, then check enable conditions
+const pricesSchedulerDisabled = process.env.PRICES_SCHEDULER_DISABLED === '1';
 const pricesSchedulerEnabled =
-    process.env.PRICES_SCHEDULER_ENABLED === '1' || Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH);
+    !pricesSchedulerDisabled && (
+        process.env.PRICES_SCHEDULER_ENABLED === '1' || Boolean(process.env.RAILWAY_VOLUME_MOUNT_PATH)
+    );
 if (pricesSchedulerEnabled) {
     startDailyPricesScheduler().catch((err) => {
         console.warn('[dailyPricesScheduler] failed to start', err?.message || err);
     });
+} else if (pricesSchedulerDisabled) {
+    console.info('[dailyPricesScheduler] scheduler disabled via PRICES_SCHEDULER_DISABLED=1');
 }
 
 async function shutdown(signal) {

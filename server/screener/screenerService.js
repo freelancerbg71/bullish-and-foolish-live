@@ -420,9 +420,9 @@ export async function findTickerPosition(ticker, pageSize = 50) {
   };
 }
 
-export async function refreshScreenerRow(ticker) {
+export async function refreshScreenerRow(ticker, { allowFilingScan = false } = {}) {
   await ensureScreenerSchema();
-  const row = await buildScreenerRowForTicker(ticker);
+  const row = await buildScreenerRowForTicker(ticker, { allowFilingScan });
   if (!row) return null;
   await upsertScreenerRows([row]);
   return row;
@@ -460,12 +460,12 @@ async function mapLimit(items, limit, worker) {
   });
 }
 
-export async function refreshScreenerIndex({ tickers = null, concurrency = null } = {}) {
+export async function refreshScreenerIndex({ tickers = null, concurrency = null, allowFilingScan = false } = {}) {
   await ensureScreenerSchema();
   const list = tickers && tickers.length ? tickers : await listTickersWithFundamentals();
   const limit = (concurrency ?? Number(process.env.SCREENER_REFRESH_CONCURRENCY)) || 2;
 
-  const built = await mapLimit(list, limit, async (t) => buildScreenerRowForTicker(t));
+  const built = await mapLimit(list, limit, async (t) => buildScreenerRowForTicker(t, { allowFilingScan }));
   const rows = built.filter(Boolean);
   await upsertScreenerRows(rows);
   return { tickers: list.length, rows: rows.length };

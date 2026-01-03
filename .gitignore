@@ -7,15 +7,49 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# Edgar data files (generated locally)
 data/cache/
 data/prices/
 data/edgar/*-fundamentals.json
 data/edgar/*.db-shm
 data/edgar/*.db-wal
 data/edgar/*.db-journal
+data/edgar/submissions/
 
+# Build outputs
 dist/
 dist-*/
 
+# OS files
 .DS_Store
 Thumbs.db
+
+# Local experiments (not committed)
+.local/
+scripts/scripts/
+
+# ============================================
+# SEC bulk data (~18GB - NEVER upload to git/Railway)
+# ============================================
+/data/edgar/bulk/
+data/edgar/bulk/
+**/companyfacts/
+**/companyfacts.zip
+companyfacts/
+companyfacts.zip
+
+# Local bulk update scripts (keep out of repo)
+scripts/update_fundamentals_bulk.js
+scripts/download_submissions_dir.js
+scripts/ingest_companyfacts_dir.js
+
+# Debug and development files (local only)
+check-q4-missing.cjs
+debug-plugin.js
+debug_nasdaq.js
+inspect_db.js
+test-debug.txt
+test-q4-derivation.js
+tickerAssembler-backup.js
+update_fundamentals.bat
+*.backup.js

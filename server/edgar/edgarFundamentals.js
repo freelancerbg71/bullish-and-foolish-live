@@ -414,6 +414,9 @@ async function lookupCompanyByTicker(ticker) {
   return null;
 }
 
+/**
+ * Classify a period as 'year' or 'quarter' based on EDGAR metadata.
+ */
 function classifyPeriod(fp) {
   if (!fp) return null;
   const v = String(fp).toUpperCase();
@@ -425,6 +428,7 @@ function classifyPeriod(fp) {
   }
   return null;
 }
+
 
 function collectFacts(facts, tags) {
   const out = [];

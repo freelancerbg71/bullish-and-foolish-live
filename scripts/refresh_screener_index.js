@@ -35,7 +35,8 @@ async function main() {
   const tickers = await resolveWarmTickers(warmLimit);
   const mode = tickers ? "warm" : "full";
   console.info("[refresh_screener_index] starting", { mode, tickers: tickers ? tickers.length : null });
-  const res = await refreshScreenerIndex({ tickers });
+  const allowFilingScan = process.env.SCREENER_INCLUDE_FILINGS === "1";
+  const res = await refreshScreenerIndex({ tickers, allowFilingScan });
   console.info("[refresh_screener_index] complete", res);
 }
 
@@ -43,4 +44,3 @@ main().catch((err) => {
   console.error("[refresh_screener_index] failed", err?.stack || err);
   process.exit(1);
 });
-
