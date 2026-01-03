@@ -3002,7 +3002,10 @@ export async function buildTickerViewModel(
       }
 
       // ========== 4. PENNY STOCK / DISTRESS FLAGS ==========
-      if (pennyStock) {
+      // Skip penny/speculative narrative for quality micro-caps (elite/bullish tier)
+      // These aren't distressed penny stocks - they're just small, well-run companies
+      const isQualityMicroCap = isTrueMicroCap && (scoreBand === 'elite' || scoreBand === 'bullish');
+      if (pennyStock && !isQualityMicroCap) {
         if (Number.isFinite(metrics.runway) && metrics.runway < 0.75) {
           parts.push(
             pick("penny.runwayShort", [
