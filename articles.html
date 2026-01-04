@@ -332,7 +332,70 @@
                 <h3 class="serif"
                     style="font-size: 1.4rem; margin-bottom: var(--space-xl); border-bottom: 2px solid var(--accent); display: inline-block;">
                     Latest Research</h3>
-                <div class="text-muted">Loading research library...</div>
+
+                <!-- Article 1: Going Concern -->
+                <a href="/articles/going-concern.html" class="article-card">
+                    <div class="meta">
+                        <span class="tag">Risk Analysis</span>
+                        <span>&bull;</span>
+                        <span>Jan 4, 2026</span>
+                        <span>&bull;</span>
+                        <span>8 min read</span>
+                    </div>
+                    <h2>The "Kiss of Death" Signature: Understanding Going Concern Warnings</h2>
+                    <p>Why a simple sentence in an auditor's report is the most reliable predictor of impending
+                        distress, even when numbers still look okay.</p>
+                    <span class="read-link">Read Analytics <div style="font-size: 1.2rem; line-height: 1;">&rarr;</div>
+                    </span>
+                </a>
+
+                <!-- Article 2: Methodology -->
+                <a href="/articles/investment-methodology.html" class="article-card">
+                    <div class="meta">
+                        <span class="tag">Education</span>
+                        <span>&bull;</span>
+                        <span>Jan 4, 2026</span>
+                        <span>&bull;</span>
+                        <span>12 min read</span>
+                    </div>
+                    <h2>Methodology: How We Score 7,000+ US Stocks Every Day</h2>
+                    <p>A deep dive into our multi-factor rating engine. We explain how we filter noise to find a
+                        high-quality non-biased quality score.</p>
+                    <span class="read-link">Read Analytics <div style="font-size: 1.2rem; line-height: 1;">&rarr;</div>
+                    </span>
+                </a>
+
+                <!-- Article 3: Tesla -->
+                <a href="/articles/tesla-overvalued-reality-check.html" class="article-card">
+                    <div class="meta">
+                        <span class="tag">Fundamental Analysis</span>
+                        <span>&bull;</span>
+                        <span>Dec 28, 2025</span>
+                        <span>&bull;</span>
+                        <span>6 min read</span>
+                    </div>
+                    <h2>Is Tesla Really Overvalued? What the 10-K Actually Says</h2>
+                    <p>Everyone's panicking about Tesla's valuation. But when you strip away the noise and focus on SEC
+                        filings, a different picture emerges.</p>
+                    <span class="read-link">Read Analytics <div style="font-size: 1.2rem; line-height: 1;">&rarr;</div>
+                    </span>
+                </a>
+
+                <!-- Article 4: Meta -->
+                <a href="/articles/meta-fundamental-reality-check.html" class="article-card">
+                    <div class="meta">
+                        <span class="tag">Fundamental Analysis</span>
+                        <span>&bull;</span>
+                        <span>Dec 28, 2025</span>
+                        <span>&bull;</span>
+                        <span>7 min read</span>
+                    </div>
+                    <h2>Is Meta Really in Trouble? A Fundamental Reality Check</h2>
+                    <p>Headlines say the Metaverse is burning billions. But Meta's balance sheet tells a story of
+                        incredible profitability.</p>
+                    <span class="read-link">Read Analytics <div style="font-size: 1.2rem; line-height: 1;">&rarr;</div>
+                    </span>
+                </a>
             </div>
 
             <!-- Right Side: Quick Audit Widget -->
@@ -397,36 +460,6 @@
     </footer>
 
     <script>
-        // Article Loader
-        async function loadArticles() {
-            try {
-                const res = await fetch('/data/articles.json');
-                if (res.ok) {
-                    const articles = await res.json();
-                    const container = document.getElementById('articleGrid');
-                    container.innerHTML = articles.map(a => `
-                        <a href="${a.path}" class="article-card">
-                            <div class="meta">
-                                <span class="tag">${a.tag}</span>
-                                <span>&bull;</span>
-                                <span>${a.date}</span>
-                                <span>&bull;</span>
-                                <span>${a.readTime}</span>
-                            </div>
-                            <h2>${a.title}</h2>
-                            <p>${a.description}</p>
-                            <span class="read-link">Read Analytics <div style="font-size: 1.2rem; line-height: 1;">&rarr;</div></span>
-                        </a>
-                    `).join('');
-                } else {
-                    document.getElementById('articleGrid').innerHTML = '<p class="text-muted">Unable to load research library.</p>';
-                }
-            } catch (err) {
-                console.error('Failed to load articles', err);
-                document.getElementById('articleGrid').innerHTML = '<p class="text-muted">Connection error.</p>';
-            }
-        }
-
         // Quick Audit Logic
         const auditInput = document.getElementById('auditInput');
         const resultsEl = document.getElementById('searchResults');
@@ -533,8 +566,6 @@
                 loadingEl.style.display = 'none';
             }
         }
-
-        loadArticles();
     </script>
 </body>
 

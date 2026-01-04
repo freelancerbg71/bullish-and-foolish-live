@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
+    <title>Is Tesla Really Overvalued? What the 10-K Actually Says | Bullish and Foolish</title>
+    <meta name="description"
+        content="Everyone's panicking about Tesla's valuation. But when you strip away the noise and focus on SEC filings, a different picture emerges. A fundamental reality check.">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="Is Tesla Really Overvalued? What the 10-K Actually Says">
+    <meta property="og:description"
+        content="The internet says Tesla is doomed. The 10-K filings tell a different story.">
+    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+
+    <link rel="stylesheet" href="/style.css?v=20260104.2">
+    <style>
+        .article-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--space-2xl) var(--space-md);
+            line-height: 1.7;
+        }
+
+        .article-header {
+            margin-bottom: var(--space-2xl);
+            text-align: center;
+        }
+
+        .article-meta {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: var(--space-md);
+        }
+
+        .article-content h2 {
+            margin-top: var(--space-2xl);
+            margin-bottom: var(--space-lg);
+            color: var(--text-primary);
+        }
+
+        .article-content p {
+            margin-bottom: var(--space-lg);
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .quote-block {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--danger);
+            padding: var(--space-lg);
+            margin: var(--space-xl) 0;
+            font-style: italic;
+            font-size: 1.15rem;
+        }
+
+        .quote-block .attribution {
+            font-style: normal;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: var(--space-sm);
+        }
+
+        .data-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--space-xl);
+            margin: var(--space-xl) 0;
+        }
+
+        .data-box h4 {
+            margin-bottom: var(--space-md);
+            color: var(--accent);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--space-lg);
+            margin-top: var(--space-lg);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: block;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: var(--text-primary);
+        }
+
+        .stat-value.positive {
+            color: var(--accent);
+        }
+
+        .stat-value.negative {
+            color: var(--danger);
+        }
+
+        .callout {
+            border-left: 4px solid var(--accent);
+            background: rgba(228, 179, 99, 0.05);
+            padding: var(--space-lg);
+            margin: var(--space-xl) 0;
+            font-style: italic;
+        }
+
+        .verdict-box {
+            background: linear-gradient(135deg, rgba(228, 179, 99, 0.1), rgba(228, 179, 99, 0.02));
+            border: 1px solid var(--accent);
+            border-radius: 12px;
+            padding: var(--space-xl);
+            margin: var(--space-2xl) 0;
+            text-align: center;
+        }
+
+        .verdict-box .score {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .verdict-box .label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="app-header">
+        <div class="container header-content">
+            <div class="header-left">
+                <a href="/index.html" class="header-brand">
+                    Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
+                </a>
+            </div>
+            <nav class="header-nav text-muted">
+                <a href="/screener.html">Screener</a>
+                <a href="/articles.html" style="color: var(--text-primary);">Articles</a>
+                <a href="/about.html">Methodology</a>
+                <a href="/index.html">Search</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="article-container">
+        <header class="article-header">
+            <div class="article-meta">December 28, 2025 • Fundamental Analysis</div>
+            <h1 class="huge">Is Tesla Really Overvalued? What the 10-K Actually Says</h1>
+            <p class="text-muted" style="font-size: 1.2rem; margin-top: var(--space-md);">
+                The internet says Tesla is doomed. The SEC filings tell a different story.
+            </p>
+        </header>
+
+        <section class="article-content">
+            <div class="callout"
+                style="border-left-color: var(--text-muted); background: rgba(255,255,255,0.02); font-style: normal; font-size: 0.9rem;">
+                <strong>Disclaimer:</strong> This analysis is based on publicly filed SEC documents and our disclosed
+                scoring methodology. It is not a recommendation to buy, sell, or hold any security.
+            </div>
+
+            <div class="quote-block">
+                "TSLA is going to zero. It's a car company trading at 60x earnings. Total bubble territory. Anyone
+                holding this is going to get wrecked."
+                <div class="attribution">— Anonymous Reddit user, r/stocks</div>
+            </div>
+
+            <p>
+                Scroll through any investing forum and you'll find dozens of posts like this. Tesla has become the
+                ultimate battleground stock — loved by some, despised by others, and misunderstood by most.
+            </p>
+
+            <p>
+                But here's what we do at Bullish & Foolish: we ignore the noise. We don't care about Elon's tweets, the
+                latest Cybertruck review, or analyst price targets. We only care about one thing: <strong>what do the
+                    SEC filings actually say?</strong>
+            </p>
+
+            <h2>What the Numbers Show</h2>
+
+            <p>
+                We ran Tesla through our 47-rule fundamental engine. No sentiment, no vibes — just the raw data from
+                their most recent 10-K and 10-Q filings.
+            </p>
+
+            <div class="data-box">
+                <h4>Tesla (TSLA) - Key Fundamentals</h4>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">Operating Margin</span>
+                        <span class="stat-value positive">9.2%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">FCF Margin (TTM)</span>
+                        <span class="stat-value positive">4.8%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Debt/Equity</span>
+                        <span class="stat-value positive">0.11</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Current Ratio</span>
+                        <span class="stat-value positive">1.73</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Cash Position</span>
+                        <span class="stat-value">$26B+</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Going Concern?</span>
+                        <span class="stat-value positive">No</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2>The Valuation Argument</h2>
+
+            <p>
+                Yes, Tesla trades at a premium. The P/E ratio is high by traditional auto industry standards. But our
+                engine doesn't penalize companies for being expensive — it measures <em>fundamental quality</em>.
+            </p>
+
+            <p>
+                And on that metric, Tesla is not the "house of cards" the bears claim:
+            </p>
+
+            <ul>
+                <li><strong>Positive free cash flow</strong> — Unlike many growth stories, Tesla actually generates
+                    cash.</li>
+                <li><strong>Minimal debt</strong> — The debt/equity ratio of 0.11 is remarkably clean for a
+                    capital-intensive manufacturer.</li>
+                <li><strong>Strong liquidity</strong> — Over $26 billion in cash provides a multi-year runway even in a
+                    downturn.</li>
+                <li><strong>No Going Concern warnings</strong> — Zero signals in the filings that auditors are worried
+                    about survival.</li>
+            </ul>
+
+            <h2>Where Tesla Loses Points</h2>
+
+            <p>
+                Our engine isn't a Tesla cheerleader. Here's where the score drops:
+            </p>
+
+            <ul>
+                <li><strong>Margin compression</strong> — Operating margins have declined from 17% to ~9% over the past
+                    two years. The cost cuts have helped, but this trend is real.</li>
+                <li><strong>Revenue growth deceleration</strong> — YoY growth has slowed significantly from the
+                    triple-digit days.</li>
+                <li><strong>Inventory buildup</strong> — Days of inventory have increased, signaling potential demand
+                    softness.</li>
+            </ul>
+
+            <p>
+                These are legitimate concerns. But they're concerns about <em>future growth rates</em>, not about
+                <em>fundamental collapse</em>.
+            </p>
+
+            <h2>The Verdict</h2>
+
+            <div class="verdict-box">
+                <div class="label">Quality Score</div>
+                <div class="score">62</div>
+                <div class="label" style="margin-top: var(--space-sm);">Bullish Range</div>
+            </div>
+
+            <p>
+                Tesla scores in the <strong>Bullish range</strong> — not elite (80+), but solidly above the danger zone.
+                The company has real margins, real cash flow, and a fortress balance sheet.
+            </p>
+
+            <p>
+                Is it overvalued? Maybe. Is it going to zero? The fundamentals say absolutely not.
+            </p>
+
+            <div class="callout">
+                <strong>The takeaway:</strong> Be skeptical of extreme predictions in either direction. The 10-K doesn't
+                lie. Tesla is a profitable, cash-generating company with minimal debt — whatever you think about the
+                stock price, the business itself is not in distress.
+            </div>
+
+            <div style="text-align: center; margin-top: var(--space-2xl);">
+                <a href="/ticker/TSLA" class="button"
+                    style="background: var(--accent); color: var(--bg-primary); font-weight: 700; padding: 16px 32px; text-decoration: none; border-radius: 8px;">
+                    View Full TSLA Analysis →
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer-disclaimer" style="margin-top: var(--space-2xl);">
+        <div class="container">
+            <div class="disclaimer-text">
+                <p>© 2025 Bullish and Foolish. For educational purposes only. Not financial advice.</p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>

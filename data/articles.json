@@ -16,5 +16,23 @@
         "description": "A deep dive into our multi-factor rating engine. We explain how we filter noise to find a high-quality non-biased quality score.",
         "readTime": "12 min read",
         "date": "Jan 4, 2026"
+    },
+    {
+        "id": "tesla-rally-check",
+        "title": "Is Tesla Really Overvalued? What the 10-K Actually Says",
+        "path": "/articles/tesla-overvalued-reality-check.html",
+        "tag": "Fundamental Analysis",
+        "description": "Everyone's panicking about Tesla's valuation. But when you strip away the noise and focus on SEC filings, a different picture emerges.",
+        "readTime": "6 min read",
+        "date": "Dec 28, 2025"
+    },
+    {
+        "id": "meta-reality-check",
+        "title": "Is Meta Really in Trouble? A Fundamental Reality Check",
+        "path": "/articles/meta-fundamental-reality-check.html",
+        "tag": "Fundamental Analysis",
+        "description": "Headlines say the Metaverse is burning billions. But Meta's balance sheet tells a story of incredible profitability.",
+        "readTime": "7 min read",
+        "date": "Dec 28, 2025"
     }
 ]
