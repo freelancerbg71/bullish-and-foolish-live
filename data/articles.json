@@ -1,0 +1,20 @@
+[
+    {
+        "id": "going-concern",
+        "title": "The \"Kiss of Death\" Signature: Understanding Going Concern Warnings",
+        "path": "/articles/going-concern.html",
+        "tag": "Risk Analysis",
+        "description": "Why a simple sentence in an auditor's report is the most reliable predictor of impending dilution and investment loss.",
+        "readTime": "5 min read",
+        "date": "Jan 4, 2026"
+    },
+    {
+        "id": "investment-methodology",
+        "title": "Modern Fundamental Analysis: The B&F Rules-Based Methodology",
+        "path": "/articles/investment-methodology.html",
+        "tag": "The Framework",
+        "description": "A deep dive into how we parse millions of data points from SEC EDGAR to produce a single, non-biased quality score.",
+        "readTime": "8 min read",
+        "date": "Jan 4, 2026"
+    }
+]

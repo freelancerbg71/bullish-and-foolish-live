@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
+    <title>Investment Methodology: The B&F Framework | Bullish and Foolish</title>
+    <meta name="description"
+        content="A comprehensive whitepaper on the Bullish & Foolish rules-based fundamental analysis engine. Learn how we score stocks using SEC data.">
+    <link rel="stylesheet" href="/style.css?v=20260104.2">
+    <style>
+        .article-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--space-2xl) var(--space-md);
+            line-height: 1.8;
+        }
+
+        .article-content h2 {
+            margin-top: var(--space-3xl);
+            margin-bottom: var(--space-lg);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+
+        .article-content h3 {
+            margin-top: var(--space-xl);
+            margin-bottom: var(--space-md);
+        }
+
+        .article-content p {
+            margin-bottom: var(--space-lg);
+            color: var(--text-secondary);
+        }
+
+        .methodology-box {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent);
+            padding: var(--space-xl);
+            margin: var(--space-xl) 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="app-header">
+        <div class="container header-content">
+            <div class="header-left">
+                <a href="/index.html" class="header-brand">
+                    Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
+                </a>
+            </div>
+            <nav class="header-nav text-muted">
+                <a href="/screener.html">Screener</a>
+                <a href="/articles.html" style="color: var(--text-primary);">Articles</a>
+                <a href="/about.html">Methodology</a>
+                <a href="/index.html">Search</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="article-container">
+        <div style="margin-bottom: var(--space-xl);">
+            <a href="/articles.html" class="text-muted" style="text-decoration: none; font-size: 0.9rem;">← Back to
+                Articles</a>
+        </div>
+
+        <header style="margin-bottom: var(--space-3xl);">
+            <div class="text-muted" style="font-size: 0.9rem; margin-bottom: var(--space-sm);">Research Whitepaper • 8
+                min read</div>
+            <h1 class="huge">Modern Fundamental Analysis: The B&F Rules-Based Methodology</h1>
+        </header>
+
+        <section class="article-content">
+            <p>
+                In an era dominated by high-frequency trading and social media sentiment, the "Quality" of a business
+                has become a secondary concern for many investors. Stock prices frequently decouple from their
+                underlying financial reality, creating a market saturated with noise.
+            </p>
+            <p>
+                <strong>Bullish & Foolish</strong> was built to cut through that noise. Our engine does not care about
+                price targets, analyst upgrades, or rumors. It cares about SEC filings. This whitepaper outlines the
+                architectural framework we use to quantify the "Quality" of a public company.
+            </p>
+
+            <h2>I. Data Ingestion: The SEC EDGAR Backbone</h2>
+            <p>
+                Most financial platforms rely on third-party data aggregators. This creates a "game of telephone" where
+                critical nuances are lost in translation. We bypass these middlemen.
+            </p>
+            <div class="methodology-box">
+                <strong>Our Process:</strong> We parse raw XBRL and HTML data directly from the SEC's EDGAR system. By
+                looking at the primary source, our engine can identify "Filing Signals" - auditor changes, going concern
+                warnings, and specific debt covenants - that are often ignored by standard ratio calculators.
+            </div>
+
+            <h2>II. Sector-Aware Normalization</h2>
+            <p>
+                A fundamental flaw in many screening tools is the "one-size-fits-all" approach. Comparing the
+                Price-to-Earnings (P/E) ratio of a software company to a regional bank is intellectually dishonest.
+            </p>
+            <p>
+                The B&F Framework uses <strong>SIC (Standard Industrial Classification)</strong> mapping to apply
+                specialized scoring weights:
+            </p>
+            <ul>
+                <li><strong>Tech/SaaS:</strong> Heavily weighted toward FCF Margin, Revenue Growth, and Gross Margin.
+                </li>
+                <li><strong>Biotech:</strong> Decoupled from traditional profitability; weighted toward Cash Runway and
+                    Dilution Rates.</li>
+                <li><strong>Industrial/Manufacturing:</strong> Weighted toward Asset Efficiency, ROA, and Inventory
+                    Turnover.</li>
+            </ul>
+
+            <h2>III. The "Disqualifier" Logic (Filing Intelligence)</h2>
+            <p>
+                Great numbers can hide bad actors. Our scorecard includes "Critical Disqualifiers" - signals that act as
+                a
+                weight on the total score regardless of how high the revenue growth is.
+            </p>
+            <p>
+                If a company shows 100% growth but has a <strong>Going Concern Warning</strong> or a <strong>Late Filing
+                    (NT 10-Q)</strong>, the system applies a sector-adjusted penalty. We prioritize survival over
+                theoretical growth.
+            </p>
+
+            <h2>IV. Transparency as a Feature</h2>
+            <p>
+                We believe in "Show Your Work." Every score generated by our engine is decomposable. By visiting any
+                ticker page, investors can see exactly which rules were passed and which were failed.
+            </p>
+            <p>
+                Our goal is not to tell you *what* to buy, but to provide a consistent, data-driven lens through which
+                to view the market.
+            </p>
+
+            <div
+                style="text-align: center; margin-top: var(--space-3xl); padding: var(--space-2xl); border: 1px solid var(--border); border-radius: 12px;">
+                <h3>Experience the Engine</h3>
+                <p>Run these rules against 6,000+ US stocks in our live screener.</p>
+                <a href="/screener.html" class="button"
+                    style="background: var(--accent); color: var(--bg-primary); font-weight: 700; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Open
+                    Market Screener</a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer-disclaimer" style="margin-top: var(--space-3xl);">
+        <div class="container">
+            <div class="disclaimer-text">
+                <p>© 2026 Bullish and Foolish Editorial Team. For institutional-grade clarity.</p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>

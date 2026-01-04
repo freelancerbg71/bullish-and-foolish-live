@@ -1029,12 +1029,15 @@ const server = http.createServer(async (req, res) => {
     let staticPath = pathname;
     if (pathname.startsWith('/assets/')) {
         base = PROJECT_ROOT;
-    } else if (pathname === '/data/prices.json') {
-        base = DATA_DIR;
-        staticPath = '/prices.json';
     } else if (pathname.startsWith('/data/')) {
-        res.writeHead(404);
-        return res.end('Not found');
+        const allowed = ['/data/prices.json', '/data/articles.json'];
+        if (allowed.includes(pathname)) {
+            base = DATA_DIR;
+            staticPath = pathname.substring(5); // removes '/data' prefix
+        } else {
+            res.writeHead(404);
+            return res.end(`Data file not allowed or not found: ${pathname}`);
+        }
     }
     const filePath = resolveSafePath(base, staticPath);
     if (!filePath) {

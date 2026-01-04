@@ -562,7 +562,7 @@ a:hover {
 }
 
 .period-pointer {
-  font-size: 0.6rem;
+  font-size: 0.65rem;
   color: var(--text-muted);
   letter-spacing: 0.02em;
   margin-top: 2px;
@@ -761,6 +761,77 @@ a:hover {
     max-width: 90% !important;
     padding: var(--space-lg) !important;
   }
+
+  /* Quality Momentum Mobile Optimization */
+  .score-trend-container {
+    margin-top: 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .momentum-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+  }
+
+  .momentum-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 10px 20px !important;
+    font-size: 0.85rem;
+    gap: 12px;
+    border-radius: 10px !important;
+    background: var(--bg-tertiary) !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  }
+
+  .momentum-score-comparison {
+    gap: 8px;
+  }
+
+  .momentum-score-comparison .prior-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.03em;
+  }
+
+  .momentum-score-comparison .prior-value {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  .delta-badge {
+    padding: 2px 8px;
+    font-size: 0.8rem;
+  }
+
+  .momentum-period {
+    font-size: 0.65rem;
+    letter-spacing: 0.03em;
+  }
+
+  .basis-pointer {
+    font-size: 0.75rem !important;
+    /* Increased for mobile clarity */
+    margin-top: 8px;
+  }
+
+  .period-pointer {
+    font-size: 0.65rem !important;
+    /* Kept smaller than Basis */
+    margin-top: 4px;
+    opacity: 0.8;
+  }
+
+  .points-card {
+    padding-bottom: 35px !important;
+  }
 }
 
 /* Modal System (Globally Hidden) */
@@ -830,6 +901,7 @@ a:hover {
   cursor: pointer;
   padding: 8px;
 }
+
 /* Score Trend / Momentum Styling */
 .score-trend-container {
   margin-top: 24px;
@@ -857,7 +929,7 @@ a:hover {
   border-radius: 8px;
   font-size: 0.8rem;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .momentum-score-comparison {
@@ -867,7 +939,16 @@ a:hover {
   color: var(--text-secondary);
 }
 
-.momentum-score-comparison .current-score {
+.momentum-score-comparison .prior-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-right: -2px;
+}
+
+.momentum-score-comparison .prior-value {
   color: var(--text-primary);
   font-weight: 800;
   font-size: 1rem;

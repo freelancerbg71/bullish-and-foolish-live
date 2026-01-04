@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
-    <title>Stock Analysis | Bullish and Foolish</title>
-    <meta name="description"
-        content="Detailed fundamental analysis and quality score for this stock, powered by SEC filings. View profitability, growth, solvency metrics and filing intelligence.">
+    <title id="metaTitle">Stock Analysis | Bullish and Foolish</title>
+    <meta id="metaDesc" name="description"
+        content="Fundamental analysis and quality score powered by SEC filings. View profitability, growth, and solvency metrics.">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -24,7 +24,7 @@
         content="Fundamental analysis and quality score powered by SEC filings. Profitability, growth, solvency metrics and filing intelligence.">
     <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
 
-    <link rel="stylesheet" href="/style.css?v=20251224">
+    <link rel="stylesheet" href="/style.css?v=20260104.2">
     <style>
         .pillar-grid {
             display: grid;
@@ -208,6 +208,7 @@
                 </div>
                 <nav class="header-nav text-muted">
                     <a href="/screener.html">Screener</a>
+                    <a href="/articles.html">Articles</a>
                     <a href="/about.html">Methodology</a>
                     <a href="/index.html">Search</a>
                 </nav>
@@ -512,8 +513,34 @@
                 if (!res.ok) throw new Error('Ticker not found');
                 const data = await res.json();
 
+                // SEO & Schema Injection
+                const pageTitle = `${data.ticker} Fundamental Analysis & Quality Rating | Bullish and Foolish`;
+                document.title = pageTitle;
+                const metaDesc = document.getElementById('metaDesc');
+                if (metaDesc && data.strategicOutlook?.narrative) {
+                    const snippet = data.strategicOutlook.narrative.split('.')[0] + '.';
+                    metaDesc.setAttribute('content', `${data.ticker}: ${snippet} SEC-filing based fundamental score: ${data.ratingNormalizedScore ?? '--'}/100.`);
+                }
+
+                // JSON-LD Schema
+                const schema = {
+                    "@context": "https://schema.org",
+                    "@type": "FinancialProduct",
+                    "name": `${data.ticker} Stock Quality Analysis`,
+                    "description": data.strategicOutlook?.narrative || pageTitle,
+                    "brand": { "@type": "Brand", "name": "Bullish & Foolish" },
+                    "identifier": data.ticker
+                };
+                let schemaScript = document.getElementById('jsonLdSchema');
+                if (!schemaScript) {
+                    schemaScript = document.createElement('script');
+                    schemaScript.id = 'jsonLdSchema';
+                    schemaScript.type = 'application/ld+json';
+                    document.head.appendChild(schemaScript);
+                }
+                schemaScript.textContent = JSON.stringify(schema);
+
                 // 1. Header & Meta
-                document.title = `${data.ticker} | Bullish and Foolish`;
                 document.getElementById('tickerDisplay').textContent = data.ticker;
                 document.getElementById('nameDisplay').textContent = data.companyName || '';
 
@@ -536,12 +563,11 @@
                             <div class="momentum-label">Quality Momentum</div>
                             <div class="momentum-pill">
                                 <div class="momentum-score-comparison">
-                                    <span style="opacity: 0.7;">${past.score}</span>
-                                    <span style="opacity: 0.3;">→</span>
-                                    <span class="current-score">${score ?? '--'}</span>
+                                    <span class="prior-label">Prior Score</span>
+                                    <span class="prior-value">${past.score}</span>
                                 </div>
                                 <div class="delta-badge ${deltaClass}">
-                                    <span style="font-size: 0.6rem;">${deltaIcon}</span>
+                                    <span>${deltaIcon}</span>
                                     <span>${deltaValue}</span>
                                 </div>
                             </div>
