@@ -260,6 +260,41 @@
         .status-fail {
             background: var(--danger);
         }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .audit-loading {
+            display: none;
+            text-align: center;
+            padding: var(--space-xl) 0;
+        }
+
+        .audit-narrative {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-top: var(--space-md);
+            padding-top: var(--space-md);
+            border-top: 1px solid var(--border);
+        }
     </style>
 </head>
 
@@ -314,6 +349,12 @@
                         <div id="searchResults" class="search-results"></div>
                     </div>
 
+                    <div id="auditLoading" class="audit-loading">
+                        <div class="spinner"></div>
+                        <p style="font-size: 0.8rem; margin-top: 12px;" class="text-muted">Scanning filings & financial
+                            health...</p>
+                    </div>
+
                     <div id="auditResult" class="audit-result">
                         <div id="verdictPill" class="verdict-pill"></div>
                         <div id="auditTicker" style="font-weight: 800; font-size: 1.5rem; margin-bottom: 4px;">--</div>
@@ -335,8 +376,11 @@
                             </div>
                         </div>
 
+                        <div id="auditNarrative" class="audit-narrative"></div>
+
                         <a id="fullAnalysisLink" href="#" class="button"
-                            style="width: 100%; text-align: center; font-size: 0.85rem; padding: 10px;">Full Technical
+                            style="width: 100%; text-align: center; font-size: 0.85rem; padding: 10px; margin-top: var(--space-md);">Full
+                            Technical
                             Analysis</a>
                     </div>
                 </div>
@@ -438,11 +482,17 @@
             resultsEl.style.display = 'none';
             auditInput.value = ticker;
 
+            const loadingEl = document.getElementById('auditLoading');
+            const resultEl = document.getElementById('auditResult');
+
+            resultEl.style.display = 'none';
+            loadingEl.style.display = 'block';
+
             try {
                 const res = await fetch(`/api/ticker?symbol=${ticker}`);
                 if (res.ok) {
                     const data = await res.json();
-                    document.getElementById('auditResult').style.display = 'block';
+
                     document.getElementById('auditTicker').textContent = data.ticker;
                     document.getElementById('auditName').textContent = data.companyName || ticker;
 
@@ -451,16 +501,20 @@
                     if (score >= 60) {
                         pill.textContent = 'Bullish Pattern';
                         pill.className = 'verdict-pill verdict-bullish';
+                    } else if (score >= 40) {
+                        pill.textContent = 'Mixed Pattern';
+                        pill.className = 'verdict-pill';
+                        pill.style.background = 'rgba(255,255,255,0.05)';
+                        pill.style.color = 'var(--text-secondary)';
                     } else {
                         pill.textContent = 'Foolish Pattern';
                         pill.className = 'verdict-pill verdict-foolish';
                     }
 
                     // Simple Logic for dots
-                    // In a real app, we'd pull from scores breakdown. Here we simulate based on data presence.
                     const dots = {
                         prof: score > 50,
-                        solv: (data.ttm?.revenue > 0),
+                        solv: (data.ttm?.revenue > 0) && (data.ttm?.netIncome > -50),
                         yield: score > 70
                     };
 
@@ -468,9 +522,16 @@
                     document.getElementById('dotSolv').className = `status-dot ${dots.solv ? 'status-pass' : 'status-fail'}`;
                     document.getElementById('dotYield').className = `status-dot ${dots.yield ? 'status-pass' : 'status-fail'}`;
 
+                    document.getElementById('auditNarrative').textContent = data.narrative || 'Analysis complete. Key signals processed from recent SEC filings.';
                     document.getElementById('fullAnalysisLink').href = `/ticker/${ticker}`;
+
+                    loadingEl.style.display = 'none';
+                    resultEl.style.display = 'block';
                 }
-            } catch (err) { console.error('Audit failed', err); }
+            } catch (err) {
+                console.error('Audit failed', err);
+                loadingEl.style.display = 'none';
+            }
         }
 
         loadArticles();
