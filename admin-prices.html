@@ -508,6 +508,14 @@
         }
 
         async function triggerUpdate() {
+            // Always prompt for key to ensure it's correct
+            const keyToUse = prompt('Enter admin key:', adminKey || '');
+            if (!keyToUse) {
+                return; // User cancelled
+            }
+            adminKey = keyToUse;
+            localStorage.setItem('bf_admin_key', adminKey);
+
             const btn = document.getElementById('updateBtn');
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div><span>Updating...</span>';
@@ -526,6 +534,12 @@
                 });
 
                 const data = await res.json();
+
+                if (res.status === 401) {
+                    localStorage.removeItem('bf_admin_key');
+                    adminKey = '';
+                    throw new Error('Invalid admin key. Please try again.');
+                }
 
                 if (!res.ok) {
                     throw new Error(data.error || `HTTP ${res.status}`);
@@ -624,6 +638,14 @@
 
         async function triggerConvertAndPush() {
             if (!selectedFile) return;
+
+            // Always prompt for key to ensure it's correct
+            const keyToUse = prompt('Enter admin key:', adminKey || '');
+            if (!keyToUse) {
+                return; // User cancelled
+            }
+            adminKey = keyToUse;
+            localStorage.setItem('bf_admin_key', adminKey);
 
             const btn = document.getElementById('uploadBtn');
             btn.disabled = true;
