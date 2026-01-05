@@ -994,6 +994,134 @@ function resolveSafePath(base, urlPath) {
     return resolved;
 }
 
+/**
+ * Serve ticker.html with SSR-injected meta tags for SEO
+ * This ensures Google sees unique title/description for each of the 7000+ tickers
+ */
+async function serveTickerWithSSR(req, res, ticker) {
+    const tickerHtmlPath = path.join(__dirname, 'ticker.html');
+
+    try {
+        // Read the template HTML
+        let html = await fsPromises.readFile(tickerHtmlPath, 'utf8');
+
+        // Quick lookup from screener_index for basic meta info
+        let companyName = '';
+        let score = null;
+        let narrative = '';
+
+        try {
+            const { getScreenerDb } = await import('./server/screener/screenerStore.js');
+            const db = await getScreenerDb();
+            const row = db.prepare(`
+                SELECT name, score, keyRiskOneLiner 
+                FROM screener_index 
+                WHERE ticker = ? 
+                LIMIT 1
+            `).get(ticker);
+
+            if (row) {
+                companyName = row.name || '';
+                score = row.score;
+                narrative = row.keyRiskOneLiner || '';
+            }
+        } catch (dbErr) {
+            console.warn('[ssr] screener lookup failed:', ticker, dbErr.message);
+        }
+
+        // Build SEO-friendly title and description
+        const displayName = companyName ? `${ticker} (${companyName})` : ticker;
+        const seoTitle = `${displayName} Fundamental Analysis & Quality Score | Bullish and Foolish`;
+
+        // First sentence of narrative, or fallback
+        const firstSentence = narrative.split('.')[0]?.trim() || 'Fundamental analysis powered by SEC filings';
+        const scoreText = score != null ? ` Quality score: ${score}/100.` : '';
+        const seoDescription = `${displayName}: ${firstSentence}.${scoreText} Free stock analysis with profitability, growth, and solvency metrics.`;
+
+        // Canonical URL
+        const canonicalUrl = `https://bullishandfoolish.com/ticker/${encodeURIComponent(ticker)}`;
+
+        // Replace placeholder meta tags in the HTML
+        html = html
+            // Title tag
+            .replace(
+                /<title[^>]*>.*?<\/title>/i,
+                `<title>${escapeHtml(seoTitle)}</title>`
+            )
+            // Meta description
+            .replace(
+                /<meta[^>]*id="metaDesc"[^>]*>/i,
+                `<meta id="metaDesc" name="description" content="${escapeHtml(seoDescription)}">`
+            )
+            // Open Graph tags
+            .replace(
+                /<meta[^>]*property="og:title"[^>]*>/i,
+                `<meta property="og:title" content="${escapeHtml(seoTitle)}">`
+            )
+            .replace(
+                /<meta[^>]*property="og:description"[^>]*>/i,
+                `<meta property="og:description" content="${escapeHtml(seoDescription)}">`
+            )
+            .replace(
+                /<meta[^>]*property="og:url"[^>]*>/i,
+                `<meta property="og:url" content="${canonicalUrl}">`
+            )
+            // Twitter tags
+            .replace(
+                /<meta[^>]*name="twitter:title"[^>]*>/i,
+                `<meta name="twitter:title" content="${escapeHtml(seoTitle)}">`
+            )
+            .replace(
+                /<meta[^>]*name="twitter:description"[^>]*>/i,
+                `<meta name="twitter:description" content="${escapeHtml(seoDescription)}">`
+            );
+
+        // Add canonical link if not present
+        if (!html.includes('rel="canonical"')) {
+            html = html.replace(
+                '</head>',
+                `    <link rel="canonical" href="${canonicalUrl}">\n</head>`
+            );
+        }
+
+        // Serve with gzip if supported
+        const headers = {
+            'Content-Type': 'text/html; charset=utf-8',
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'SAMEORIGIN',
+            'Referrer-Policy': 'strict-origin-when-cross-origin',
+            'Vary': 'Accept-Encoding'
+        };
+
+        const acceptEncoding = req.headers['accept-encoding'] || '';
+        if (acceptEncoding.includes('gzip')) {
+            headers['Content-Encoding'] = 'gzip';
+            res.writeHead(200, headers);
+            zlib.gzip(Buffer.from(html, 'utf8'), (err, buffer) => {
+                if (err) return res.end(html);
+                res.end(buffer);
+            });
+        } else {
+            res.writeHead(200, headers);
+            res.end(html);
+        }
+
+    } catch (err) {
+        console.error('[ssr] ticker page error:', ticker, err.message);
+        // Fallback: serve ticker.html without SSR
+        res.writeHead(302, { 'Location': `/ticker.html?ticker=${encodeURIComponent(ticker)}` });
+        res.end();
+    }
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
     let pathname = parsedUrl.pathname;
@@ -1021,7 +1149,7 @@ const server = http.createServer(async (req, res) => {
         pathname = '/admin-prices.html';
     }
 
-    // Support pretty URLs: /ticker/AAPL -> serve ticker.html
+    // Support pretty URLs: /ticker/AAPL -> serve ticker.html with SSR meta tags
     // Only capture 2-segment paths under /ticker/ that don't look like file requests
     if (pathname.startsWith('/ticker/')) {
         const parts = pathname.split('/').filter(Boolean);
@@ -1030,7 +1158,8 @@ const server = http.createServer(async (req, res) => {
             // Allow dots for tickers like BRK.B, but exclude common web extensions
             const isAsset = /\.(css|js|png|jpg|jpeg|webp|gif|ico|json|map|svg|woff2?|ttf|html)$/i.test(parts[1]);
             if (!isAsset) {
-                pathname = '/ticker.html';
+                const tickerSymbol = decodeURIComponent(parts[1]).toUpperCase();
+                return serveTickerWithSSR(req, res, tickerSymbol);
             }
         }
     }
