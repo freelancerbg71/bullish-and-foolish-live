@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>🔐 Price Update</title>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --accent: #00d4ff;
+            --accent-secondary: #7c3aed;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .status-card {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .status-indicator {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .status-indicator.unknown {
+            background: rgba(160, 174, 192, 0.2);
+        }
+
+        .status-indicator.fresh {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .status-indicator.stale {
+            background: rgba(245, 158, 11, 0.2);
+        }
+
+        .status-indicator.error {
+            background: rgba(239, 68, 68, 0.2);
+        }
+
+        .status-info h3 {
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .status-info p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .status-info .fresh {
+            color: var(--success);
+        }
+
+        .status-info .stale {
+            color: var(--warning);
+        }
+
+        .status-info .error {
+            color: var(--error);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), var(--accent-secondary));
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            margin-top: 12px;
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card);
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .log-output {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .log-output.visible {
+            display: block;
+        }
+
+        .log-line {
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .log-line:last-child {
+            border-bottom: none;
+        }
+
+        .log-line.info {
+            color: var(--accent);
+        }
+
+        .log-line.success {
+            color: var(--success);
+        }
+
+        .log-line.error {
+            color: var(--error);
+        }
+
+        .log-line.warning {
+            color: var(--warning);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .stat-item {
+            background: var(--bg-secondary);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .auth-form {
+            margin-bottom: 20px;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+
+        .auth-form input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .auth-form input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .upload-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .upload-section h4 {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .file-label:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .file-label.has-file {
+            border-color: var(--success);
+            color: var(--success);
+            border-style: solid;
+        }
+
+        .btn-upload {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+            color: white;
+            margin-top: 12px;
+        }
+
+        .btn-upload:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐂 Price Updater</h1>
+            <p>Private admin tool for Bullish & Foolish</p>
+        </div>
+
+        <div class="card" id="authCard">
+            <h3 style="margin-bottom: 16px;">🔐 Authentication Required</h3>
+            <div class="auth-form">
+                <input type="password" id="adminKey" placeholder="Enter admin key..." autocomplete="off">
+                <button class="btn btn-primary" onclick="authenticate()">
+                    <span>Unlock</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="card hidden" id="mainCard">
+            <div class="status-card" id="statusArea">
+                <div class="status-indicator unknown" id="statusIndicator">❓</div>
+                <div class="status-info">
+                    <h3 id="statusTitle">Checking status...</h3>
+                    <p id="statusSubtitle">Loading price data info</p>
+                </div>
+            </div>
+
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-item">
+                    <div class="stat-value" id="tickerCount">-</div>
+                    <div class="stat-label">Tickers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="lastUpdate">-</div>
+                    <div class="stat-label">Last Update</div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" id="updateBtn" onclick="triggerUpdate()">
+                <span>🔄 Update Prices Now</span>
+            </button>
+
+            <button class="btn btn-secondary" onclick="checkStatus()">
+                <span>📊 Refresh Status</span>
+            </button>
+
+            <div class="upload-section">
+                <h4>📥 Manual Update (if NASDAQ blocks server)</h4>
+
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 16px;">
+                    Step 1: Download prices from NASDAQ, then upload here to convert & push.
+                </p>
+
+                <a href="https://api.nasdaq.com/api/screener/stocks?tableonly=true&limit=0&download=true"
+                    target="_blank" class="btn btn-secondary" style="text-decoration: none; margin-top: 0;">
+                    <span>⬇️ Download from NASDAQ</span>
+                </a>
+
+                <div class="file-input-wrapper" style="margin-top: 16px;">
+                    <label class="file-label" id="fileLabel">
+                        <span>📄 Step 2: Select downloaded NASDAQ file</span>
+                    </label>
+                    <input type="file" id="pricesFile" accept=".json" onchange="handleFileSelect(this)">
+                </div>
+
+                <button class="btn btn-upload hidden" id="uploadBtn" onclick="triggerConvertAndPush()">
+                    <span>🚀 Convert & Push to GitHub</span>
+                </button>
+            </div>
+
+            <div class="log-output" id="logOutput"></div>
+        </div>
+
+        <div class="footer">
+            <a href="/">← Back to Bullish & Foolish</a>
+        </div>
+    </div>
+
+    <script>
+        let adminKey = localStorage.getItem('bf_admin_key') || '';
+
+        function authenticate() {
+            const keyInput = document.getElementById('adminKey');
+            adminKey = keyInput.value.trim();
+            if (adminKey) {
+                localStorage.setItem('bf_admin_key', adminKey);
+                document.getElementById('authCard').classList.add('hidden');
+                document.getElementById('mainCard').classList.remove('hidden');
+                checkStatus();
+            }
+        }
+
+        // Auto-authenticate if key is stored
+        if (adminKey) {
+            document.getElementById('authCard').classList.add('hidden');
+            document.getElementById('mainCard').classList.remove('hidden');
+            checkStatus();
+        }
+
+        async function checkStatus() {
+            const indicator = document.getElementById('statusIndicator');
+            const title = document.getElementById('statusTitle');
+            const subtitle = document.getElementById('statusSubtitle');
+
+            try {
+                const res = await fetch('/api/prices/status');
+                const data = await res.json();
+
+                document.getElementById('tickerCount').textContent = data.entries || 0;
+
+                if (data.newestAt) {
+                    const date = new Date(data.newestAt);
+                    const now = new Date();
+                    const diffHours = Math.round((now - date) / (1000 * 60 * 60));
+                    document.getElementById('lastUpdate').textContent = diffHours < 24
+                        ? `${diffHours}h ago`
+                        : date.toLocaleDateString();
+                }
+
+                if (data.isStale) {
+                    indicator.className = 'status-indicator stale';
+                    indicator.textContent = '⚠️';
+                    title.textContent = 'Prices are stale';
+                    title.className = 'stale';
+                    subtitle.textContent = 'Update recommended';
+                } else {
+                    indicator.className = 'status-indicator fresh';
+                    indicator.textContent = '✅';
+                    title.textContent = 'Prices are fresh';
+                    title.className = 'fresh';
+                    subtitle.textContent = `${data.entries} tickers updated`;
+                }
+            } catch (err) {
+                indicator.className = 'status-indicator error';
+                indicator.textContent = '❌';
+                title.textContent = 'Error checking status';
+                title.className = 'error';
+                subtitle.textContent = err.message;
+            }
+        }
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('logOutput');
+            output.classList.add('visible');
+            const line = document.createElement('div');
+            line.className = `log-line ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        async function triggerUpdate() {
+            const btn = document.getElementById('updateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div><span>Updating...</span>';
+
+            document.getElementById('logOutput').innerHTML = '';
+            log('Starting price update...', 'info');
+
+            try {
+                const res = await fetch('/api/admin/update-prices', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify({ pushToGithub: true })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || `HTTP ${res.status}`);
+                }
+
+                log(`Fetched ${data.tickersUpdated || 0} prices from NASDAQ`, 'success');
+
+                if (data.githubPushed) {
+                    log(`Pushed to GitHub: ${data.githubCommit || 'success'}`, 'success');
+                } else if (data.githubError) {
+                    log(`GitHub push failed: ${data.githubError}`, 'warning');
+                } else {
+                    log('GitHub push skipped (not configured)', 'warning');
+                }
+
+                log('✨ Update complete!', 'success');
+
+                // Refresh status after update
+                setTimeout(checkStatus, 1000);
+
+            } catch (err) {
+                log(`Error: ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔄 Update Prices Now</span>';
+            }
+        }
+
+        // Enter key support for auth
+        document.getElementById('adminKey').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') authenticate();
+        });
+
+        let selectedFile = null;
+
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            const label = document.getElementById('fileLabel');
+            const uploadBtn = document.getElementById('uploadBtn');
+
+            if (file && file.name.endsWith('.json')) {
+                selectedFile = file;
+                label.classList.add('has-file');
+                label.innerHTML = `<span>✅ ${file.name} (${(file.size / 1024).toFixed(1)} KB)</span>`;
+                uploadBtn.classList.remove('hidden');
+            } else {
+                selectedFile = null;
+                label.classList.remove('has-file');
+                label.innerHTML = '<span>📄 Step 2: Select downloaded NASDAQ file</span>';
+                uploadBtn.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Convert NASDAQ screener JSON format to our prices.json format
+         * NASDAQ format: { data: { rows: [{ symbol, lastsale, marketCap, ... }] } }
+         * Our format: { TICKER: { p: price, t: date, mc: marketCap, s: source } }
+         */
+        function convertNasdaqToPrices(nasdaqData) {
+            const rows = nasdaqData?.data?.rows || [];
+            if (!rows.length) {
+                throw new Error('No price data found in file. Is this a NASDAQ screener file?');
+            }
+
+            const todayDate = new Date().toISOString().split('T')[0];
+            const prices = {};
+            let skipped = 0;
+
+            for (const row of rows) {
+                const symbol = String(row.symbol || '').trim().toUpperCase();
+                if (!symbol) continue;
+
+                // NASDAQ lastsale looks like "$137.24"
+                const priceStr = String(row.lastsale || '').replace(/[$,]/g, '');
+                const price = Number(priceStr);
+
+                // Market cap is a plain number like "39102999277.00"
+                const mcStr = String(row.marketCap || '').replace(/[$,]/g, '');
+                const marketCap = Number(mcStr);
+
+                if (!Number.isFinite(price) || price <= 0) {
+                    skipped++;
+                    continue;
+                }
+
+                prices[symbol] = {
+                    p: price,
+                    t: todayDate,
+                    mc: Number.isFinite(marketCap) ? marketCap : null,
+                    s: 'NASDAQ-Public'
+                };
+            }
+
+            return { prices, count: Object.keys(prices).length, skipped };
+        }
+
+        async function triggerConvertAndPush() {
+            if (!selectedFile) return;
+
+            const btn = document.getElementById('uploadBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div><span>Converting...</span>';
+
+            document.getElementById('logOutput').innerHTML = '';
+            log('Reading NASDAQ file...', 'info');
+
+            try {
+                const text = await selectedFile.text();
+                let nasdaqData;
+
+                try {
+                    nasdaqData = JSON.parse(text);
+                } catch (e) {
+                    throw new Error('Invalid JSON file');
+                }
+
+                log('Converting NASDAQ format to prices.json...', 'info');
+                const { prices, count, skipped } = convertNasdaqToPrices(nasdaqData);
+
+                log(`Converted ${count} tickers (${skipped} skipped)`, 'success');
+                log('Pushing to server & GitHub...', 'info');
+
+                const res = await fetch('/api/admin/update-prices', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify({
+                        prices: prices,
+                        pushToGithub: true
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || `HTTP ${res.status}`);
+                }
+
+                log(`Server received ${data.tickersUpdated} prices`, 'success');
+
+                if (data.githubPushed) {
+                    log(`Pushed to GitHub: ${data.githubCommit || 'success'}`, 'success');
+                } else if (data.githubError) {
+                    log(`GitHub push failed: ${data.githubError}`, 'warning');
+                }
+
+                log('✨ Prices updated successfully!', 'success');
+                setTimeout(checkStatus, 1000);
+
+            } catch (err) {
+                log(`Error: ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🚀 Convert & Push to GitHub</span>';
+            }
+        }
+    </script>
+</body>
+
+</html>

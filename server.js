@@ -35,6 +35,7 @@ import { closeDb as closeFundamentalsDb, getFundamentalsForTicker, writeFundamen
 import { closeDb as closeScreenerDb } from './server/screener/screenerStore.js';
 import { closeDb as closePricesDb } from './server/prices/priceStore.js';
 import { startDailyPricesScheduler } from './server/prices/dailyLastTradeScheduler.js';
+import { handleAdminPriceUpdate } from './server/admin/adminPriceHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -968,6 +969,10 @@ async function handleApi(req, res, url) {
                             : 202;
             return sendJson(req, res, statusCode, statusPayload);
         }
+        // Admin price update endpoint
+        if (url.pathname === '/api/admin/update-prices' && req.method === 'POST') {
+            return handleAdminPriceUpdate(req, res, { sendJson });
+        }
         return sendJson(req, res, 404, { error: 'Not found' });
     } catch (err) {
         const status = err?.status && Number.isInteger(err.status) ? err.status : 500;
@@ -1010,6 +1015,11 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/' || pathname === '') pathname = '/index.html';
+
+    // Hidden admin page for price updates (not linked anywhere)
+    if (pathname === '/admin/prices') {
+        pathname = '/admin-prices.html';
+    }
 
     // Support pretty URLs: /ticker/AAPL -> serve ticker.html
     // Only capture 2-segment paths under /ticker/ that don't look like file requests
