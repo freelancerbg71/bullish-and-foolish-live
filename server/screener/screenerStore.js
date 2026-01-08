@@ -47,6 +47,8 @@ export async function ensureScreenerSchema() {
       name TEXT,
       sector TEXT,
       sectorBucket TEXT,
+      issuerType TEXT,
+      annualMode INTEGER,
       score REAL,
       tier TEXT,
       marketCap REAL,
@@ -86,6 +88,8 @@ export async function ensureScreenerSchema() {
   try {
     const existing = new Set(db.prepare("PRAGMA table_info(screener_index)").all().map((c) => c.name));
     const desired = {
+      issuerType: "TEXT",
+      annualMode: "INTEGER",
       lastTradePrice: "REAL",
       lastTradeAt: "TEXT",
       lastTradeSource: "TEXT",
@@ -124,7 +128,7 @@ export async function upsertScreenerRows(rows = []) {
   const stmt = db.prepare(`
     INSERT INTO screener_index (
       ticker, name, sector, sectorBucket,
-      score, tier,
+      issuerType, annualMode, score, tier,
       marketCap, marketCapBucket,
       revenueGrowthYoY, fcfMarginTTM, peTTM,
       dividendYield, dividendCovered,
@@ -135,7 +139,7 @@ export async function upsertScreenerRows(rows = []) {
       updatedAt
     ) VALUES (
       @ticker, @name, @sector, @sectorBucket,
-      @score, @tier,
+      @issuerType, @annualMode, @score, @tier,
       @marketCap, @marketCapBucket,
       @revenueGrowthYoY, @fcfMarginTTM, @peTTM,
       @dividendYield, @dividendCovered,
@@ -149,6 +153,8 @@ export async function upsertScreenerRows(rows = []) {
       name=excluded.name,
       sector=excluded.sector,
       sectorBucket=excluded.sectorBucket,
+      issuerType=excluded.issuerType,
+      annualMode=excluded.annualMode,
       score=excluded.score,
       tier=excluded.tier,
       marketCap=excluded.marketCap,
@@ -182,6 +188,8 @@ export async function upsertScreenerRows(rows = []) {
         name: row.name ?? null,
         sector: row.sector ?? null,
         sectorBucket: row.sectorBucket ?? null,
+        issuerType: row.issuerType ?? null,
+        annualMode: row.annualMode ? 1 : 0,
         score: Number.isFinite(Number(row.score)) ? Number(row.score) : null,
         tier: row.tier ?? null,
         marketCap: Number.isFinite(Number(row.marketCap)) ? Number(row.marketCap) : null,

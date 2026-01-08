@@ -452,7 +452,8 @@ export function buildStockForRules(vm) {
             ? netDebt / toNumber(curBal.totalStockholdersEquity)
             : debtToEquity;
 
-    const lastClose = vm?.priceSummary?.lastClose != null ? Number(vm.priceSummary.lastClose) : null;
+    const priceStale = vm?.priceSummary?.stale === true;
+    const lastClose = !priceStale && vm?.priceSummary?.lastClose != null ? Number(vm.priceSummary.lastClose) : null;
     const marketCap = vm?.snapshot?.marketCap != null ? Number(vm.snapshot.marketCap) : (lastClose != null && curBal.commonStockSharesOutstanding != null ? lastClose * curBal.commonStockSharesOutstanding : null);
 
     const revenueForValuation =

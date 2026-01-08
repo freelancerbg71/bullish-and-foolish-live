@@ -491,6 +491,14 @@ export const rules = [
       const g = revenueGrowth(stock) || 0;
       const bucket = resolveSectorBucket(stock?.sector || stock?.sectorBucket);
 
+      // Negative or zero P/E means unprofitable; do not reward it as "cheap".
+      if (Number.isFinite(pe) && pe <= 0) {
+        if (bucket === "Tech/Internet" && g > 30) {
+          return { score: 0, message: "Unprofitable (High Growth)" };
+        }
+        return missing("Unprofitable", true);
+      }
+
       // SaaS/High Growth Exemption: Unprofitable is okay if growing > 30%
       if (pe === null || pe === undefined) {
         if (bucket === "Tech/Internet" && g > 30) {

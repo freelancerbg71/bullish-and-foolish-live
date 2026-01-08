@@ -19,6 +19,8 @@ import {
   clamp01,
   avg,
   RISK_FREE_RATE_PCT as ENGINE_RISK_FREE_RATE_PCT,
+  RATING_MIN,
+  RATING_RANGE,
   SAFE_DIVISION_THRESHOLD,
   ONE_YEAR_MS,
   TOLERANCE_30D_MS,
@@ -56,7 +58,7 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(ROOT, "data");
 const EDGAR_DIR = path.join(DATA_DIR, "edgar");
 const STATIC_PRICE_PATCH_PATH = path.join(DATA_DIR, "prices.json");
-const PRICE_PATCH_MAX_AGE_DAYS = Number(process.env.PRICE_PATCH_MAX_AGE_DAYS) || 2;
+const PRICE_PATCH_MAX_AGE_DAYS = Number(process.env.PRICE_PATCH_MAX_AGE_DAYS) || 3;
 const RISK_FREE_RATE_PCT = ENGINE_RISK_FREE_RATE_PCT;
 const priceLogCache = new Map(); // throttle noisy price logs per ticker
 const staticPricePatchCache = { loadedAt: 0, data: null };
@@ -398,36 +400,38 @@ function deriveQuarterFromAnnual(latestAnnual, quartersAsc) {
   return derived;
 }
 
-function buildTtmWithDerived({ quartersAsc, latestAnnual }) {
-  // Step 1: Check for gaps in the most recent quarters that could be filled by derivation.
+function augmentQuartersWithDerived({ quartersAsc, latestAnnual }) {
   // Q4 often isn't filed separately (included in 10-K), so derive Q4 = Annual - (Q1+Q2+Q3)
   let workingQuarters = [...(quartersAsc || [])];
+  if (!latestAnnual?.periodEnd) return workingQuarters;
 
-  // Look through all annual periods and try to derive missing Q4s
-  if (latestAnnual?.periodEnd) {
-    const annualEnd = Date.parse(latestAnnual.periodEnd);
-    if (Number.isFinite(annualEnd)) {
-      // Check if we have an incomplete quarter at the annual period end
-      const existingQ4 = workingQuarters.find((q) =>
-        q?.periodEnd && Math.abs(Date.parse(q.periodEnd) - annualEnd) < 5 * 24 * 60 * 60 * 1000
-      );
-      const q4IsIncomplete = !existingQ4 ||
-        !Number.isFinite(Number(existingQ4.revenue)) ||
-        !Number.isFinite(Number(existingQ4.netIncome));
+  const annualEnd = Date.parse(latestAnnual.periodEnd);
+  if (!Number.isFinite(annualEnd)) return workingQuarters;
 
-      if (q4IsIncomplete) {
-        const derivedQ4 = deriveQuarterFromAnnual(latestAnnual, workingQuarters);
-        if (derivedQ4) {
-          // Replace incomplete Q4 with derived one, or add if missing
-          if (existingQ4) {
-            workingQuarters = workingQuarters.filter((q) => q !== existingQ4);
-          }
-          workingQuarters.push(derivedQ4);
-          workingQuarters = sortByPeriodEndAsc(workingQuarters);
-        }
+  const existingQ4 = workingQuarters.find((q) =>
+    q?.periodEnd && Math.abs(Date.parse(q.periodEnd) - annualEnd) < 5 * 24 * 60 * 60 * 1000
+  );
+  const q4IsIncomplete = !existingQ4 ||
+    !Number.isFinite(Number(existingQ4.revenue)) ||
+    !Number.isFinite(Number(existingQ4.netIncome));
+
+  if (q4IsIncomplete) {
+    const derivedQ4 = deriveQuarterFromAnnual(latestAnnual, workingQuarters);
+    if (derivedQ4) {
+      if (existingQ4) {
+        workingQuarters = workingQuarters.filter((q) => q !== existingQ4);
       }
+      workingQuarters.push(derivedQ4);
+      workingQuarters = sortByPeriodEndAsc(workingQuarters);
     }
   }
+
+  return workingQuarters;
+}
+
+function buildTtmWithDerived({ quartersAsc, latestAnnual }) {
+  // Step 1: Check for gaps in the most recent quarters that could be filled by derivation.
+  let workingQuarters = augmentQuartersWithDerived({ quartersAsc, latestAnnual });
 
   // Step 2: Now try to build TTM with potentially augmented quarters
   const ttmWithDerived = buildTtmFromQuarters(workingQuarters);
@@ -491,7 +495,14 @@ function buildTtmWithDerived({ quartersAsc, latestAnnual }) {
 }
 
 function computePriorTtmMeta({ quartersAsc, annualSeries }) {
-  const quarters = sortByPeriodEndAsc(quartersAsc || []);
+  const annuals = Array.isArray(annualSeries) ? annualSeries : [];
+  const latestAnnual = [...annuals]
+    .filter((p) => p?.periodEnd)
+    .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0] || null;
+  const quarters = augmentQuartersWithDerived({
+    quartersAsc: sortByPeriodEndAsc(quartersAsc || []),
+    latestAnnual
+  });
   if (quarters.length < 8) return null;
 
   const priorSlice = quarters.slice(0, -4);
@@ -499,7 +510,6 @@ function computePriorTtmMeta({ quartersAsc, annualSeries }) {
   const priorEnd = priorSlice[priorSlice.length - 1]?.periodEnd || null;
   if (!priorEnd) return null;
 
-  const annuals = Array.isArray(annualSeries) ? annualSeries : [];
   const priorAnnual = [...annuals]
     .filter((p) => p?.periodEnd && Date.parse(p.periodEnd) <= Date.parse(priorEnd))
     .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0] || null;
@@ -536,10 +546,6 @@ function computePriorTtmMeta({ quartersAsc, annualSeries }) {
 
 
 // ---------- Rating helpers (shared-rule pipeline on the server) ----------
-// Recommended normalization: wider bounds to avoid easy 100/100 scores.
-const RATING_MIN = -60; // Captures truly distressed companies
-const RATING_MAX = 100; // Reserves 100/100 for near-perfect execution
-const RATING_RANGE = RATING_MAX - RATING_MIN || 1;
 
 // Local definitions of normalizeRuleScore, getScoreBand, and pctChange removed.
 // They are now imported from engine/index.js
@@ -1387,6 +1393,16 @@ function computeRuleRating({
       : null
   };
 
+  const completenessMultiplier =
+    completeness?.percent != null ? (0.5 + 0.5 * (completeness.percent / 100)) : 1;
+  if (normalized != null) {
+    normalized = Math.max(0, Math.min(100, normalized * completenessMultiplier));
+    if (completeness?.percent != null && completeness.percent < 70) {
+      missingNotes.push("Score adjusted for data completeness.");
+    }
+    normalized = Math.round(normalized);
+  }
+
   // --- NARRATIVE SYNTHESIS ---
   const reconcileNarrative = () => {
     const contradictions = [];
@@ -2214,6 +2230,7 @@ export async function buildTickerViewModel(
         logPriceOnce("stale-no-fallback", ticker, `[tickerAssembler] price stale and no fallback for ${ticker}`);
       }
     }
+    priceSummary.stale = isDateStale(priceSummary.lastCloseDate, PRICE_PATCH_MAX_AGE_DAYS);
 
     let quarterlySeries = toQuarterlySeries(fundamentals);
 
@@ -3244,12 +3261,20 @@ function computeRevenueGrowthYoY({ statementQuarterlySeries, annualSeries, annua
     return pctChange(latest, prior);
   }
 
-  const quartersAsc = sortByPeriodEndAsc(statementQuarterlySeries || []).filter((q) =>
-    Number.isFinite(Number(q?.revenue))
-  );
-  if (quartersAsc.length < 8) return null;
-  const latestTtm = ttmFromQuarterSeries(quartersAsc, "revenue", 4);
-  const priorTtm = ttmFromQuarterSeries(quartersAsc.slice(0, -4), "revenue", 4);
+  const annuals = Array.isArray(annualSeries) ? annualSeries : [];
+  const latestAnnual = [...annuals]
+    .filter((p) => p?.periodEnd)
+    .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0] || null;
+  const quartersAsc = augmentQuartersWithDerived({
+    quartersAsc: sortByPeriodEndAsc(statementQuarterlySeries || []).filter((q) =>
+      Number.isFinite(Number(q?.revenue))
+    ),
+    latestAnnual
+  });
+  const latestTtmMeta = buildTtmWithDerived({ quartersAsc, latestAnnual });
+  const priorTtmMeta = computePriorTtmMeta({ quartersAsc, annualSeries });
+  const latestTtm = Number(latestTtmMeta?.ttm?.revenue);
+  const priorTtm = Number(priorTtmMeta?.ttm?.revenue);
   return pctChange(latestTtm, priorTtm);
 }
 
@@ -3257,6 +3282,22 @@ function computeFcfMarginTTM({ ttm, statementQuarterlySeries, annualSeries, annu
   const fcf = Number(ttm?.freeCashFlow);
   const rev = Number(ttm?.revenue);
   if (Number.isFinite(fcf) && Number.isFinite(rev) && rev !== 0) return (fcf / Math.abs(rev)) * 100;
+
+  if (!annualMode) {
+    const annuals = Array.isArray(annualSeries) ? annualSeries : [];
+    const latestAnnual = [...annuals]
+      .filter((p) => p?.periodEnd)
+      .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0] || null;
+    const ttmMeta = buildTtmWithDerived({
+      quartersAsc: sortByPeriodEndAsc(statementQuarterlySeries || []),
+      latestAnnual
+    });
+    const fcfDerived = Number(ttmMeta?.ttm?.freeCashFlow);
+    const revDerived = Number(ttmMeta?.ttm?.revenue);
+    if (Number.isFinite(fcfDerived) && Number.isFinite(revDerived) && revDerived !== 0) {
+      return (fcfDerived / Math.abs(revDerived)) * 100;
+    }
+  }
 
   if (annualMode) {
     const years = Array.isArray(annualSeries) ? annualSeries : [];
@@ -3509,13 +3550,17 @@ export async function buildScreenerRowForTicker(ticker, { allowFilingScan = fals
         updatedAt: new Date().toISOString()
       };
     }
-    const recent = await getRecentPrices(key, Number(process.env.SCREENER_PRICE_SERIES_LIMIT) || 260);
-    const series = recent.map((p) => ({ date: p.date, close: p.close }));
-    const pricePieces = series.length
-      ? buildPricePieces(series)
-      : { priceSummary: emptyPriceSummary(), priceHistory: [] };
-    let priceSummary = pricePieces.priceSummary;
-    let priceHistory = pricePieces.priceHistory;
+    // Align screener prices with ticker view (prices.json / NASDAQ patch as source of truth).
+    let priceSummary = emptyPriceSummary();
+    let priceHistory = [];
+    if (hit && Number.isFinite(Number(hit.p))) {
+      priceSummary.lastClose = Number(hit.p);
+      priceSummary.lastCloseDate = hit.t ? String(hit.t).slice(0, 10) : null;
+    } else if (latestCached?.close != null) {
+      priceSummary.lastClose = Number(latestCached.close);
+      priceSummary.lastCloseDate = latestCached.date ? String(latestCached.date).slice(0, 10) : null;
+    }
+    priceSummary.stale = isDateStale(priceSummary.lastCloseDate, PRICE_PATCH_MAX_AGE_DAYS);
     const externalMarketCap = latestCached?.marketCap || null;
     const externalCurrency = latestCached?.currency || null;
 
@@ -3629,6 +3674,8 @@ export async function buildScreenerRowForTicker(ticker, { allowFilingScan = fals
       latestBalance,
       shortInterest: null
     });
+    // Keep screener/ticker market cap aligned to NASDAQ prices.json when available.
+    snapshot.marketCap = keyMetrics.marketCap;
     const projections = buildProjections({ snapshot, growth, quarterlySeries, annualSeries, annualMode, keyMetrics });
 
     const filteredSignals = (resolvedFilingSignals || []).filter(
@@ -3708,6 +3755,8 @@ export async function buildScreenerRowForTicker(ticker, { allowFilingScan = fals
       name: fundamentals[0]?.companyName || cached?.companyName || null,
       sector: sector || null,
       sectorBucket,
+      issuerType,
+      annualMode: Boolean(annualMode),
       score: score == null ? null : Number(score),
       tier: rating?.tierLabel || null,
       marketCap: marketCap == null ? null : Number(marketCap),

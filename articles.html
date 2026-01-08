@@ -296,24 +296,33 @@
             border-top: 1px solid var(--border);
         }
     </style>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GFS8VB2GT4"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-GFS8VB2GT4');
+    </script>
 </head>
 
 <body>
 
-    <header class="app-header">
-        <div class="container header-content">
-            <div class="header-left">
-                <a href="/index.html" class="header-brand">
-                    Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
-                </a>
-            </div>
-            <nav class="header-nav text-muted">
-                <a href="/screener.html">Screener</a>
-                <a href="/articles.html" style="color: var(--text-primary);">Articles</a>
-                <a href="/about.html">Methodology</a>
-                <a href="/index.html">Search</a>
-            </nav>
-        </div>
+    <header class="container"
+        style="padding: 0 var(--space-md) var(--space-xs) var(--space-md); display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border);">
+        <a href="/index.html"
+            style="font-family: var(--font-serif); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-primary); margin-bottom: 24px;">
+            Bullish <span style="color: var(--accent); font-style: italic;">&amp;</span> Foolish
+        </a>
+        <nav style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px; align-items: center;"
+            class="text-muted">
+            <a href="/screener.html">Screener</a>
+            <a href="/articles.html" style="color: var(--text-primary);">Articles</a>
+            <a href="/about.html">Methodology</a>
+            <a href="/index.html">Search</a>
+            <div id="authButtonContainer"></div>
+        </nav>
     </header>
 
     <div class="articles-hero">
@@ -567,6 +576,11 @@
             }
         }
     </script>
+
+    <!-- Supabase Auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/assets/js/supabase-auth.js"></script>
+    <script src="/assets/js/auth-ui.js"></script>
 </body>
 
 </html>

@@ -290,7 +290,7 @@ export async function queryScreener(url) {
       `
       ${baseQuery}
       SELECT
-        ticker, name, sector, sectorBucket,
+        ticker, name, sector, sectorBucket, issuerType, annualMode,
         score, tier,
         revenueGrowthYoY, fcfMarginTTM, marketCap,
         marketCapBucket, peTTM,
@@ -312,6 +312,8 @@ export async function queryScreener(url) {
     name: r.name,
     sector: r.sector,
     sectorBucket: r.sectorBucket,
+    issuerType: r.issuerType || null,
+    annualMode: r.annualMode == null ? null : Boolean(r.annualMode),
     score: r.score == null ? null : Number(r.score),
     tier: r.tier,
     marketCap: r.marketCap == null ? null : Number(r.marketCap),

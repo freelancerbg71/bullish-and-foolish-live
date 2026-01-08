@@ -1,5 +1,5 @@
 /**
- * Bullish & Foolish - Open Fundamentals Demo
+n * Bullish & Foolish - Open Fundamentals Demo
  * Copyright (C) 2024-2025 Bullish & Foolish Contributors
  *
  * This program is free software: you can redistribute it and/or modify
@@ -43,6 +43,51 @@ const PROJECT_ROOT = __dirname;
 const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(PROJECT_ROOT, 'data');
 const EDGAR_SNAPSHOT_DIR = path.join(DATA_DIR, 'edgar');
 const JSON_SNAPSHOT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+// S&P 100 tickers get special clickbait SEO treatment
+const SP100_TICKERS = new Set([
+    'AAPL', 'ABBV', 'ABT', 'ACN', 'ADBE', 'AIG', 'AMD', 'AMGN', 'AMZN', 'AVGO',
+    'AXP', 'BA', 'BAC', 'BK', 'BKNG', 'BLK', 'BMY', 'BRK.B', 'C', 'CAT',
+    'CHTR', 'CL', 'CMCSA', 'COF', 'COP', 'COST', 'CRM', 'CSCO', 'CVS', 'CVX',
+    'DE', 'DHR', 'DIS', 'DOW', 'DUK', 'EMR', 'EXC', 'F', 'FDX', 'GD',
+    'GE', 'GILD', 'GM', 'GOOG', 'GOOGL', 'GS', 'HD', 'HON', 'IBM', 'INTC',
+    'JNJ', 'JPM', 'KHC', 'KO', 'LIN', 'LLY', 'LMT', 'LOW', 'MA', 'MCD',
+    'MDLZ', 'MDT', 'MET', 'META', 'MMM', 'MO', 'MRK', 'MS', 'MSFT', 'NEE',
+    'NFLX', 'NKE', 'NVDA', 'ORCL', 'PEP', 'PFE', 'PG', 'PM', 'PYPL', 'QCOM',
+    'RTX', 'SBUX', 'SCHW', 'SO', 'SPG', 'T', 'TGT', 'TMO', 'TMUS', 'TSLA',
+    'TXN', 'UNH', 'UNP', 'UPS', 'USB', 'V', 'VZ', 'WBA', 'WFC', 'WMT', 'XOM'
+]);
+
+// Clickbait SEO templates for S&P 100 - rotates based on ticker hash for variety
+const SP100_SEO_TEMPLATES = [
+    { title: 'Is {TICKER} Overrated? SEC Data Reveals All', desc: 'Everyone\'s hyped about {COMPANY}. But what do actual SEC filings show? {SCORE_TEXT}' },
+    { title: '{TICKER} Scored {SCORE}/100 — Here\'s Why', desc: 'We analyzed {COMPANY}\'s latest 10-K filings. The fundamentals might surprise you. Free quality score on Bullish & Foolish.' },
+    { title: 'Wall Street Loves {TICKER}. Should You?', desc: 'Analysts say buy {COMPANY}. The 10-K filings tell a different story. SEC-based fundamental analysis inside.' },
+    { title: '{TICKER}: Buy, Hold, or Run? 10-K Breakdown', desc: 'Should you own {COMPANY} stock? We scored 100+ financial metrics from SEC filings. See the verdict.' },
+    { title: 'The Truth About {TICKER} Nobody Talks About', desc: '{COMPANY}\'s SEC filings reveal what Wall Street won\'t tell you. Free fundamental analysis based on real data.' }
+];
+
+function getClickbaitSEO(ticker, companyName, score) {
+    // Hash ticker to pick consistent template
+    const hash = ticker.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    const template = SP100_SEO_TEMPLATES[hash % SP100_SEO_TEMPLATES.length];
+
+    const scoreText = score != null ? `Quality score: ${score}/100.` : 'Quality score updated regularly.';
+    const displayScore = score != null ? String(score) : '??';
+    const displayCompany = companyName || ticker;
+
+    return {
+        title: template.title
+            .replace('{TICKER}', ticker)
+            .replace('{COMPANY}', displayCompany)
+            .replace('{SCORE}', displayScore),
+        description: template.desc
+            .replace('{TICKER}', ticker)
+            .replace('{COMPANY}', displayCompany)
+            .replace('{SCORE}', displayScore)
+            .replace('{SCORE_TEXT}', scoreText)
+    };
+}
 
 async function loadEnv() {
     const envFiles = ['.env.local', '.env'];
@@ -1030,13 +1075,26 @@ async function serveTickerWithSSR(req, res, ticker) {
         }
 
         // Build SEO-friendly title and description
-        const displayName = companyName ? `${ticker} (${companyName})` : ticker;
-        const seoTitle = `${displayName} Fundamental Analysis & Quality Score | Bullish and Foolish`;
+        // S&P 100 tickers get clickbait-style SEO, others keep current format
+        let seoTitle;
+        let seoDescription;
 
-        // First sentence of narrative, or fallback
-        const firstSentence = narrative.split('.')[0]?.trim() || 'Fundamental analysis powered by SEC filings';
-        const scoreText = score != null ? ` Quality score: ${score}/100.` : '';
-        const seoDescription = `${displayName}: ${firstSentence}.${scoreText} Free stock analysis with profitability, growth, and solvency metrics.`;
+        if (SP100_TICKERS.has(ticker)) {
+            // Clickbait SEO for S&P 100 companies
+            const clickbait = getClickbaitSEO(ticker, companyName, score);
+            seoTitle = `${clickbait.title} | Bullish & Foolish`;
+            seoDescription = clickbait.description;
+        } else {
+            // Standard SEO for all other tickers (unchanged)
+            seoTitle = `${ticker} Financial Health Exposed | Bullish & Foolish`;
+
+            if (companyName || score != null) {
+                const scoreText = score != null ? `Quality score: ${score}/100 updated regularly.` : 'Quality score updated regularly.';
+                seoDescription = `${ticker} fundamentals from SEC filings: dilution, cash runway, debt risk, going concern, and 15 filing-based signals summarized in plain English. ${scoreText}`;
+            } else {
+                seoDescription = `${ticker} fundamentals from SEC filings: dilution, cash runway, debt risk, going concern, and 15 filing-based signals summarized in plain English. Free analysis updated regularly.`;
+            }
+        }
 
         // Canonical URL
         const canonicalUrl = `https://bullishandfoolish.com/ticker/${encodeURIComponent(ticker)}`;

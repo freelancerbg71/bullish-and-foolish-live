@@ -15,14 +15,14 @@
     <meta property="og:title" content="Stock Analysis | Bullish and Foolish">
     <meta property="og:description"
         content="Fundamental analysis and quality score powered by SEC filings. Profitability, growth, solvency metrics and filing intelligence.">
-    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Stock Analysis | Bullish and Foolish">
     <meta name="twitter:description"
         content="Fundamental analysis and quality score powered by SEC filings. Profitability, growth, solvency metrics and filing intelligence.">
-    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
 
     <link rel="stylesheet" href="/style.css?v=20260104.2">
     <style>
@@ -187,6 +187,15 @@
             }
         }
     </style>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GFS8VB2GT4"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-GFS8VB2GT4');
+    </script>
 </head>
 
 <body>
@@ -211,6 +220,7 @@
                     <a href="/articles.html">Articles</a>
                     <a href="/about.html">Methodology</a>
                     <a href="/index.html">Search</a>
+                    <div id="authButtonContainer"></div>
                 </nav>
             </div>
         </div>
@@ -406,34 +416,35 @@
             "Revenue growth YoY": { pos: "Sales are growing vs last year.", neg: "Sales are shrinking vs last year." },
             "Revenue growth": { pos: "Sales are growing vs last year.", neg: "Sales are shrinking vs last year." },
             "Revenue Growth": { pos: "Sales are growing vs last year.", neg: "Sales are shrinking vs last year." },
-            "Gross margin": { pos: "High profit on every product sold.", neg: "Low profit per product sold." },
-            "FCF margin": { pos: "Business generates extra cash for growth.", neg: "Burning cash to operate." },
+            "Gross margin": { pos: "Gross profit as % of revenue (higher is better).", neg: "Low gross profit % of revenue." },
+            "FCF margin": { pos: "TTM free cash flow as % of revenue (higher is better).", neg: "TTM free cash flow is weak vs revenue." },
             "Cash Runway (years)": { pos: "Enough cash for the long haul.", neg: "Might need more funding soon." },
             "Shares dilution YoY": { pos: "Share count is stable.", neg: "New shares reduce your ownership." },
             "Share Buybacks": { pos: "Company is repurchasing its own stock.", neg: "Shares are being diluted." },
-            "Debt / Equity": { pos: "Conservative debt levels.", neg: "High debt increases risk." },
-            "Net Debt / FCF": { pos: "Debt can be paid off quickly.", neg: "Debt burden is heavy relative to cash flow." },
-            "Interest coverage": { pos: "Profits easily cover interest payments.", neg: "Struggling to pay interest costs." },
+            "Debt / Equity": { pos: "Latest total debt relative to equity (lower is safer).", neg: "High debt relative to equity." },
+            "Net Debt / FCF": { pos: "Net debt relative to TTM FCF (lower is safer).", neg: "Debt burden is heavy vs cash flow." },
+            "Interest coverage": { pos: "TTM operating income / interest expense (higher is safer).", neg: "TTM operating income doesn't cover interest." },
             "ROIC": { pos: "Creating value on every dollar invested.", neg: "Low returns on invested capital." },
             "ROE": { pos: "Efficiently using shareholder money.", neg: "Low return on equity." },
             "ROE quality": { pos: "Return on equity driven by efficiency.", neg: "Return on equity boosted by debt." },
             "Refined ROE": { pos: "High quality returns.", neg: "Weak returns on capital." },
-            "Revenue CAGR (3Y)": { pos: "Consistent long-term growth.", neg: "Growth has stalled over time." },
-            "EPS CAGR (3Y)": { pos: "Earnings are compounding.", neg: "Earnings have stagnated." },
+            "Revenue CAGR (3Y)": { pos: "3-year annualized revenue growth is strong.", neg: "3-year annualized revenue growth is weak." },
+            "EPS CAGR (3Y)": { pos: "3-year annualized EPS growth is strong.", neg: "3-year annualized EPS growth is weak." },
             "R&D intensity": { pos: "Investing heavily in the future.", neg: "Spending little on innovation." },
             "Working Capital": { pos: "Efficient cash cycle.", neg: "Cash cycle is inefficient/strapped." },
-            "Operating leverage": { pos: "Growing profit faster than revenue.", neg: "Costs rising faster than sales." },
-            "Price / Sales": { pos: "Valuation is reasonable relative to sales.", neg: "Expensive relative to sales." },
-            "Price / Earnings": { pos: "Valuation is reasonable relative to profit.", neg: "Expensive relative to profit." },
+            "Operating leverage": { pos: "TTM operating income relative to gross profit is improving.", neg: "TTM operating income is weak vs gross profit." },
+            "Price / Sales": { pos: "Price vs TTM revenue (lower can be cheaper).", neg: "Price is high vs TTM revenue." },
+            "Price / Earnings": { pos: "Price vs TTM earnings (lower can be cheaper).", neg: "Price is high vs TTM earnings." },
+            "Price / Book": { pos: "Price vs book value per share (lower can be cheaper).", neg: "Price is high vs book value." },
             "Asset Efficiency": { pos: "Generating strong turnover on assets.", neg: "Assets are underutilized." },
             "Revenue per Asset Efficiency": { pos: "Getting more revenue out of every asset.", neg: "Asset yield is declining." },
             "Revenue Per Asset Efficiency": { pos: "Getting more revenue out of every asset.", neg: "Asset yield is declining." },
             "Revenue Quality": { pos: "Growth backed by cash collection.", neg: "Growth relies on uncollected IOU sales." },
             "Effective Tax Rate": { pos: "Tax rate implies normal operations.", neg: "Tax rate suggests unusual items." },
             "Return on Assets": { pos: "Profitable relative to total assets.", neg: "Low profit relative to asset base." },
-            "Gross margin trend": { pos: "Margins are expanding.", neg: "Margins are compressing." },
-            "Capital Return": { pos: "Returning value to shareholders.", neg: "Limited capital return programs." },
-            "Capital Return TTM": { pos: "Returning value to shareholders.", neg: "Limited capital return programs." },
+            "Gross margin trend": { pos: "Gross margin is expanding vs last year.", neg: "Gross margin is compressing vs last year." },
+            "Capital Return": { pos: "Buybacks + dividends as % of TTM FCF are strong.", neg: "Shareholder returns are limited vs FCF." },
+            "Capital Return TTM": { pos: "Buybacks + dividends as % of TTM FCF are strong.", neg: "Shareholder returns are limited vs FCF." },
             "Debt Maturity Runway": { pos: "No major debt due soon.", neg: "Significant debt maturing shortly." },
             "Net income trend": { pos: "Profits are trending up.", neg: "Profits are shrinking." },
             "Operating Leverage Inflection": { pos: "Operating leverage is improving.", neg: "Operating leverage is weakening." },
@@ -478,6 +489,14 @@
         function formatNum(val, dec = 2) {
             if (val == null) return '--';
             return Number(val).toFixed(dec);
+        }
+
+        function formatScore(val, dec = 2) {
+            if (val == null) return '--';
+            const num = Number(val);
+            if (!Number.isFinite(num)) return '--';
+            if (Math.abs(num - Math.round(num)) < 1e-6) return String(Math.round(num));
+            return num.toFixed(dec);
         }
 
         async function init() {
@@ -607,9 +626,7 @@
                 const baseTierLabel = tierMap[rawTier] || data.ratingTierLabel || 'N/A';
                 const tierBadge = document.getElementById('tierBadge');
 
-                const issuerType =
-                    data.issuerType ||
-                    (data.filingProfile?.annual === '20-F' || data.filingProfile?.interim === '6-K' ? 'foreign' : 'domestic');
+                const annualMode = Boolean(data.annualMode);
 
                 const isBiotechSector = (() => {
                     const sector = String(data.sectorBucket || data.sector || '').toLowerCase();
@@ -687,10 +704,10 @@
                 screenerLinkContainer.style.display = 'block';
 
                 const warnings = [];
-                if (issuerType === 'foreign') {
+                if (annualMode) {
                     warnings.push({
                         title: 'Foreign Issuer',
-                        text: 'This is a foreign company; ratings are based on year-on-year documents (20-F / 6-K).'
+                        text: 'This company files annual-only statements; ratings use year-on-year data.'
                     });
                 }
                 if (isClinicalStageBiotech) {
@@ -752,12 +769,14 @@
                     .sort((a, b) => Math.abs(b.score) - Math.abs(a.score));
 
                 document.getElementById('quickHighlights').innerHTML = ratingReasons.map(r => {
-                    const isPos = r.score > 0;
-                    const isNeg = r.score < 0;
+                    const scoreVal = Number(r.score) || 0;
+                    const scoreText = formatScore(scoreVal);
+                    const isPos = scoreVal > 0;
+                    const isNeg = scoreVal < 0;
                     const typeClass = isPos ? 'positive' : (isNeg ? 'negative' : 'neutral');
                     const color = isPos ? 'var(--accent)' : (isNeg ? 'var(--danger)' : 'var(--warning)');
 
-                    const explainer = ruleExplainers[r.name] ? (r.score >= 0 ? ruleExplainers[r.name].pos : ruleExplainers[r.name].neg) : '';
+                    const explainer = ruleExplainers[r.name] ? (scoreVal >= 0 ? ruleExplainers[r.name].pos : ruleExplainers[r.name].neg) : '';
 
                     let displayName = r.name;
 
@@ -770,8 +789,8 @@
                     // Ensure matching key for explainer even if renamed
                     const explainerKey = r.name;
                     const explanationText = ruleExplainers[explainerKey]
-                        ? (r.score >= 0 ? ruleExplainers[explainerKey].pos : ruleExplainers[explainerKey].neg)
-                        : (ruleExplainers[displayName] ? (r.score >= 0 ? ruleExplainers[displayName].pos : ruleExplainers[displayName].neg) : '');
+                        ? (scoreVal >= 0 ? ruleExplainers[explainerKey].pos : ruleExplainers[explainerKey].neg)
+                        : (ruleExplainers[displayName] ? (scoreVal >= 0 ? ruleExplainers[displayName].pos : ruleExplainers[displayName].neg) : '');
 
                     const basisLabel = r.basisLabel || r.timeBasis || data.ratingBasis || 'Mixed';
                     const periodEnds = (r.sourcePeriods || [])
@@ -787,10 +806,10 @@
                     })();
 
                     return `
-                        <div class="points-card ${typeClass}">
-                            <div class="points-header">
-                                <span style="text-transform: capitalize;">${displayName}</span>
-                                <span class="points-score" style="background: ${color}; color: var(--bg-primary);">${isPos ? '+' : ''}${r.score}</span>
+                            <div class="points-card ${typeClass}">
+                                <div class="points-header">
+                                    <span style="text-transform: capitalize;">${displayName}</span>
+                                <span class="points-score" style="background: ${color}; color: var(--bg-primary);">${isPos ? '+' : ''}${scoreText}</span>
                             </div>
                             <p class="points-desc">${(r.message || '').replace(/\n/g, '<br>').replace(/(-?\d+(\.\d+)?%?|\$\d+(\.\d+)?[BMT]?)/g, '<strong>$1</strong>')}</p>
                             <div class="points-footer">
@@ -800,7 +819,7 @@
                             </div>
                             ${hasStaleData ? `<div class="dq-badge">Stale Data (&gt;180d)</div>` : ''}
                             <div class="indicator-track">
-                                <div class="indicator-fill" style="width: ${Math.min(100, Math.abs(r.score) * 10)}%; background: ${color};"></div>
+                                <div class="indicator-fill" style="width: ${Math.min(100, Math.abs(scoreVal) * 10)}%; background: ${color};"></div>
                             </div>
                         </div>
                     `;
@@ -869,6 +888,7 @@
                         const scoreVal = Number(sig.score) || 0;
                         const isPos = scoreVal > 0;
                         const isNeg = scoreVal < 0;
+                        const scoreText = formatScore(scoreVal);
                         const color = isPos ? 'var(--accent)' : (isNeg ? 'var(--danger)' : 'var(--warning)');
                         const badgeBg = isPos ? 'var(--accent-muted)' : (isNeg ? 'var(--danger-muted)' : 'var(--warning-muted)');
                         const title = String(sig.title || '')
@@ -887,7 +907,7 @@
                                         </div>
                                     </div>
                                     <div class="badge" style="background: ${badgeBg}; color: ${color};">
-                                        Impact: ${isPos ? '+' : ''}${scoreVal}
+                                        Impact: ${isPos ? '+' : ''}${scoreText}
                                     </div>
                                 </div>
                                 <div class="filing-quote">
@@ -939,6 +959,7 @@
                         const scoreVal = Number(sig.score) || 0;
                         const isPos = scoreVal > 0;
                         const isNeg = scoreVal < 0;
+                        const scoreText = formatScore(scoreVal);
                         const color = isPos ? 'var(--accent)' : (isNeg ? 'var(--danger)' : 'var(--warning)');
                         const badgeBg = isPos ? 'var(--accent-muted)' : (isNeg ? 'var(--danger-muted)' : 'var(--warning-muted)');
                         const snippet = sig.snippet || 'Biotech-specific signal detected in recent filing.';
@@ -954,7 +975,7 @@
                                         </div>
                                     </div>
                                     <div class="badge" style="background: ${badgeBg}; color: ${color};">
-                                        Impact: ${isPos ? '+' : ''}${scoreVal}
+                                        Impact: ${isPos ? '+' : ''}${scoreText}
                                     </div>
                                 </div>
                                 <div class="filing-quote">
@@ -1043,6 +1064,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Supabase Auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/assets/js/supabase-auth.js"></script>
+    <script src="/assets/js/auth-ui.js"></script>
 </body>
 
 </html>

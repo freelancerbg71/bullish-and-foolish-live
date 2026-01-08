@@ -15,14 +15,14 @@
     <meta property="og:title" content="Market Screener | Bullish and Foolish">
     <meta property="og:description"
         content="Screen US stocks by quality score, sector, and market cap. Find elite fundamentals and undervalued opportunities.">
-    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Market Screener | Bullish and Foolish">
     <meta name="twitter:description"
         content="Screen US stocks by quality score, sector, and market cap. Find elite fundamentals and undervalued opportunities.">
-    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
 
     <link rel="stylesheet" href="/style.css?v=20260104.2">
     <style>
@@ -123,24 +123,33 @@
             font-variant-numeric: tabular-nums;
         }
     </style>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GFS8VB2GT4"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-GFS8VB2GT4');
+    </script>
 </head>
 
 <body>
 
-    <header class="app-header">
-        <div class="container header-content">
-            <div class="header-left">
-                <a href="/index.html" class="header-brand">
-                    Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
-                </a>
-            </div>
-            <nav class="header-nav text-muted">
-                <a href="/screener.html" style="color: var(--text-primary);">Screener</a>
-                <a href="/articles.html">Articles</a>
-                <a href="/about.html">Methodology</a>
-                <a href="/index.html">Search</a>
-            </nav>
-        </div>
+    <header class="container"
+        style="padding: 0 var(--space-md) var(--space-xs) var(--space-md); display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border);">
+        <a href="/index.html"
+            style="font-family: var(--font-serif); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-primary); margin-bottom: 24px;">
+            Bullish <span style="color: var(--accent); font-style: italic;">&amp;</span> Foolish
+        </a>
+        <nav style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px; align-items: center;"
+            class="text-muted">
+            <a href="/screener.html" style="color: var(--text-primary);">Screener</a>
+            <a href="/articles.html">Articles</a>
+            <a href="/about.html">Methodology</a>
+            <a href="/index.html">Search</a>
+            <div id="authButtonContainer"></div>
+        </nav>
     </header>
 
     <div class="filter-bar">
@@ -500,7 +509,14 @@
                     const scoreCell = document.createElement('td');
                     scoreCell.className = 'score-cell';
                     const scoreVal = row.score ?? '--';
-                    scoreCell.textContent = scoreVal;
+                    const annualMode = row.annualMode;
+                    const isForeignAnnual = annualMode == null
+                        ? (row.issuerType || '').toLowerCase() === 'foreign'
+                        : !!annualMode;
+                    scoreCell.textContent = `${scoreVal}${isForeignAnnual ? '*' : ''}`;
+                    if (isForeignAnnual) {
+                        scoreCell.title = 'Annual-only filings; score may be less comparable';
+                    }
                     if (row.score >= 70) scoreCell.style.color = 'var(--accent)';
                     else if (row.score < 40) scoreCell.style.color = 'var(--danger)';
                     else scoreCell.style.color = 'var(--warning)';
@@ -641,6 +657,11 @@
             }
         })();
     </script>
+
+    <!-- Supabase Auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/assets/js/supabase-auth.js"></script>
+    <script src="/assets/js/auth-ui.js"></script>
 </body>
 
 </html>

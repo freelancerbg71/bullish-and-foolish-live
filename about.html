@@ -15,14 +15,14 @@
     <meta property="og:title" content="Methodology | Bullish and Foolish">
     <meta property="og:description"
         content="How we rate stocks using SEC EDGAR data, sector-aware scoring, and filing signals.">
-    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Methodology | Bullish and Foolish">
     <meta name="twitter:description"
         content="How we rate stocks using SEC EDGAR data, sector-aware scoring, and filing signals.">
-    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/og-preview.png">
+    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
 
     <link rel="stylesheet" href="/style.css?v=20260104.2">
     <style>
@@ -42,6 +42,15 @@
             margin-bottom: var(--space-sm);
         }
     </style>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GFS8VB2GT4"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-GFS8VB2GT4');
+    </script>
 </head>
 
 <body>
@@ -52,12 +61,13 @@
             style="font-family: var(--font-serif); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-primary); margin-bottom: 24px;">
             Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
         </a>
-        <nav style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px;"
+        <nav style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px; align-items: center;"
             class="text-muted">
             <a href="/screener.html">Screener</a>
             <a href="/articles.html">Articles</a>
             <a href="about.html" style="color: var(--text-primary);">Methodology</a>
             <a href="/index.html">Search</a>
+            <div id="authButtonContainer"></div>
         </nav>
     </header>
 
@@ -207,6 +217,10 @@
         </div>
     </footer>
 
+    <!-- Supabase Auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/assets/js/supabase-auth.js"></script>
+    <script src="/assets/js/auth-ui.js"></script>
 </body>
 
 </html>
