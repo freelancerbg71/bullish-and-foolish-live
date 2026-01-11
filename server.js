@@ -1166,9 +1166,32 @@ async function serveTickerWithSSR(req, res, ticker) {
 
     } catch (err) {
         console.error('[ssr] ticker page error:', ticker, err.message);
-        // Fallback: serve ticker.html without SSR
-        res.writeHead(302, { 'Location': `/ticker.html?ticker=${encodeURIComponent(ticker)}` });
-        res.end();
+        // Fallback: serve a minimal error page instead of redirect loop
+        // This gives Google a clear signal instead of redirect chains
+        const errorHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${ticker} - Loading Error | Bullish & Foolish</title>
+    <meta name="robots" content="noindex">
+    <link rel="canonical" href="https://bullishandfoolish.com/ticker/${encodeURIComponent(ticker)}">
+    <style>body{font-family:system-ui;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;}</style>
+</head>
+<body>
+    <div>
+        <h1>${ticker}</h1>
+        <p>Data is loading. Please refresh in a moment.</p>
+        <p><a href="/" style="color:#e4b363;">← Back to Search</a></p>
+        <script>setTimeout(()=>location.reload(),5000);</script>
+    </div>
+</body>
+</html>`;
+        res.writeHead(503, {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Retry-After': '5'
+        });
+        res.end(errorHtml);
     }
 }
 
@@ -1205,6 +1228,23 @@ const server = http.createServer(async (req, res) => {
     // Hidden admin page for price updates (not linked anywhere)
     if (pathname === '/admin/prices') {
         pathname = '/admin-prices.html';
+    }
+
+    // SEO FIX: 301 redirect from old query-param format to pretty URLs
+    // This tells Google the canonical location and prevents "Page with redirect" issues
+    if (pathname === '/ticker.html') {
+        const tickerParam = parsedUrl.searchParams.get('ticker');
+        if (tickerParam) {
+            const prettyUrl = `/ticker/${encodeURIComponent(tickerParam.toUpperCase())}`;
+            // Preserve refresh param if present
+            const refreshParam = parsedUrl.searchParams.get('refresh');
+            const finalUrl = refreshParam === 'true' ? `${prettyUrl}?refresh=true` : prettyUrl;
+            res.writeHead(301, {
+                'Location': finalUrl,
+                'Cache-Control': 'public, max-age=31536000' // Cache redirect for 1 year
+            });
+            return res.end();
+        }
     }
 
     // Support pretty URLs: /ticker/AAPL -> serve ticker.html with SSR meta tags

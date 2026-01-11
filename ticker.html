@@ -408,8 +408,8 @@
         }
 
         if (tickerParam && !window.location.pathname.startsWith('/ticker/')) {
-            const redirectUrl = `/ticker/${encodeURIComponent(tickerParam)}` + (refreshParam ? `?refresh=${encodeURIComponent(refreshParam)}` : '');
-            window.location.replace(redirectUrl);
+            // Server handles 301 redirect - client-side disabled for SEO
+            console.log('Legacy URL format detected - server should have redirected');
         }
 
         const ruleExplainers = {
