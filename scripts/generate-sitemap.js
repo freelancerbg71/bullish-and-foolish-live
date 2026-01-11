@@ -14,8 +14,8 @@ const DATA_DIR = process.env.DATA_DIR || path.join(PROJECT_ROOT, 'data');
 async function loadTickers() {
     // Try to load from screener database
     try {
-        const { getDb } = await import('../server/screener/screenerStore.js');
-        const db = await getDb();
+        const { getScreenerDb } = await import('../server/screener/screenerStore.js');
+        const db = await getScreenerDb();
         const rows = db.prepare('SELECT ticker FROM screener_index ORDER BY ticker').all();
         return rows.map(r => r.ticker);
     } catch (err) {
@@ -66,6 +66,18 @@ function generateSitemap(tickers) {
     </url>
 
     <!-- Articles -->
+    <url>
+        <loc>https://bullishandfoolish.com/articles/palantir-sci-fi-reality.html</loc>
+        <lastmod>2026-01-11</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/articles/archer-aviation-flying-cars.html</loc>
+        <lastmod>2026-01-11</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
     <url>
         <loc>https://bullishandfoolish.com/articles/tesla-overvalued-reality-check.html</loc>
         <lastmod>2026-01-04</lastmod>
