@@ -227,7 +227,8 @@
     </header>
 
     <main class="container">
-        <h1 id="pageTitle" class="page-title">Stock Analysis</h1>
+        <h1 id="pageTitle" class="page-title visually-hidden"
+            style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Stock Analysis</h1>
         <!-- Loading State -->
         <div id="loading" class="section" style="text-align: center; padding-top: 10vh;">
             <div class="label" style="font-size: 1.1rem; letter-spacing: 0.05em; color: var(--text-primary);"
@@ -563,10 +564,10 @@
                 // 1. Header & Meta
                 document.getElementById('tickerDisplay').textContent = data.ticker;
                 document.getElementById('nameDisplay').textContent = data.companyName || '';
-                const pageTitle = document.getElementById('pageTitle');
-                if (pageTitle) {
+                const pageTitleEl = document.getElementById('pageTitle');
+                if (pageTitleEl) {
                     const companySegment = data.companyName ? ` (${data.companyName})` : '';
-                    pageTitle.textContent = `${data.ticker}${companySegment} Stock Analysis`;
+                    pageTitleEl.textContent = `${data.ticker}${companySegment} Stock Analysis`;
                 }
 
                 const score = data.ratingNormalizedScore;

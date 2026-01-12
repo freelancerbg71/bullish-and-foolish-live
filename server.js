@@ -1139,7 +1139,7 @@ async function serveTickerWithSSR(req, res, ticker) {
             )
             .replace(
                 /<h1[^>]*id="pageTitle"[^>]*>.*?<\/h1>/i,
-                `<h1 id="pageTitle" class="page-title">${escapeHtml(h1Text)}</h1>`
+                `<h1 id="pageTitle" class="page-title visually-hidden" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">${escapeHtml(h1Text)}</h1>`
             );
 
         // Add canonical link if not present
