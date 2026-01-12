@@ -10,6 +10,8 @@ if (!process.env.DATA_USER_AGENT) {
 if (process.env.RAILWAY_VOLUME_MOUNT_PATH) {
   const gitDbPath = path.resolve("./data/edgar/fundamentals.db");
   const volumeDbPath = path.join(process.env.RAILWAY_VOLUME_MOUNT_PATH, "edgar", "fundamentals.db");
+  const volumeWalPath = `${volumeDbPath}-wal`;
+  const volumeShmPath = `${volumeDbPath}-shm`;
 
   try {
     if (fs.existsSync(gitDbPath)) {
@@ -34,6 +36,32 @@ if (process.env.RAILWAY_VOLUME_MOUNT_PATH) {
     }
   } catch (err) {
     console.warn("[startup] Failed to sync DB to volume:", err.message);
+  }
+
+  // Integrity guard: if the volume DB is corrupt, restore from the git-tracked copy.
+  try {
+    if (fs.existsSync(volumeDbPath) && fs.existsSync(gitDbPath)) {
+      let isHealthy = false;
+      try {
+        const { default: Database } = await import("better-sqlite3");
+        const db = new Database(volumeDbPath, { readonly: true });
+        const check = db.prepare("PRAGMA quick_check").all();
+        db.close();
+        isHealthy = Array.isArray(check) && check.length === 1 && String(check[0]?.quick_check).toLowerCase() === "ok";
+      } catch (err) {
+        console.warn("[startup] DB integrity check failed", err?.message || err);
+        isHealthy = false;
+      }
+
+      if (!isHealthy) {
+        fs.copyFileSync(gitDbPath, volumeDbPath);
+        fs.rmSync(volumeWalPath, { force: true });
+        fs.rmSync(volumeShmPath, { force: true });
+        console.warn("[startup] Restored volume DB from git copy after integrity failure");
+      }
+    }
+  } catch (err) {
+    console.warn("[startup] Failed integrity guard:", err.message);
   }
 }
 

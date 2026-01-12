@@ -1099,6 +1099,10 @@ async function serveTickerWithSSR(req, res, ticker) {
         // Canonical URL
         const canonicalUrl = `https://bullishandfoolish.com/ticker/${encodeURIComponent(ticker)}`;
 
+        const h1Text = companyName
+            ? `${ticker} (${companyName}) Stock Analysis`
+            : `${ticker} Stock Analysis`;
+
         // Replace placeholder meta tags in the HTML
         html = html
             // Title tag
@@ -1132,6 +1136,10 @@ async function serveTickerWithSSR(req, res, ticker) {
             .replace(
                 /<meta[^>]*name="twitter:description"[^>]*>/i,
                 `<meta name="twitter:description" content="${escapeHtml(seoDescription)}">`
+            )
+            .replace(
+                /<h1[^>]*id="pageTitle"[^>]*>.*?<\/h1>/i,
+                `<h1 id="pageTitle" class="page-title">${escapeHtml(h1Text)}</h1>`
             );
 
         // Add canonical link if not present
@@ -1206,9 +1214,33 @@ function escapeHtml(str) {
 const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
     let pathname = parsedUrl.pathname;
+    const hostHeader = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
+    const protoHeader = (req.headers['x-forwarded-proto'] || '').toString().split(',')[0].trim().toLowerCase();
+
+    if (hostHeader.toLowerCase().endsWith('bullishandfoolish.com')) {
+        const canonicalHost = 'bullishandfoolish.com';
+        const isWww = hostHeader.toLowerCase().startsWith('www.');
+        const needsHttps = protoHeader !== 'https';
+        if (isWww || needsHttps) {
+            const target = `https://${canonicalHost}${pathname}${parsedUrl.search}`;
+            res.writeHead(301, {
+                'Location': target,
+                'Cache-Control': 'public, max-age=31536000'
+            });
+            return res.end();
+        }
+    }
 
     if (pathname.startsWith('/api/')) {
         return handleApi(req, res, parsedUrl);
+    }
+
+    if (pathname === '/index.html') {
+        res.writeHead(301, {
+            'Location': `/${parsedUrl.search}`,
+            'Cache-Control': 'public, max-age=31536000'
+        });
+        return res.end();
     }
 
     if (pathname === '/favicon.ico') {
