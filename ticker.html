@@ -288,7 +288,7 @@
                         style="margin-top: var(--space-md); padding: var(--space-md); display: none; background: rgba(255, 80, 80, 0.08); border: 1px solid rgba(255, 80, 80, 0.3); cursor: pointer;"
                         onclick="document.getElementById('filingIntelligenceSection').scrollIntoView({behavior: 'smooth'});">
                         <div style="display: flex; align-items: center; gap: var(--space-sm);">
-                            <span style="font-size: 1.25rem;">⚠️</span>
+                            <span style="font-size: 1.25rem;">&#9888;</span>
                             <span class="label" style="font-size: 0.8rem; color: var(--negative);">Risk Alerts
                                 Detected</span>
                         </div>
@@ -379,6 +379,22 @@
                     </div>
                 </div>
             </div>
+        </section>
+
+        <section id="relatedArticlesSection" class="section"
+            style="margin-bottom: var(--space-3xl); display: none; border-top: 1px solid var(--border); padding-top: var(--space-2xl);">
+            <div style="display: flex; align-items: baseline; gap: 18px; flex-wrap: wrap; margin-bottom: var(--space-lg);">
+                <div class="label" style="font-size: 0.75rem; letter-spacing: 0.22em; color: var(--accent);">
+                    RESEARCH MEMO
+                </div>
+                <div style="font-family: var(--font-serif); font-size: 2rem; font-weight: 800;">
+                    Read the story behind the filings
+                </div>
+            </div>
+            <div class="text-muted" style="margin-bottom: var(--space-xl); max-width: 720px; font-size: 1.05rem;">
+                Long-form analysis with context, narrative, and the data that moves the needle.
+            </div>
+            <div id="relatedArticlesContainer" class="grid grid-2" style="gap: var(--space-xl);"></div>
         </section>
 
         </div>
@@ -500,12 +516,165 @@
             if (Math.abs(num - Math.round(num)) < 1e-6) return String(Math.round(num));
             return num.toFixed(dec);
         }
+        // Detect non-SEC-filing tickers (warrants, units, rights, preferred shares, etc.)
+        function isNonFilingTicker(tickerSymbol) {
+            const t = tickerSymbol.toUpperCase();
+            // Warrants: -WT, -WS, +, ends with W after 4+ chars
+            if (/-WT$|-WS$/.test(t)) return { type: 'warrant', baseTicker: t.replace(/-WT$|-WS$/g, '') };
+            if (/\+$/.test(t)) return { type: 'warrant', baseTicker: t.replace(/\+$/g, '') };
+            if (t.length >= 5 && /W$/.test(t) && !/^[A-Z]{1,4}W$/.test(t)) return { type: 'warrant', baseTicker: t.replace(/W$/g, '') };
+            // Units: -UN, -U, ends with U after base ticker
+            if (/-UN$|-U$/.test(t)) return { type: 'unit', baseTicker: t.replace(/-UN$|-U$/g, '') };
+            if (t.length >= 5 && /U$/.test(t) && !/^[A-Z]{1,4}U$/.test(t)) return { type: 'unit', baseTicker: t.replace(/U$/g, '') };
+            // Rights: -R, -RT, ends with R after 4+ chars
+            if (/-R$|-RT$/.test(t)) return { type: 'right', baseTicker: t.replace(/-R$|-RT$/g, '') };
+            if (t.length >= 5 && /R$/.test(t) && !/^[A-Z]{1,4}R$/.test(t)) return { type: 'right', baseTicker: t.replace(/R$/g, '') };
+            // Preferred shares: -PA, -PB, -PC, etc.
+            if (/-P[A-Z]$/.test(t)) return { type: 'preferred', baseTicker: t.replace(/-P[A-Z]$/g, '') };
+            // Notes: -N
+            if (/-N$/.test(t)) return { type: 'note', baseTicker: t.replace(/-N$/g, '') };
+            return null;
+        }
+
+        function renderUnsupportedTickerPage(tickerSymbol, info) {
+            const typeLabels = {
+                warrant: 'Warrant',
+                unit: 'Unit',
+                right: 'Right',
+                preferred: 'Preferred Share',
+                note: 'Note/Debenture'
+            };
+            const typeLabel = typeLabels[info.type] || 'Security';
+            
+            document.getElementById('loading').innerHTML = `
+                <div style="max-width: 600px; margin: 0 auto; text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 20px;"></div>
+                    <h2 style="font-size: 1.5rem; margin-bottom: 16px; color: var(--text-primary);">
+                        ${tickerSymbol} is a ${typeLabel}
+                    </h2>
+                    <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 24px;">
+                        This ticker represents a <strong>${typeLabel.toLowerCase()}</strong>, which does not file standard SEC financials (10-K / 10-Q). 
+                        Bullish and Foolish analyzes <strong>common stocks</strong> that file regular quarterly and annual reports with the SEC.
+                    </p>
+                    ${info.baseTicker ? `
+                        <div style="margin-bottom: 24px;">
+                            <p style="color: var(--text-muted); margin-bottom: 12px;">Looking for the main stock?</p>
+                            <a href="/ticker/${info.baseTicker}" class="btn" style="display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: var(--bg-primary); padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+                                View ${info.baseTicker} Analysis
+                            </a>
+                        </div>
+                    ` : ''}
+                    <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px;">
+                        <a href="/" style="color: var(--accent); text-decoration: none;">Back to Search</a>
+                    </div>
+                </div>
+            `;
+        }
+
+        const relatedArticlesByTicker = {
+            PLTR: [
+                {
+                    title: 'Palantir: The $80B Sci-Fi Story',
+                    path: '/articles/palantir-sci-fi-reality.html',
+                    description: 'A deep look at PLTR fundamentals beyond the hype.',
+                    tag: 'Fundamental Research',
+                    readTime: '6 min'
+                }
+            ],
+            ACHR: [
+                {
+                    title: 'Flying Cars: Are Archer\'s Fundamentals Grounded?',
+                    path: '/articles/archer-aviation-flying-cars.html',
+                    description: 'What the filings say about Archer Aviation\'s runway.',
+                    tag: 'Speculative Growth',
+                    readTime: '5 min'
+                }
+            ],
+            TSLA: [
+                {
+                    title: 'Tesla: Overvalued or Misunderstood?',
+                    path: '/articles/tesla-overvalued-reality-check.html',
+                    description: 'A reality check on TSLA fundamentals and risk.',
+                    tag: 'Fundamental Analysis',
+                    readTime: '6 min'
+                }
+            ],
+            META: [
+                {
+                    title: 'Meta: Fundamental Reality Check',
+                    path: '/articles/meta-fundamental-reality-check.html',
+                    description: 'A closer read of META\'s balance sheet and signals.',
+                    tag: 'Fundamental Analysis',
+                    readTime: '6 min'
+                }
+            ],
+            KULR: [
+                {
+                    title: 'The "Kiss of Death" Signature',
+                    path: '/articles/going-concern.html',
+                    description: 'Understanding going concern warnings through real filings.',
+                    tag: 'Financial Intelligence',
+                    readTime: '5 min'
+                }
+            ],
+            BINI: [
+                {
+                    title: 'The "Kiss of Death" Signature',
+                    path: '/articles/going-concern.html',
+                    description: 'Understanding going concern warnings through real filings.',
+                    tag: 'Financial Intelligence',
+                    readTime: '5 min'
+                }
+            ]
+        };
+
+        function renderRelatedArticles(tickerSymbol) {
+            const articles = relatedArticlesByTicker[tickerSymbol];
+            if (!articles || articles.length === 0) return;
+            const section = document.getElementById('relatedArticlesSection');
+            const container = document.getElementById('relatedArticlesContainer');
+            if (!section || !container) return;
+
+            container.innerHTML = articles.map((article, index) => {
+                const isFeature = index === 0 && articles.length > 1;
+                const meta = [article.tag, article.readTime].filter(Boolean).join(' • ');
+
+                return `
+                <div class="card" style="${isFeature ? 'grid-column: span 2; border-left: 4px solid var(--accent);' : ''} background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.15)); padding: var(--space-xl); border: 1px solid var(--border); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                        <div class="label" style="font-size: 0.75rem; letter-spacing: 0.12em; color: var(--text-muted);">${article.tag || 'Research'}</div>
+                        ${article.readTime ? `<div class="text-muted" style="font-size: 0.8rem;">${article.readTime} read</div>` : ''}
+                    </div>
+                    <div style="font-family: var(--font-serif); font-size: ${isFeature ? '1.6rem' : '1.35rem'}; font-weight: 700; margin-top: var(--space-sm);">
+                        ${article.title}
+                    </div>
+                    <p class="text-muted" style="margin-top: var(--space-sm); font-size: 1rem; line-height: 1.6; max-width: ${isFeature ? '680px' : 'unset'};">
+                        ${article.description}
+                    </p>
+                    <a href="${article.path}" style="margin-top: var(--space-md); display: inline-flex; align-items: center; gap: 10px; color: var(--accent); text-decoration: none; font-weight: 700;">
+                        Read the memo <span aria-hidden="true">→</span>
+                    </a>
+                </div>
+                `;
+            }).join('');
+
+            section.style.display = 'block';
+        }
+
 
         async function init() {
             if (!ticker) {
                 document.getElementById('loading').innerHTML = '<div class="badge badge-bearish">No Ticker Specified</div>';
                 return;
             }
+            // Check if this is a non-filing ticker BEFORE making API call
+            const nonFilingInfo = isNonFilingTicker(ticker);
+            if (nonFilingInfo) {
+                renderUnsupportedTickerPage(ticker, nonFilingInfo);
+                return;
+            }
+            renderRelatedArticles(ticker);
+
 
             try {
                 // Show deep scanning notice if it takes > 2.5s
@@ -864,7 +1033,7 @@
                     trajIcon.style.color = 'var(--warning)';
                     document.getElementById('trajLabel').style.color = 'var(--warning)';
                 } else if (trajLabel === 'Stalling' || trajLabel === 'Cooling') {
-                    trajIcon.innerHTML = '●';
+                    trajIcon.innerHTML = '&#9679;';
                     trajIcon.style.color = 'var(--warning)';
                     document.getElementById('trajLabel').style.color = 'var(--warning)';
                 } else if (trajLabel === 'Deteriorating' || trajLabel === 'Falling') {
@@ -1049,7 +1218,7 @@
                     <a href="https://github.com/freelancerbg71/bullish-and-foolish-live" target="_blank"
                         rel="noopener">View Source Code</a>.
                 </p>
-                <p style="margin-top: var(--space-sm);">© 2025 Bullish and Foolish. All rights reserved.</p>
+                <p style="margin-top: var(--space-sm);">&copy; 2025 Bullish and Foolish. All rights reserved.</p>
             </div>
         </div>
     </footer>
