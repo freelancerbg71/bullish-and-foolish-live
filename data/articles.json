@@ -1,5 +1,23 @@
 [
     {
+        "id": "palantir-sci-fi-reality",
+        "title": "Palantir: The $80B Sci-Fi Story. What do the SEC Filings Say?",
+        "path": "/articles/palantir-sci-fi-reality.html",
+        "tag": "Fundamental Research",
+        "description": "I've read Palantir's 10-K three times and I'm still not 100% sure what they do. Are they the next tech giant or just a very expensive mystery?",
+        "readTime": "6 min read",
+        "date": "Jan 11, 2026"
+    },
+    {
+        "id": "archer-aviation-flying-cars",
+        "title": "Flying Cars: Are Archer's Fundamentals Grounded?",
+        "path": "/articles/archer-aviation-flying-cars.html",
+        "tag": "Speculative Growth",
+        "description": "Archer Aviation promises to whisk us over traffic in electric pods. But can a company with no revenue and a massive burn rate actually take flight?",
+        "readTime": "5 min read",
+        "date": "Jan 11, 2026"
+    },
+    {
         "id": "going-concern",
         "title": "The \"Kiss of Death\" Signature: Understanding Going Concern Warnings",
         "path": "/articles/going-concern.html",

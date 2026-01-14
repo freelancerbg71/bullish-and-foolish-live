@@ -67,6 +67,32 @@ const SP100_SEO_TEMPLATES = [
     { title: 'The Truth About {TICKER} Nobody Talks About', desc: '{COMPANY}\'s SEC filings reveal what Wall Street won\'t tell you. Free fundamental analysis based on real data.' }
 ];
 
+function detectNonFilingTicker(tickerSymbol) {
+    const t = String(tickerSymbol || '').toUpperCase();
+    if (!t) return null;
+
+    // Warrants: -WT, -WS, +, ends with W after 4+ chars
+    if (/-WT$|-WS$/.test(t)) return { type: 'warrant', baseTicker: t.replace(/-WT$|-WS$/g, '') };
+    if (/\+$/.test(t)) return { type: 'warrant', baseTicker: t.replace(/\+$/g, '') };
+    if (t.length >= 5 && /W$/.test(t) && !/^[A-Z]{1,4}W$/.test(t)) return { type: 'warrant', baseTicker: t.replace(/W$/g, '') };
+
+    // Units: -UN, -U, ends with U after base ticker
+    if (/-UN$|-U$/.test(t)) return { type: 'unit', baseTicker: t.replace(/-UN$|-U$/g, '') };
+    if (t.length >= 5 && /U$/.test(t) && !/^[A-Z]{1,4}U$/.test(t)) return { type: 'unit', baseTicker: t.replace(/U$/g, '') };
+
+    // Rights: -R, -RT, ends with R after 4+ chars
+    if (/-R$|-RT$/.test(t)) return { type: 'right', baseTicker: t.replace(/-R$|-RT$/g, '') };
+    if (t.length >= 5 && /R$/.test(t) && !/^[A-Z]{1,4}R$/.test(t)) return { type: 'right', baseTicker: t.replace(/R$/g, '') };
+
+    // Preferred shares: -PA, -PB, -PC, -PD, -PE, -PF, -PG, -PH, -PI, -PJ, -PK, -PL, -PM, -PN, -PO, -PP
+    if (/-P[A-Z]$/.test(t)) return { type: 'preferred', baseTicker: t.replace(/-P[A-Z]$/g, '') };
+
+    // Notes/Debentures: -N
+    if (/-N$/.test(t)) return { type: 'note', baseTicker: t.replace(/-N$/g, '') };
+
+    return null;
+}
+
 function getClickbaitSEO(ticker, companyName, score) {
     // Hash ticker to pick consistent template
     const hash = ticker.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
@@ -1069,6 +1095,12 @@ async function serveTickerWithSSR(req, res, ticker) {
                 companyName = row.name || '';
                 score = row.score;
                 narrative = row.keyRiskOneLiner || '';
+            } else {
+                const nonFilingInfo = detectNonFilingTicker(ticker);
+                if (nonFilingInfo) {
+                    return renderUnsupportedTickerResponse(res, ticker, nonFilingInfo);
+                }
+                return renderUnknownTickerResponse(res, ticker);
             }
         } catch (dbErr) {
             console.warn('[ssr] screener lookup failed:', ticker, dbErr.message);
@@ -1209,6 +1241,65 @@ function escapeHtml(str) {
         .replace(/"/g, '&quot;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
+}
+
+function renderUnsupportedTickerResponse(res, ticker, info) {
+    const typeLabels = {
+        warrant: 'Warrant',
+        unit: 'Unit',
+        right: 'Right',
+        preferred: 'Preferred Share',
+        note: 'Note/Debenture'
+    };
+    const typeLabel = typeLabels[info.type] || 'Security';
+    const baseTicker = info.baseTicker ? escapeHtml(info.baseTicker) : '';
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escapeHtml(ticker)} - ${typeLabel} | Bullish & Foolish</title>
+    <meta name="robots" content="noindex">
+    <link rel="canonical" href="https://bullishandfoolish.com/ticker/${encodeURIComponent(ticker)}">
+    <style>body{font-family:system-ui;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:24px;}a{color:#e4b363;text-decoration:none;}</style>
+</head>
+<body>
+    <div>
+        <h1>${escapeHtml(ticker)} is a ${typeLabel}</h1>
+        <p>This ticker represents a ${typeLabel.toLowerCase()} that does not file standard SEC 10-K/10-Q reports.</p>
+        ${baseTicker ? `<p><a href="/ticker/${baseTicker}">View ${baseTicker} analysis</a></p>` : ''}
+        <p><a href="/">Back to Search</a></p>
+    </div>
+</body>
+</html>`;
+
+    res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
+}
+
+function renderUnknownTickerResponse(res, ticker) {
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${escapeHtml(ticker)} - Not Found | Bullish & Foolish</title>
+    <meta name="robots" content="noindex">
+    <link rel="canonical" href="https://bullishandfoolish.com/ticker/${encodeURIComponent(ticker)}">
+    <style>body{font-family:system-ui;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:24px;}a{color:#e4b363;text-decoration:none;}</style>
+</head>
+<body>
+    <div>
+        <h1>${escapeHtml(ticker)}</h1>
+        <p>We do not have SEC filings for this ticker yet.</p>
+        <p><a href="/">Back to Search</a></p>
+    </div>
+</body>
+</html>`;
+
+    res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(html);
 }
 
 const server = http.createServer(async (req, res) => {
