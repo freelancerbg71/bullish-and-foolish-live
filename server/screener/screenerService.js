@@ -296,6 +296,7 @@ export async function queryScreener(url) {
         marketCapBucket, peTTM,
         dividendYield, dividendCovered,
         lastTradePrice, lastTradeAt, lastTradeSource,
+        signalTempo,
         growthAdjustment, depositGrowthYoY,
         keyRiskOneLiner, prominentSentiment,
         fcfPositive, lowDebt, highGrowth, isFintech, isBiotech, isPenny,
@@ -326,6 +327,7 @@ export async function queryScreener(url) {
     lastTradePrice: r.lastTradePrice == null ? null : Number(r.lastTradePrice),
     lastTradeAt: r.lastTradeAt || null,
     lastTradeSource: r.lastTradeSource || null,
+    signalTempo: r.signalTempo || null,
     flags: {
       fcfPositive: !!r.fcfPositive,
       lowDebt: !!r.lowDebt,

@@ -206,6 +206,47 @@ a:hover {
   font-family: var(--font-serif);
 }
 
+.about-collapse {
+  border-top: 1px solid var(--border);
+  padding: var(--space-md) 0;
+}
+
+.about-collapse:first-of-type {
+  border-top: none;
+}
+
+.about-collapse summary {
+  list-style: none;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  margin-bottom: var(--space-sm);
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.about-collapse summary::-webkit-details-marker {
+  display: none;
+}
+
+.about-collapse summary::after {
+  content: "+";
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.about-collapse[open] summary::after {
+  content: "-";
+}
+
+.about-collapse p {
+  font-size: 1.15rem;
+  line-height: 1.5;
+  margin-bottom: var(--space-md);
+}
+
 /* Header Navigation */
 .app-header {
   border-bottom: 1px solid var(--border);
@@ -688,6 +729,62 @@ a:hover {
   text-align: center;
 }
 
+.standouts-banner {
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  display: grid;
+  gap: var(--space-md);
+}
+
+.standouts-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.standouts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-md);
+}
+
+.standout-item {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+}
+
+.standout-ticker {
+  font-weight: 800;
+}
+
+.standout-name {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.standout-meta {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+
+.results-recap {
+  margin-top: var(--space-lg);
+  font-size: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+
 /* Progress / Indicator Bar in Cards */
 .indicator-track {
   height: 4px;
@@ -719,6 +816,46 @@ a:hover {
   margin-bottom: var(--space-lg);
   border-bottom: 1px solid var(--border);
   padding-bottom: var(--space-xs);
+}
+
+.trajectory-hint {
+  margin-top: var(--space-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 6px;
+}
+
+.trajectory-hint summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.trajectory-hint summary::-webkit-details-marker {
+  display: none;
+}
+
+.trajectory-hint summary::after {
+  content: "+";
+  margin-left: auto;
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
+.trajectory-hint[open] summary::after {
+  content: "-";
+}
+
+#trajHintBody {
+  margin-top: var(--space-sm);
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 /* Footer & Disclaimer */

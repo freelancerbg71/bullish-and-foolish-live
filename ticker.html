@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
+    <link rel="icon" href="/favicon.ico" sizes="any">
     <title id="metaTitle">Stock Analysis | Bullish and Foolish</title>
     <meta id="metaDesc" name="description"
         content="Fundamental analysis and quality score powered by SEC filings. View profitability, growth, and solvency metrics.">
@@ -13,6 +14,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://bullishandfoolish.com/ticker.html">
     <meta property="og:title" content="Stock Analysis | Bullish and Foolish">
+    <meta property="og:site_name" content="Bullish And Foolish Stock Analysis">
     <meta property="og:description"
         content="Fundamental analysis and quality score powered by SEC filings. Profitability, growth, solvency metrics and filing intelligence.">
     <meta property="og:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
@@ -89,6 +91,10 @@
             width: 0%;
             background: var(--text-muted);
             transition: width 0.4s ease;
+        }
+
+        #loadingStatus {
+            transition: opacity 0.6s ease;
         }
 
         .confidence-text {
@@ -231,13 +237,13 @@
             style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Stock Analysis</h1>
         <!-- Loading State -->
         <div id="loading" class="section" style="text-align: center; padding-top: 10vh;">
-            <div class="label" style="font-size: 1.1rem; letter-spacing: 0.05em; color: var(--text-primary);"
+            <div id="scanningNotice"
+                style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 10px; display: block;">
+                Deep Scanning SEC Filings (this can take 10-15 seconds)...
+            </div>
+            <div class="label" style="font-size: 0.95rem; letter-spacing: 0.05em; color: var(--text-muted);"
                 id="loadingStatus">
                 Assembling Financial Data...
-            </div>
-            <div id="scanningNotice"
-                style="font-size: 0.85rem; color: var(--text-muted); margin-top: 12px; display: none;">
-                Deep Scanning SEC Filings (this can take 10-15 seconds)...
             </div>
             <div class="spinner" style="margin-top: 24px;"></div>
         </div>
@@ -375,6 +381,14 @@
                             </div>
                             <span id="trajText" class="text-muted"
                                 style="font-size: 0.9rem; margin-top: 4px; display: block;">--</span>
+                            <details id="trajHint" class="trajectory-hint">
+                                <summary>
+                                    <span class="traj-hint-label">Trajectory:</span>
+                                    <span id="trajHintLabel">--</span>
+                                    <span class="traj-hint-why">(why?)</span>
+                                </summary>
+                                <div id="trajHintBody" class="text-muted"></div>
+                            </details>
                         </div>
                     </div>
                 </div>
@@ -411,6 +425,52 @@
         function closeSupportModal(e) {
             document.getElementById('supportModal').style.display = 'none';
             document.body.style.overflow = '';
+        }
+
+        const loadingMessages = [
+            "Loading fundamentals and prices…",
+            "Checking filing signals for recent 10-K/10-Q/8-K mentions…",
+            "Computing quality score from fundamentals…",
+            "Summarizing the strategic narrative…",
+            "Measuring operational momentum and trajectory…"
+        ];
+        let narratorTimer = null;
+        let narratorIndex = 0;
+
+        function startLoadingNarrator() {
+            const label = document.getElementById('loadingStatus');
+            if (!label) return;
+            stopLoadingNarrator();
+            const setText = (text) => {
+                label.style.opacity = 0;
+                setTimeout(() => {
+                    label.textContent = text;
+                    label.style.opacity = 1;
+                }, 250);
+            };
+
+            narratorIndex = 0;
+            const loop = () => {
+                const next = loadingMessages[narratorIndex % loadingMessages.length];
+                setText(next);
+                narratorIndex += 1;
+                narratorTimer = setTimeout(loop, 1500 + Math.random() * 500); // 1.5s - 2.0s
+            };
+            loop();
+        }
+
+        function stopLoadingNarrator(finalText = null) {
+            if (narratorTimer) {
+                clearTimeout(narratorTimer);
+                narratorTimer = null;
+            }
+            if (finalText) {
+                const label = document.getElementById('loadingStatus');
+                if (label) {
+                    label.style.opacity = 1;
+                    label.textContent = finalText;
+                }
+            }
         }
 
         const urlParams = new URLSearchParams(window.location.search);
@@ -677,13 +737,6 @@
 
 
             try {
-                // Show deep scanning notice if it takes > 2.5s
-                const scanTimer = setTimeout(() => {
-                    const notice = document.getElementById('scanningNotice');
-                    if (notice) notice.style.display = 'block';
-                }, 2500);
-
-
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 35000); // 35s timeout for deep scans
                 const refresh = urlParams.get('refresh') === 'true' ? '&refresh=true' : '';
@@ -698,7 +751,6 @@
                     res = await fetch(`/api/ticker?symbol=${ticker}`, { signal: controller.signal });
                 }
                 clearTimeout(timeoutId);
-                clearTimeout(scanTimer);
 
                 if (!res.ok) throw new Error('Ticker not found');
                 const data = await res.json();
@@ -853,7 +905,9 @@
                 `;
 
                 // 2. Narrative & Points Cards (Filter out Filing signals)
-                const narrative = data.narrative || 'Summary not available.';
+                const narrative = data.narrative
+                    || data.strategicOutlook?.narrative
+                    || 'Balanced fundamentals without a single standout strength or weakness.';
                 const fmtNarrative = narrative.replace(/((?:High\s*risk|Speculative):)/gi, '<br>$1');
                 document.getElementById('narrativeDisplay').innerHTML = `"${fmtNarrative}"`;
 
@@ -1023,6 +1077,75 @@
                 document.getElementById('trajText').textContent = traj.narrative || 'No detailed trajectory data.';
 
                 const trajIcon = document.getElementById('trajIcon');
+                const trajHint = document.getElementById('trajHint');
+                const trajHintLabel = document.getElementById('trajHintLabel');
+                const trajHintBody = document.getElementById('trajHintBody');
+
+                function buildTrajectoryHint(payload, trajMeta) {
+                    const labelRaw = String(trajMeta?.label || '').trim();
+                    const label = labelRaw.toLowerCase();
+                    const company = payload.companyName || 'The company';
+                    const sector = payload.sectorBucket || payload.sector || 'its sector';
+                    const op = payload.strategicOutlook?.operationalMomentum || {};
+                    const opLabel = op.label ? `Operational momentum reads as ${op.label.toLowerCase()}.` : '';
+
+                    let sentences = [];
+                    if (label.includes('compound')) {
+                        sentences = [
+                            `${company} is compounding: steady progress without sharp reversals.`,
+                            `Signals across ${sector} fundamentals are reinforcing each other, not spiking once.`,
+                            `That pattern usually holds up best when growth and cash durability stay aligned.`
+                        ];
+                    } else if (label.includes('accelerat')) {
+                        sentences = [
+                            `${company} is improving faster than its recent baseline.`,
+                            `Signals across ${sector} fundamentals are stacking rather than canceling out.`,
+                            `If this pace persists, the score tends to settle at higher levels instead of fading.`
+                        ];
+                    } else if (label.includes('improv')) {
+                        sentences = [
+                            `${company} is making visible gains versus its recent base.`,
+                            `Positive moves in ${sector} fundamentals are outnumbering the negatives.`,
+                            `The next filings should confirm whether this is a durable step-up.`
+                        ];
+                    } else if (label.includes('recover')) {
+                        sentences = [
+                            `${company} is climbing out of a softer period, not fully normalized yet.`,
+                            `The trajectory reads as early proof, but it still needs follow-through in ${sector}.`,
+                            `Look for consistency across profitability and cash durability in upcoming filings.`
+                        ];
+                    } else if (label.includes('stall') || label.includes('cool')) {
+                        sentences = [
+                            `${company} is holding ground, but the pace of improvement is slowing.`,
+                            `Fewer fresh positives from ${sector} fundamentals are landing in the score.`,
+                            `Without new catalysts, the quality signal can drift sideways for a while.`
+                        ];
+                    } else if (label.includes('deterior') || label.includes('fall')) {
+                        sentences = [
+                            `${company} is losing traction versus its recent base.`,
+                            `Negative shifts in ${sector} fundamentals are now outweighing the positives.`,
+                            `If the next filings do not reverse this, the score can keep sliding.`
+                        ];
+                    } else if (label.includes('stable') || label.includes('flat') || label.includes('mixed') || label.includes('unclear')) {
+                        sentences = [
+                            `${company} is balancing positives and negatives without a clear winner.`,
+                            `The signal mix in ${sector} looks steady but not decisive.`,
+                            `A single strong or weak filing can move this quickly, so it reads as neutral.`
+                        ];
+                    } else if (labelRaw) {
+                        sentences = [
+                            `${company} is showing a ${labelRaw.toLowerCase()} pattern in the fundamentals.`,
+                            `That suggests the ${sector} signal mix is tilting in one direction.`,
+                            `We will keep adjusting as new filings land.`
+                        ];
+                    }
+
+                    if (opLabel) {
+                        sentences.push(opLabel);
+                    }
+
+                    return sentences;
+                }
 
                 if (trajLabel === 'Accelerating' || trajLabel === 'Improving' || trajLabel === 'Compounder') {
                     trajIcon.innerHTML = '▲';
@@ -1043,6 +1166,17 @@
                 } else {
                     trajIcon.innerHTML = '';
                     document.getElementById('trajLabel').style.color = 'var(--text-primary)';
+                }
+
+                if (trajHint && trajHintLabel && trajHintBody) {
+                    if (trajLabel && trajLabel !== '--') {
+                        trajHintLabel.textContent = trajLabel;
+                        const sentences = buildTrajectoryHint(data, traj);
+                        trajHintBody.textContent = sentences.join(' ');
+                        trajHint.style.display = '';
+                    } else {
+                        trajHint.style.display = 'none';
+                    }
                 }
 
                 // 4. Filing Signals (Detailed)
@@ -1170,6 +1304,7 @@
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
                 initScrollCue();
+                stopLoadingNarrator();
 
                 // Initial scroll check for sticky score
                 handleScroll();
@@ -1188,6 +1323,7 @@
                 }
 
             } catch (err) {
+                stopLoadingNarrator('Could not load data.');
                 document.getElementById('loading').innerHTML = `
                     <div class="badge badge-bearish">Error: ${err.message}</div>
                     <p class="text-muted" style="margin-top: var(--space-md);">Ensure "${ticker}" is valid and has data.</p>
@@ -1195,6 +1331,7 @@
             }
         }
 
+        startLoadingNarrator();
         init();
     </script>
     <div id="scrollDownOverlay" class="scroll-down-overlay" aria-hidden="true">&darr;</div>

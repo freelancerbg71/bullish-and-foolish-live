@@ -61,6 +61,7 @@ export async function ensureScreenerSchema() {
       lastTradePrice REAL,
       lastTradeAt TEXT,
       lastTradeSource TEXT,
+      signalTempo TEXT,
       fcfPositive INTEGER,
       lowDebt INTEGER,
       highGrowth INTEGER,
@@ -93,7 +94,8 @@ export async function ensureScreenerSchema() {
       lastTradePrice: "REAL",
       lastTradeAt: "TEXT",
       lastTradeSource: "TEXT",
-      prominentSentiment: "TEXT"
+      prominentSentiment: "TEXT",
+      signalTempo: "TEXT"
     };
     for (const [name, type] of Object.entries(desired)) {
       if (!existing.has(name)) {
@@ -133,6 +135,7 @@ export async function upsertScreenerRows(rows = []) {
       revenueGrowthYoY, fcfMarginTTM, peTTM,
       dividendYield, dividendCovered,
       lastTradePrice, lastTradeAt, lastTradeSource,
+      signalTempo,
       fcfPositive, lowDebt, highGrowth, isFintech, isBiotech, isPenny,
       growthAdjustment, depositGrowthYoY,
       keyRiskOneLiner, prominentSentiment,
@@ -144,6 +147,7 @@ export async function upsertScreenerRows(rows = []) {
       @revenueGrowthYoY, @fcfMarginTTM, @peTTM,
       @dividendYield, @dividendCovered,
       @lastTradePrice, @lastTradeAt, @lastTradeSource,
+      @signalTempo,
       @fcfPositive, @lowDebt, @highGrowth, @isFintech, @isBiotech, @isPenny,
       @growthAdjustment, @depositGrowthYoY,
       @keyRiskOneLiner, @prominentSentiment,
@@ -167,6 +171,7 @@ export async function upsertScreenerRows(rows = []) {
       lastTradePrice=COALESCE(excluded.lastTradePrice, screener_index.lastTradePrice),
       lastTradeAt=COALESCE(excluded.lastTradeAt, screener_index.lastTradeAt),
       lastTradeSource=COALESCE(excluded.lastTradeSource, screener_index.lastTradeSource),
+      signalTempo=excluded.signalTempo,
       fcfPositive=excluded.fcfPositive,
       lowDebt=excluded.lowDebt,
       highGrowth=excluded.highGrowth,
@@ -207,6 +212,7 @@ export async function upsertScreenerRows(rows = []) {
         lastTradePrice: Number.isFinite(Number(row.lastTradePrice)) ? Number(row.lastTradePrice) : null,
         lastTradeAt: row.lastTradeAt ?? null,
         lastTradeSource: row.lastTradeSource ?? null,
+        signalTempo: row.signalTempo ?? null,
         fcfPositive: row.fcfPositive ? 1 : 0,
         lowDebt: row.lowDebt ? 1 : 0,
         highGrowth: row.highGrowth ? 1 : 0,

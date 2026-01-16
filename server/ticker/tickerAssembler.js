@@ -3085,7 +3085,15 @@ export async function buildTickerViewModel(
       }
 
       // Deduplicate and join
-      return [...new Set(parts)].join(" ");
+      const unique = [...new Set(parts)].filter(Boolean);
+      if (!unique.length) {
+        return pick("fallback.generic", [
+          "Fundamentals look balanced with no single dominant driver.",
+          "Mixed fundamentals with no clear strength or weakness standing out.",
+          "No single metric dominates; the profile reads as steady and mixed."
+        ]) || "Balanced fundamentals without a standout signal.";
+      }
+      return unique.join(" ");
     }
 
     const stock = buildStockForRules({
@@ -3766,6 +3774,7 @@ export async function buildScreenerRowForTicker(ticker, { allowFilingScan = fals
       peTTM: keyMetrics?.peTtm == null ? null : Number(keyMetrics.peTtm),
       dividendYield: dividend.dividendYield == null ? null : Number(dividend.dividendYield),
       dividendCovered: dividend.dividendCovered,
+      signalTempo: projections?.trajectoryLabel || null,
       fcfPositive,
       lowDebt,
       highGrowth,
