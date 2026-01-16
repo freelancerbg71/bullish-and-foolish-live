@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
+    <link rel="icon" href="/favicon.ico" sizes="any">
     <title>Free Stock Screener | Bullish & Foolish</title>
     <link rel="canonical" href="https://bullishandfoolish.com/screener.html">
     <meta name="description"
@@ -16,6 +17,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://bullishandfoolish.com/screener.html">
     <meta property="og:title" content="Free Stock Screener 2026 - Find Undervalued Quality Stocks">
+    <meta property="og:site_name" content="Bullish And Foolish Screener">
     <meta property="og:description"
         content="Screen 7,000+ US stocks by quality score, revenue growth & FCF margin. Find undervalued gems backed by SEC filings. Free, no signup required.">
     <meta property="og:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
@@ -248,7 +250,7 @@
     </div>
 
     <main class="container" style="padding-bottom: var(--space-2xl);">
-        <h1 class="page-title">Stock Screener</h1>
+        <h1 class="page-title" style="text-align: center;">Stock Screener</h1>
         <div id="loading" class="section" style="text-align: center;">
             <div class="label">Querying Market Data...</div>
         </div>
@@ -272,6 +274,8 @@
             <span id="pageInfoTop" class="text-muted" style="font-size: 0.85rem;">Page 1 of 1</span>
             <button id="nextPageTop" class="select-minimal" style="border: 1px solid var(--border);">Next</button>
         </div>
+
+        <div id="standoutsBanner" class="standouts-banner" style="display: none;"></div>
 
         <table id="screenerTable" style="display: none;">
             <thead>
@@ -300,6 +304,8 @@
                 <!-- Data will be injected here -->
             </tbody>
         </table>
+
+        <div id="resultsRecap" class="results-recap text-muted" style="display: none;"></div>
 
         <div id="pagination"
             style="margin-top: var(--space-xl); display: none; justify-content: center; gap: var(--space-md); align-items: center;">
@@ -399,6 +405,55 @@
             if (num >= 1e6) return '$' + (num / 1e6).toFixed(1) + 'M';
             if (num >= 1e3) return '$' + (num / 1e3).toFixed(1) + 'k';
             return '$' + num.toLocaleString();
+        }
+
+        function renderStandouts(rows) {
+            const banner = document.getElementById('standoutsBanner');
+            if (!banner) return;
+            // Hide the standouts block for now while keeping the layout stable.
+            banner.style.display = 'none';
+            banner.innerHTML = '';
+        }
+
+        function renderResultsRecap(data, rows) {
+            const recap = document.getElementById('resultsRecap');
+            if (!recap) return;
+
+            const parts = [];
+            const sectorVal = document.getElementById('sectorFilter').value;
+            const scoreVal = document.getElementById('scoreFilter').value;
+            const mcapVal = document.getElementById('mcapFilter').value;
+            const priceVal = document.getElementById('priceFilter').value;
+
+            if (sectorVal) parts.push(`Sector ${sectorVal}`);
+            if (scoreVal && scoreVal !== 'all') parts.push(`Score ${scoreVal}`);
+            if (mcapVal && mcapVal !== 'all') parts.push(mcapVal === 'large-mid' ? 'Market cap Large/Mid' : 'Market cap Small/Micro');
+            if (priceVal && priceVal !== 'all') parts.push(`Price ${priceVal.replace('-', ' to ')}`);
+
+            const sortLabels = {
+                marketCap: 'Market Cap',
+                lastTradePrice: 'Last Price',
+                revenueGrowthYoY: 'Revenue Growth',
+                fcfMarginTTM: 'FCF Margin',
+                score: 'Quality Score'
+            };
+            const sortLabel = sortLabels[currentSort] || currentSort;
+            const total = data.total || rows.length;
+            const showing = rows.length;
+
+            let text = `Showing ${showing} of ${total} companies.`;
+            if (parts.length) {
+                text += ` Filters: ${parts.join(', ')}.`;
+            } else {
+                text += ' Filters: none.';
+            }
+            text += ` Sorted by ${sortLabel} (${currentDir}).`;
+            if (currentSort === 'score' && currentDir === 'desc' && currentPage === 1) {
+                text += ' This is the top of the market by score.';
+            }
+
+            recap.textContent = text;
+            recap.style.display = 'flex';
         }
 
         let currentSort = 'score';
@@ -590,6 +645,9 @@
                 document.getElementById('nextPage').disabled = data.page >= totalPages;
                 document.getElementById('prevPageTop').disabled = data.page <= 1;
                 document.getElementById('nextPageTop').disabled = data.page >= totalPages;
+
+                renderStandouts(rows);
+                renderResultsRecap(data, rows);
 
                 if (data.meta?.newestAt) {
                     const d = new Date(data.meta.newestAt);
