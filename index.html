@@ -66,15 +66,16 @@
 
 <body>
 
-    <header class="container"
+    <header class="container site-header"
         style="padding: 0 var(--space-md) var(--space-xs) var(--space-md); display: flex; justify-content: space-between; align-items: flex-end;">
-        <a href="/index.html"
+        <a href="/index.html" class="site-brand"
             style="font-family: var(--font-serif); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-primary); margin-bottom: 24px;">
             Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
         </a>
-        <nav style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px; align-items: center;"
-            class="text-muted">
+        <nav class="text-muted site-nav"
+            style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px; align-items: center;">
             <a href="/screener.html">Screener</a>
+            <a href="/going-concern.html">Cash Runway Watch</a>
             <a href="/articles.html">Articles</a>
             <a href="/about.html">Methodology</a>
             <div id="authButtonContainer"></div>
@@ -111,7 +112,7 @@
             <p class="text-muted" style="margin-top: var(--space-md); font-size: 0.85rem;">
                 Found a bug, have a feature request, or just want to share your thoughts?
                 <a href="https://forms.gle/R2PBuazjAmqY2VZc8" target="_blank" rel="noopener"
-                    style="color: var(--accent); text-decoration: none; font-weight: 600;">Let us know →</a>
+                    style="color: var(--accent); text-decoration: none; font-weight: 600;">Let us know &rarr;</a>
             </p>
 
             <script>
@@ -219,7 +220,122 @@
                         input.focus();
                     }
                 });
+
+                const WATCHLIST_KEY = 'savedTickers';
+
+                function normalizeTicker(val) {
+                    return String(val || '').trim().toUpperCase();
+                }
+
+                function readWatchlist() {
+                    try {
+                        const raw = localStorage.getItem(WATCHLIST_KEY);
+                        const list = raw ? JSON.parse(raw) : [];
+                        if (!Array.isArray(list)) return [];
+                        return list.map(normalizeTicker).filter(Boolean);
+                    } catch (_) {
+                        return [];
+                    }
+                }
+
+                function renderSavedTickers() {
+                    const section = document.getElementById('savedTickersSection');
+                    const listEl = document.getElementById('savedTickersList');
+                    const emptyEl = document.getElementById('savedTickersEmpty');
+                    if (!section || !listEl || !emptyEl) return false;
+
+                    const saved = readWatchlist();
+                    listEl.innerHTML = '';
+
+                    if (!saved.length) {
+                        section.style.display = 'block';
+                        emptyEl.style.display = 'block';
+                        return true;
+                    }
+
+                    emptyEl.style.display = 'none';
+                    saved.forEach((symbol) => {
+                        const link = document.createElement('a');
+                        link.href = `/ticker/${encodeURIComponent(symbol)}`;
+                        link.className = 'card';
+                        link.style.display = 'block';
+                        link.style.textDecoration = 'none';
+                        link.style.color = 'inherit';
+                        link.style.border = '1px solid rgba(255, 255, 255, 0.08)';
+                        link.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02))';
+                        link.style.boxShadow = '0 18px 36px rgba(0, 0, 0, 0.25)';
+                        link.style.backdropFilter = 'blur(12px)';
+                        link.style.padding = 'var(--space-lg)';
+                        link.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: baseline;">
+                                <div style="font-weight: 800; font-size: 1.2rem; color: var(--text-primary); letter-spacing: 0.04em;">
+                                    ${symbol}
+                                </div>
+                                <div class="badge badge-neutral" style="font-size: 0.65rem;">Saved</div>
+                            </div>
+                            <div class="text-muted" data-saved-name="${symbol}"
+                                style="font-size: 0.9rem; margin-top: 6px; min-height: 1.1em;">
+                                Loading company name...
+                            </div>
+                            <div class="text-muted" data-saved-meta="${symbol}" style="font-size: 0.75rem; margin-top: 6px;">
+                                Open the latest analysis
+                            </div>
+                        `;
+                        listEl.appendChild(link);
+                    });
+
+                    section.style.display = 'block';
+                    loadSavedTickerMeta(saved);
+                    return true;
+                }
+
+                async function loadSavedTickerMeta(saved) {
+                    const max = 15;
+                    const targets = saved.slice(0, max);
+                    await Promise.all(targets.map(async (symbol) => {
+                        try {
+                            const res = await fetch(`/api/ticker?symbol=${encodeURIComponent(symbol)}`);
+                            if (!res.ok) return;
+                            const data = await res.json();
+                            const nameEl = document.querySelector(`[data-saved-name="${symbol}"]`);
+                            const metaEl = document.querySelector(`[data-saved-meta="${symbol}"]`);
+                            if (nameEl) {
+                                nameEl.textContent = data.companyName || symbol;
+                            }
+                            if (metaEl) {
+                                const score = data.ratingNormalizedScore != null ? `${data.ratingNormalizedScore}/100` : '--/100';
+                                const lastFiled = data.lastFilingDate ? String(data.lastFilingDate).slice(0, 10) : 'n/a';
+                                metaEl.textContent = `Score ${score} &bull; Last filing ${lastFiled}`;
+                            }
+                        } catch (_) {
+                            const nameEl = document.querySelector(`[data-saved-name="${symbol}"]`);
+                            if (nameEl) nameEl.textContent = symbol;
+                        }
+                    }));
+                }
+
+                const ensureSavedTickers = () => {
+                    const rendered = renderSavedTickers();
+                    if (!rendered) {
+                        setTimeout(renderSavedTickers, 0);
+                    }
+                };
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', ensureSavedTickers);
+                } else {
+                    ensureSavedTickers();
+                }
+                window.addEventListener('storage', renderSavedTickers);
             </script>
+        </section>
+
+        <section id="savedTickersSection" class="container section" style="display: none;">
+            <div class="label" style="margin-bottom: var(--space-sm);">Saved Tickers</div>
+            <div id="savedTickersEmpty" class="text-muted" style="margin-bottom: var(--space-md);">
+                No saved tickers yet. Save a ticker to build a calm return loop after filings land.
+            </div>
+            <div id="savedTickersList" class="grid grid-3" style="gap: var(--space-lg);"></div>
         </section>
 
         <!-- Why Use Bullish And Foolish -->
@@ -284,7 +400,7 @@
         <section class="container section">
             <div class="label" style="margin-bottom: var(--space-sm);">Latest Company Updates</div>
             <p class="text-muted" style="font-size: 0.85rem; margin-bottom: var(--space-md);">Recent SEC filings from
-                companies we track — new financial reports, material events, and disclosures.</p>
+                companies we track - new financial reports, material events, and disclosures.</p>
             <div class="card" style="display: flex; flex-direction: column; gap: var(--space-md);">
                 <div id="filingNewsStatus" class="text-muted">Loading filings...</div>
                 <div id="filingNewsList" style="display: grid; gap: var(--space-sm);"></div>
@@ -293,9 +409,9 @@
 
         <section class="container section" style="text-align: center;">
             <h2 class="huge" style="margin-bottom: var(--space-md);">About Bullish And Foolish</h2>
-            <div style="max-width: 780px; margin: 0 auto; text-align: left;">
-                <details class="about-collapse">
-                    <summary><strong>Why this exists:</strong> cut noise, make filings readable.</summary>
+            <div style="max-width: 780px; margin: 0 auto; text-align: left; display: grid; gap: var(--space-xl);">
+                <div>
+                    <h3 style="margin-bottom: var(--space-sm);">Why this exists: cut noise, make filings readable.</h3>
                     <p class="text-secondary">
                         Investing shouldn't feel like reading an income statement in Latin.
                         Bullish And Foolish cuts through the noise, condenses the mountain of financial data, and shows
@@ -306,9 +422,9 @@
                         Instead of telling you what to buy, the goal is to help you understand why something looks
                         promising or questionable.
                     </p>
-                </details>
-                <details class="about-collapse">
-                    <summary><strong>What it protects you from:</strong> hype, blind spots, weak signals.</summary>
+                </div>
+                <div>
+                    <h3 style="margin-bottom: var(--space-sm);">What it protects you from: hype, blind spots, weak signals.</h3>
                     <p class="text-secondary">
                         Many people start their investing journey in penny-stock land - convinced they've found the next
                         massive breakout.
@@ -325,7 +441,7 @@
                         If you find value in this project, the best support is simply using the site, learning from it,
                         and thinking independently.
                     </p>
-                </details>
+                </div>
             </div>
         </section>
     </main>
@@ -351,7 +467,7 @@
                         rel="noopener">View
                         Source Code</a>.
                 </p>
-                <p style="margin-top: var(--space-sm);">© 2025 Bullish and Foolish. All rights reserved.</p>
+                <p style="margin-top: var(--space-sm);">&copy; 2025 Bullish and Foolish. All rights reserved.</p>
             </div>
         </div>
     </footer>
