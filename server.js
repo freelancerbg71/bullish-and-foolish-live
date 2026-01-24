@@ -217,6 +217,21 @@ async function seedPersistentData() {
         console.warn('[seed] source prices.json missing', sourcePricesFile);
     }
 
+    // Always copy going_concern.json if missing (even if DB exists and seeding is skipped)
+    const sourceGcFile = path.join(sourceDir, 'going_concern.json');
+    const targetGcFile = path.join(targetDir, 'going_concern.json');
+    try {
+        await fsPromises.access(targetGcFile);
+    } catch (_) {
+        try {
+            await fsPromises.access(sourceGcFile);
+            await fsPromises.mkdir(targetDir, { recursive: true });
+            await fsPromises.copyFile(sourceGcFile, targetGcFile);
+            console.log('[seed] copied going_concern.json to volume');
+        } catch (err) {
+            console.warn('[seed] going_concern.json copy failed:', err?.message || err);
+        }
+    }
     try {
         const stats = await fsPromises.stat(targetDbFile);
         if (!seedForce && stats.size > 1024) return;
