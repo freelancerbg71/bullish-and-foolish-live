@@ -286,6 +286,33 @@ async function seedPersistentData() {
 }
 
 await seedPersistentData();
+// Ensure critical JSON files exist in DATA_DIR (runs unconditionally, unlike seedPersistentData)
+async function ensureCriticalJsonFiles() {
+    const sourceDir = path.join(PROJECT_ROOT, 'data');
+    const targetDir = DATA_DIR;
+    if (path.resolve(sourceDir) === path.resolve(targetDir)) return; // Same dir, nothing to copy
+
+    const criticalFiles = ['going_concern.json', 'prices.json'];
+    for (const fileName of criticalFiles) {
+        const sourceFile = path.join(sourceDir, fileName);
+        const targetFile = path.join(targetDir, fileName);
+        try {
+            await fsPromises.access(targetFile);
+        } catch (_) {
+            try {
+                await fsPromises.access(sourceFile);
+                await fsPromises.mkdir(targetDir, { recursive: true });
+                await fsPromises.copyFile(sourceFile, targetFile);
+                console.log(`[boot] copied ${fileName} to volume`);
+            } catch (err) {
+                console.warn(`[boot] ${fileName} copy failed:`, err?.message || err);
+            }
+        }
+    }
+}
+
+await ensureCriticalJsonFiles();
+
 
 async function logScreenerBootStatus() {
     if (process.env.SCREENER_BOOT_LOG !== '1') return;
