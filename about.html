@@ -76,15 +76,16 @@
 
 <body>
 
-    <header class="container"
+    <header class="container site-header"
         style="padding: 0 var(--space-md) var(--space-xs) var(--space-md); display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border);">
-        <a href="/index.html"
+        <a href="/index.html" class="site-brand"
             style="font-family: var(--font-serif); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-primary); margin-bottom: 24px;">
             Bullish <span style="color: var(--accent); font-style: italic;">&</span> Foolish
         </a>
-        <nav style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px; align-items: center;"
-            class="text-muted">
+        <nav class="text-muted site-nav"
+            style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px; align-items: center;">
             <a href="/screener.html">Screener</a>
+            <a href="/going-concern.html">Cash Runway Watch</a>
             <a href="/articles.html">Articles</a>
             <a href="about.html" style="color: var(--text-primary);">Methodology</a>
             <a href="/index.html">Search</a>
@@ -209,6 +210,10 @@
                     style="background:#ffb84d; color:#1a120d; font-weight:700; border:none; padding:12px 32px; font-size:1.1rem; display: inline-block; margin-top: 16px;">
                     Donate via Revolut
                 </a>
+                <p class="text-muted" style="margin-top: var(--space-md); max-width: 700px;">
+                    If you're ready, start with the <a href="/screener.html" style="color: var(--accent); text-decoration: none; font-weight: 700;">Screener</a>
+                    or <a href="/index.html" style="color: var(--accent); text-decoration: none; font-weight: 700;">search a ticker</a>.
+                </p>
             </div>
         </section>
     </main>
@@ -233,7 +238,7 @@
                     <a href="https://github.com/freelancerbg71/bullish-and-foolish-live" target="_blank"
                         rel="noopener">View Source Code</a>.
                 </p>
-                <p style="margin-top: var(--space-sm);">© 2025 Bullish and Foolish. All rights reserved.</p>
+                <p style="margin-top: var(--space-sm);">&copy; 2025 Bullish and Foolish. All rights reserved.</p>
             </div>
         </div>
     </footer>

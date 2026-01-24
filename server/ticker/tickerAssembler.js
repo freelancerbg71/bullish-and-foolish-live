@@ -3188,6 +3188,7 @@ export async function buildTickerViewModel(
       dataCompleteness,
       confidence: confidenceMeta.level,
       confidenceMeta,
+      runwayYears: Number.isFinite(runwayYearsVm) ? runwayYearsVm : null,
       // Populate riskFactors with all negative items for visibility
       riskFactors: rating.reasons
         .filter((r) => r.score < 0 && !r.missing && !r.notApplicable)

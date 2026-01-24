@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <title>Cash Runway Watch | Bullish & Foolish</title>
+    <link rel="canonical" href="https://bullishandfoolish.com/going-concern.html">
+    <meta name="description"
+        content="Bullish & Foolish Going Concern Monitor: identify companies with going-concern warnings, assess runway urgency, and track recent actions from SEC filings.">
+
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bullishandfoolish.com/going-concern.html">
+    <meta property="og:title" content="Cash Runway Watch | Bullish & Foolish">
+    <meta property="og:site_name" content="Bullish & Foolish">
+    <meta property="og:description"
+        content="A focused monitor for going-concern warnings: who is at risk, how urgent it is, and what actions are underway.">
+    <meta property="og:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Cash Runway Watch | Bullish & Foolish">
+    <meta name="twitter:description"
+        content="A focused monitor for going-concern warnings: who is at risk, how urgent it is, and what actions are underway.">
+    <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
+
+    <link rel="stylesheet" href="/style.css?v=20260104.2">
+    <style>
+        .gc-hero {
+            display: grid;
+            gap: var(--space-lg);
+            padding: var(--space-2xl) 0 var(--space-xl);
+        }
+
+        .gc-hero h1 {
+            font-size: 2.4rem;
+            line-height: 1.1;
+        }
+
+        .gc-hero p {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+        }
+
+        .gc-questions {
+            display: grid;
+            gap: var(--space-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .gc-search {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--space-lg);
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        .gc-search-bar {
+            display: flex;
+            gap: var(--space-sm);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .gc-search input {
+            flex: 1;
+            min-width: 220px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            background: #fff;
+            color: var(--text-primary);
+        }
+
+        .gc-search button {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .gc-tier-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--space-md);
+        }
+
+        .gc-tier-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: var(--space-md);
+            background: var(--bg-secondary);
+        }
+
+        .gc-tier-title {
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .gc-tier-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .gc-table-wrap {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--bg-secondary);
+        }
+
+        .gc-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .gc-table th,
+        .gc-table td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .gc-table th {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            background: var(--bg-secondary);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            box-shadow: inset 0 -1px var(--border), 0 6px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        .gc-table tr:hover td {
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        .gc-table .num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .gc-table th.gc-last-gc,
+        .gc-table td.gc-last-gc {
+            padding-right: 10px;
+        }
+
+        .gc-table th.gc-runway,
+        .gc-table td.gc-runway {
+            padding-left: 10px;
+        }
+
+        .gc-tier-badge {
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            font-size: 0.75rem;
+            text-align: center;
+        }
+
+        .gc-tier-critical {
+            background: rgba(225, 29, 72, 0.12);
+            color: #b91c1c;
+        }
+
+        .gc-tier-at_risk {
+            background: rgba(217, 119, 6, 0.12);
+            color: #b45309;
+        }
+
+        .gc-tier-watch {
+            background: rgba(245, 158, 11, 0.12);
+            color: #b45309;
+        }
+
+        .gc-tier-managed {
+            background: rgba(5, 150, 105, 0.12);
+            color: #047857;
+        }
+
+        .gc-row-highlight {
+            animation: gcHighlight 4s ease;
+        }
+
+        @keyframes gcHighlight {
+            0% {
+                background: rgba(5, 150, 105, 0.18);
+            }
+            60% {
+                background: rgba(5, 150, 105, 0.12);
+            }
+            100% {
+                background: transparent;
+            }
+        }
+
+        .gc-detail {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: var(--space-lg);
+            background: var(--bg-secondary);
+            display: grid;
+            gap: var(--space-md);
+        }
+
+        .gc-detail-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: var(--space-sm);
+        }
+
+        .gc-detail-header h3 {
+            font-size: 1.2rem;
+        }
+
+        .gc-detail-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--space-sm);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .gc-timeline {
+            display: grid;
+            gap: var(--space-sm);
+        }
+
+        .gc-timeline-line {
+            height: 4px;
+            background: var(--bg-tertiary);
+            position: relative;
+            border-radius: 999px;
+        }
+
+        .gc-timeline-dot {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--text-primary);
+        }
+
+        .gc-timeline-dot.risk {
+            background: var(--danger);
+        }
+
+        .gc-lifelines {
+            display: flex;
+            gap: var(--space-sm);
+            flex-wrap: wrap;
+        }
+
+        .gc-lifeline-pill {
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .gc-empty {
+            padding: var(--space-xl);
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .gc-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: var(--space-sm);
+            margin-top: var(--space-sm);
+        }
+
+        .gc-pagination button {
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+
+        .gc-pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .gc-hero h1 {
+                font-size: 2rem;
+            }
+
+            .gc-table th,
+            .gc-table td {
+                padding: 10px 12px;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="container site-header"
+        style="padding: 0 var(--space-md) var(--space-xs) var(--space-md); display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--border);">
+        <a href="/index.html" class="site-brand"
+            style="font-family: var(--font-serif); font-size: 1.5rem; font-weight: 800; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--text-primary); margin-bottom: 24px;">
+            Bullish <span style="color: var(--accent); font-style: italic;">&amp;</span> Foolish
+        </a>
+        <nav class="text-muted site-nav"
+            style="display: flex; gap: var(--space-lg); font-size: 0.9rem; font-weight: 500; margin-bottom: 24px; align-items: center;">
+            <a href="/screener.html">Screener</a>
+            <a href="/going-concern.html" style="color: var(--text-primary);">Cash Runway Watch</a>
+            <a href="/articles.html">Articles</a>
+            <a href="/about.html">Methodology</a>
+            <a href="/index.html">Search</a>
+            <div id="authButtonContainer"></div>
+        </nav>
+    </header>
+
+    <main class="container" style="padding-bottom: var(--space-2xl);">
+        <section class="gc-hero">
+            <h1>Bullish &amp; Foolish - Cash Runway Watch</h1>
+            <p>
+                This monitor is built to answer three questions for retail investors.
+            </p>
+            <div class="gc-questions">
+                <div>1. Who is actually in danger?</div>
+                <div>2. How urgent is it?</div>
+                <div>3. Has the company done anything about it?</div>
+            </div>
+            <p class="text-muted" style="font-size: 0.95rem;">
+                Companies appear here only if they explicitly mention a going concern risk in recent SEC filings.
+                That means this is a focused subset of the market, not a full coverage list.
+                If a company is missing, it simply has not disclosed that warning in its filings.
+            </p>
+        </section>
+
+        <section class="section" style="padding-top: 0;">
+            <div class="gc-search">
+                <div class="label">Search companies in this list</div>
+                <div class="gc-search-bar">
+                    <input id="gcSearch" type="text" placeholder="Search companies in this list..." autocomplete="off">
+                    <button id="gcJump" type="button">Enter to jump</button>
+                </div>
+                <div id="gcSearchStatus" class="text-muted" style="font-size: 0.85rem;"></div>
+            </div>
+        </section>
+
+        <section class="section" id="gcDetailSection" style="padding-top: 0; display: none;">
+            <div class="gc-detail" id="gcDetailPanel">
+                <div class="gc-detail-header">
+                    <h3 id="gcDetailTitle">Select a company row to view its timeline.</h3>
+                    <span id="gcDetailBadge" class="gc-tier-badge"></span>
+                </div>
+                <div class="gc-detail-meta">
+                    <div>Last going concern mention: <strong id="gcDetailLastGc">--</strong></div>
+                    <div>Estimated runway at that time: <strong id="gcDetailRunway">--</strong></div>
+                    <div>Recent action: <strong id="gcDetailAction">--</strong></div>
+                </div>
+                <div class="gc-timeline">
+                    <div class="text-muted" style="font-size: 0.85rem;">Estimated risk point: <strong
+                            id="gcDetailRiskPoint">--</strong></div>
+                    <div class="gc-timeline-line">
+                        <span class="gc-timeline-dot" id="gcTimelineStartDot" style="left: 10%;"></span>
+                        <span class="gc-timeline-dot risk" id="gcTimelineRiskDot" style="left: 70%;"></span>
+                    </div>
+                    <div class="gc-detail-meta">
+                        <div>Last filing window: <strong id="gcTimelineStart">--</strong></div>
+                        <div>Estimated risk window: <strong id="gcTimelineRisk">--</strong></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="label" style="margin-bottom: 6px;">Key lifelines available</div>
+                    <div class="gc-lifelines" id="gcDetailLifelines"></div>
+                </div>
+                <div style="display: flex; justify-content: flex-end;">
+                    <a id="gcDetailLink" href="#" style="display: none; font-weight: 700; color: var(--accent); text-decoration: none;">
+                        View full profile
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" style="padding-top: 0;">
+            <div class="label" style="margin-bottom: var(--space-md);">Danger Tiers</div>
+            <div class="gc-tier-grid">
+                <div class="gc-tier-card">
+                    <div class="gc-tier-title"> Critical</div>
+                    <div class="gc-tier-desc">Likely to run out of cash before the next filing.</div>
+                </div>
+                <div class="gc-tier-card">
+                    <div class="gc-tier-title"> At Risk</div>
+                    <div class="gc-tier-desc">Runway under 12 months with no clear financing path.</div>
+                </div>
+                <div class="gc-tier-card">
+                    <div class="gc-tier-title"> Watch List</div>
+                    <div class="gc-tier-desc">Going concern flagged, but levers exist to extend runway.</div>
+                </div>
+                <div class="gc-tier-card">
+                    <div class="gc-tier-title"> Managed Risk</div>
+                    <div class="gc-tier-desc">Going concern flagged, with recent capital or refinancing action.</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" style="padding-top: 0;">
+            <div class="label" style="margin-bottom: var(--space-sm);">Runway Risk Screener</div>
+            <div class="gc-table-wrap">
+                <div id="gcLoading" class="gc-empty">Loading going-concern universe...</div>
+                <table class="gc-table" id="gcTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th data-field="ticker">Ticker</th>
+                            <th data-field="sector" class="hide-mobile">Sector</th>
+                            <th data-field="lastGcDate" class="gc-last-gc">Last Going Concern</th>
+                            <th data-field="runwayMonthsMin" class="num gc-runway">Runway</th>
+                            <th data-field="riskRank">Risk Tier</th>
+                            <th data-field="recentAction" class="hide-mobile">Recent Action</th>
+                            <th data-field="marketCap" class="num hide-mobile">Market Cap</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gcBody"></tbody>
+                </table>
+            </div>
+            <div id="gcResultsMeta" class="text-muted" style="margin-top: var(--space-sm); font-size: 0.8rem;">
+            </div>
+            <div id="gcTableHints" class="text-muted"
+                style="margin-top: 4px; font-size: 0.8rem; display: flex; justify-content: space-between; gap: var(--space-sm); flex-wrap: wrap;">
+                <div id="gcSortHint">Sorted by Risk Tier (desc). Click headers to sort.</div>
+                <div id="gcPageSizeHint"></div>
+            </div>
+            <div class="text-muted" style="margin-top: 4px; font-size: 0.8rem;">
+                Runway estimates are directional guides based on recent cash burn and reported cash/short-term investments, not a forecast.
+            </div>
+            <div class="text-muted" style="margin-top: 4px; font-size: 0.8rem;">
+                Click a company row for details.
+            </div>
+            <div id="gcPagination" class="gc-pagination">
+                <button id="gcPrev" type="button">Prev</button>
+                <div id="gcPageLabel" class="text-muted" style="font-size: 0.8rem;"></div>
+                <button id="gcNext" type="button">Next</button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer-disclaimer">
+        <div class="container">
+            <div class="disclaimer-text">
+                <p style="font-weight: 600; margin-bottom: var(--space-sm); color: var(--text-primary);">Disclaimer &amp;
+                    Disclosure</p>
+                <p>Bullish and Foolish is an independent financial analysis tool. All data is sourced from public SEC
+                    filings.
+                    The ratings and analysis provided are for informational purposes only and do NOT constitute
+                    financial advice, investment recommendations, or an offer to buy/sell securities.
+                    We are not a registered investment advisor.
+                    Fundamental data can be subject to reporting lags or errors in source filings.
+                    Past performance is not indicative of future results.
+                    We make no representation or warranty as to the accuracy or completeness of the information.
+                    Always perform your own due diligence before making investment decisions.</p>
+                <p style="margin-top: var(--space-md);">
+                    <strong>Open Source:</strong> This software is licensed under
+                    <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener">AGPL-3.0</a>.
+                    <a href="https://github.com/freelancerbg71/bullish-and-foolish-live" target="_blank"
+                        rel="noopener">View Source Code</a>.
+                </p>
+                <p style="margin-top: var(--space-sm);">Ac 2025 Bullish and Foolish. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const state = {
+            rows: [],
+            sortField: 'riskRank',
+            sortDir: 'desc',
+            selectedTicker: null,
+            page: 1,
+            pageSize: 50,
+            lookbackDays: 365,
+            detailRowEl: null
+        };
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function compareValues(a, b, dir = 'asc') {
+            const direction = dir === 'desc' ? -1 : 1;
+            const aVal = a == null ? null : a;
+            const bVal = b == null ? null : b;
+            if (aVal == null && bVal == null) return 0;
+            if (aVal == null) return 1 * direction;
+            if (bVal == null) return -1 * direction;
+            if (typeof aVal === 'string') {
+                return aVal.localeCompare(bVal) * direction;
+            }
+            return (aVal - bVal) * direction;
+        }
+
+        function sortRows() {
+            const { sortField, sortDir, rows } = state;
+            return [...rows].sort((a, b) => {
+                if (sortField === 'runwayMonthsMin') {
+                    const aVal = Number.isFinite(a[sortField]) ? a[sortField] : null;
+                    const bVal = Number.isFinite(b[sortField]) ? b[sortField] : null;
+                    const aUnknown = aVal == null;
+                    const bUnknown = bVal == null;
+                    if (aUnknown && bUnknown) return a.ticker.localeCompare(b.ticker);
+                    if (aUnknown) return 1;
+                    if (bUnknown) return -1;
+                    const direction = sortDir === 'desc' ? -1 : 1;
+                    if (aVal !== bVal) return (aVal - bVal) * direction;
+                    return a.ticker.localeCompare(b.ticker);
+                }
+                const primary = compareValues(a[sortField], b[sortField], sortDir);
+                if (primary !== 0) return primary;
+                return a.ticker.localeCompare(b.ticker);
+            });
+        }
+
+        function getPageCount(rows) {
+            return Math.max(1, Math.ceil(rows.length / state.pageSize));
+        }
+
+        function normalizeRecentAction(value) {
+            const text = String(value || '').trim();
+            if (!text || text === '--' || text === '-' || text === '\u2014') return 'None Reported';
+            return text;
+        }
+
+        function normalizeRunwayLabel(row) {
+            if (row.runwayMonthsMin === 1 && row.runwayMonthsMax === 1) return '1-2 mo';
+            return row.runwayLabel || 'Unknown Runway';
+        }
+
+        function describeRecentAction(actionLabel) {
+            const map = {
+                'ATM/Shelf filed': 'At-the-market or shelf registration filed.',
+                'Non-dilutive funding': 'Funding that does not issue equity.',
+                'Debt refinanced': 'Debt facilities updated or refinanced.',
+                'Long-term contract': 'New or extended long-term contract.',
+                'Credit upgraded': 'Credit rating or facility terms improved.',
+                'Controls remediated': 'Material weakness remediation reported.',
+                'Buyback authorized': 'Share repurchase program authorized.',
+                'Dividend raised': 'Dividend increase announced.',
+                'None Reported': 'No recent action reported in filings.'
+            };
+            return map[actionLabel] || 'Recent action mentioned in filings.';
+        }
+
+        function normalizeRiskPointLabel(label) {
+            if (!label || label === '--') return '--';
+            return String(label).replace(/\s*-\s*/g, ' \u2013 ').replace(/\s*\u2013\s*/g, ' \u2013 ');
+        }
+
+        function setDetailVisibility(visible) {
+            const section = document.getElementById('gcDetailSection');
+            if (!section) return;
+            section.style.display = visible ? 'block' : 'none';
+        }
+
+        function closeDetailRow() {
+            if (state.detailRowEl) {
+                const detailPanel = document.getElementById('gcDetailPanel');
+                const section = document.getElementById('gcDetailSection');
+                if (detailPanel && section) {
+                    section.appendChild(detailPanel);
+                }
+                state.detailRowEl.remove();
+                state.detailRowEl = null;
+            }
+        }
+
+        function openDetailRow(tr) {
+            const detailPanel = document.getElementById('gcDetailPanel');
+            if (!detailPanel) return;
+            closeDetailRow();
+            const detailRow = document.createElement('tr');
+            detailRow.className = 'gc-detail-row';
+            const detailCell = document.createElement('td');
+            detailCell.colSpan = 7;
+            const label = document.createElement('div');
+            label.className = 'label';
+            label.style.margin = '0 0 var(--space-sm) 0';
+            label.textContent = 'Estimated Survival Timeline';
+            detailCell.appendChild(label);
+            detailCell.appendChild(detailPanel);
+            detailRow.appendChild(detailCell);
+            tr.insertAdjacentElement('afterend', detailRow);
+            state.detailRowEl = detailRow;
+        }
+
+        function updateSortHint() {
+            const hint = document.getElementById('gcSortHint');
+            if (!hint) return;
+            const labels = {
+                ticker: 'Ticker',
+                sector: 'Sector',
+                lastGcDate: 'Last Going Concern',
+                runwayMonthsMin: 'Runway',
+                riskRank: 'Risk Tier',
+                recentAction: 'Recent Action',
+                marketCap: 'Market Cap'
+            };
+            const label = labels[state.sortField] || state.sortField;
+            const dirLabel = state.sortDir === 'desc' ? 'desc' : 'asc';
+            hint.textContent = `Sorted by ${label} (${dirLabel}). Click headers to sort.`;
+        }
+
+        function updatePagination(rows) {
+            const pageCount = getPageCount(rows);
+            const label = document.getElementById('gcPageLabel');
+            const prev = document.getElementById('gcPrev');
+            const next = document.getElementById('gcNext');
+            if (!label || !prev || !next) return;
+            label.textContent = `Page ${state.page} of ${pageCount}`;
+            prev.disabled = state.page <= 1;
+            next.disabled = state.page >= pageCount;
+        }
+
+        function updateMeta(rows, startIndex, endIndex) {
+            const meta = document.getElementById('gcResultsMeta');
+            if (!meta) return;
+            const startLabel = rows.length ? startIndex + 1 : 0;
+            const endLabel = rows.length ? endIndex : 0;
+            meta.textContent = `Universe: ${rows.length} companies flagged within the last ${state.lookbackDays} days. Showing ${startLabel}-${endLabel}.`;
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('.gc-table th').forEach(th => {
+                const field = th.dataset.field;
+                if (!field) return;
+                const isActive = field === state.sortField;
+                th.textContent = th.textContent.replace(/\s[\^v]+$/, '');
+                if (isActive) {
+                    th.textContent += state.sortDir === 'desc' ? ' v' : ' ^';
+                }
+            });
+            updateSortHint();
+        }
+
+        function renderTable() {
+            const body = document.getElementById('gcBody');
+            closeDetailRow();
+            const rows = sortRows();
+            const pageCount = getPageCount(rows);
+            if (state.page > pageCount) state.page = pageCount;
+            const startIndex = (state.page - 1) * state.pageSize;
+            const endIndex = Math.min(startIndex + state.pageSize, rows.length);
+            const pagedRows = rows.slice(startIndex, endIndex);
+            body.innerHTML = '';
+            pagedRows.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.dataset.ticker = row.ticker;
+
+                const tickerCell = document.createElement('td');
+                const link = document.createElement('a');
+                link.href = `/ticker/${encodeURIComponent(row.ticker)}`;
+                link.textContent = row.ticker;
+                link.style.fontWeight = '700';
+                tickerCell.appendChild(link);
+                if (row.name) {
+                    const name = document.createElement('div');
+                    name.className = 'text-muted';
+                    name.style.fontSize = '0.75rem';
+                    name.textContent = row.name;
+                    tickerCell.appendChild(name);
+                }
+
+                const sectorCell = document.createElement('td');
+                sectorCell.className = 'text-muted hide-mobile';
+                sectorCell.textContent = row.sector || '--';
+
+                const lastGcCell = document.createElement('td');
+                lastGcCell.className = 'gc-last-gc';
+                lastGcCell.textContent = row.lastGcLabel || '--';
+
+                const runwayCell = document.createElement('td');
+                runwayCell.className = 'num gc-runway';
+                runwayCell.textContent = normalizeRunwayLabel(row);
+
+                const riskCell = document.createElement('td');
+                const badge = document.createElement('span');
+                badge.className = `gc-tier-badge gc-tier-${row.riskTier}`;
+                badge.textContent = `${row.riskIcon} ${row.riskLabel}`;
+                riskCell.appendChild(badge);
+
+                const actionCell = document.createElement('td');
+                actionCell.className = 'hide-mobile';
+                const actionLabel = normalizeRecentAction(row.recentAction);
+                actionCell.textContent = actionLabel;
+                actionCell.style.fontWeight = actionLabel === 'None Reported' ? '500' : '700';
+                actionCell.title = describeRecentAction(actionLabel);
+
+                const mcapCell = document.createElement('td');
+                mcapCell.className = 'num hide-mobile';
+                mcapCell.textContent = row.marketCapLabel || '--';
+
+                tr.appendChild(tickerCell);
+                tr.appendChild(sectorCell);
+                tr.appendChild(lastGcCell);
+                tr.appendChild(runwayCell);
+                tr.appendChild(riskCell);
+                tr.appendChild(actionCell);
+                tr.appendChild(mcapCell);
+
+                tr.addEventListener('click', () => {
+                    selectRow(row, tr);
+                });
+
+                body.appendChild(tr);
+            });
+            updateSortIndicators();
+            updatePagination(rows);
+            updateMeta(rows, startIndex, endIndex);
+        }
+
+        function selectRow(row, tr) {
+            if (state.selectedTicker === row.ticker && state.detailRowEl) {
+                closeDetailRow();
+                state.selectedTicker = null;
+                return;
+            }
+            state.selectedTicker = row.ticker;
+            setDetailVisibility(false);
+            openDetailRow(tr);
+
+            document.getElementById('gcDetailTitle').textContent = `${row.ticker} ${row.name ? `- ${row.name}` : ''}`;
+            const badge = document.getElementById('gcDetailBadge');
+            badge.className = `gc-tier-badge gc-tier-${row.riskTier}`;
+            badge.textContent = `${row.riskIcon} ${row.riskLabel}`;
+            document.getElementById('gcDetailLastGc').textContent = row.lastGcLabel || '--';
+            document.getElementById('gcDetailRunway').textContent = normalizeRunwayLabel(row);
+            const detailAction = normalizeRecentAction(row.recentAction);
+            const detailActionEl = document.getElementById('gcDetailAction');
+            detailActionEl.textContent = detailAction;
+            detailActionEl.style.fontWeight = detailAction === 'None Reported' ? '500' : '700';
+            detailActionEl.title = describeRecentAction(detailAction);
+            document.getElementById('gcDetailRiskPoint').textContent = normalizeRiskPointLabel(row.riskPointLabel);
+            document.getElementById('gcTimelineStart').textContent = row.lastGcLabel || '--';
+            document.getElementById('gcTimelineRisk').textContent = normalizeRiskPointLabel(row.riskPointLabel);
+
+            const lifelines = document.getElementById('gcDetailLifelines');
+            lifelines.innerHTML = '';
+            if (row.lifelines && row.lifelines.length) {
+                row.lifelines.forEach(item => {
+                    const pill = document.createElement('span');
+                    pill.className = 'gc-lifeline-pill';
+                    pill.textContent = item;
+                    lifelines.appendChild(pill);
+                });
+            } else {
+                const pill = document.createElement('span');
+                pill.className = 'gc-lifeline-pill';
+                pill.textContent = 'No clear lifelines flagged';
+                lifelines.appendChild(pill);
+            }
+
+            const detailLink = document.getElementById('gcDetailLink');
+            if (detailLink) {
+                detailLink.href = `/ticker/${encodeURIComponent(row.ticker)}`;
+                detailLink.textContent = `View ${row.ticker} full profile`;
+                detailLink.style.display = 'inline-flex';
+            }
+        }
+
+        function highlightRow(row) {
+            const tr = document.querySelector(`#gcBody tr[data-ticker="${row.ticker}"]`);
+            if (!tr) return;
+            tr.classList.add('gc-row-highlight');
+            setTimeout(() => tr.classList.remove('gc-row-highlight'), 4000);
+            selectRow(row, tr);
+        }
+
+        function findRowByQuery(query) {
+            const q = query.trim().toUpperCase();
+            if (!q) return null;
+            return state.rows.find(row => row.ticker === q) || null;
+        }
+
+        function handleSearch(query) {
+            const status = document.getElementById('gcSearchStatus');
+            const trimmed = query.trim();
+            if (!trimmed) {
+                status.textContent = '';
+                status.innerHTML = '';
+                if (!state.selectedTicker) {
+                    setDetailVisibility(false);
+                }
+                return;
+            }
+            const match = findRowByQuery(trimmed);
+            if (match) {
+                const sortedRows = sortRows();
+                const idx = sortedRows.findIndex(row => row.ticker === match.ticker);
+                if (idx >= 0) {
+                    state.page = Math.floor(idx / state.pageSize) + 1;
+                    renderTable();
+                }
+                status.textContent = `Found ${match.ticker} in the Cash Runway Watch list.`;
+                highlightRow(match);
+            } else {
+                if (!state.selectedTicker) {
+                    setDetailVisibility(false);
+                }
+                const safeText = escapeHtml(trimmed.toUpperCase());
+                const safeUrl = encodeURIComponent(trimmed.toUpperCase());
+                status.innerHTML = `${safeText} is not currently flagged in the Cash Runway Watch list. <a href="/ticker/${safeUrl}" style="color: var(--accent); font-weight: 700;">View ${safeText} ticker page instead</a>.`;
+            }
+        }
+
+        async function loadGoingConcern() {
+            const loading = document.getElementById('gcLoading');
+            const table = document.getElementById('gcTable');
+            try {
+                const res = await fetch('/api/going-concern');
+                if (!res.ok) throw new Error('Failed to load going-concern list');
+                const data = await res.json();
+                if (data.error) {
+                    loading.textContent = data.error;
+                    return;
+                }
+                state.rows = Array.isArray(data.rows) ? data.rows : [];
+                if (!state.rows.length) {
+                    loading.textContent = 'No going-concern flags found in the last 12 months.';
+                    return;
+                }
+                state.lookbackDays = data.lookbackDays || 365;
+                state.page = 1;
+                setDetailVisibility(Boolean(state.selectedTicker));
+                const pageHint = document.getElementById('gcPageSizeHint');
+                if (pageHint) {
+                    pageHint.textContent = `Showing ${state.pageSize} per page.`;
+                }
+                loading.style.display = 'none';
+                table.style.display = 'table';
+                renderTable();
+            } catch (err) {
+                loading.textContent = `Error loading list: ${err.message}`;
+            }
+        }
+
+        document.querySelectorAll('.gc-table th').forEach(th => {
+            th.addEventListener('click', () => {
+                const field = th.dataset.field;
+                if (!field) return;
+                if (state.sortField === field) {
+                    state.sortDir = state.sortDir === 'desc' ? 'asc' : 'desc';
+                } else {
+                    state.sortField = field;
+                    state.sortDir = field === 'riskRank' ? 'desc' : 'asc';
+                }
+                state.page = 1;
+                renderTable();
+            });
+        });
+
+        document.getElementById('gcSearch').addEventListener('input', (event) => {
+            const value = event.target.value;
+            if (value.length < 2) {
+                document.getElementById('gcSearchStatus').textContent = '';
+                return;
+            }
+            handleSearch(value);
+        });
+
+        document.getElementById('gcJump').addEventListener('click', () => {
+            const value = document.getElementById('gcSearch').value;
+            handleSearch(value);
+        });
+
+        document.getElementById('gcSearch').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleSearch(event.target.value);
+            }
+        });
+
+        document.getElementById('gcPrev').addEventListener('click', () => {
+            if (state.page > 1) {
+                state.page -= 1;
+                renderTable();
+            }
+        });
+
+        document.getElementById('gcNext').addEventListener('click', () => {
+            const pageCount = getPageCount(sortRows());
+            if (state.page < pageCount) {
+                state.page += 1;
+                renderTable();
+            }
+        });
+
+        loadGoingConcern();
+    </script>
+</body>
+
+</html>

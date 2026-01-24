@@ -7,12 +7,12 @@ A modular, rules-based scoring engine for evaluating public company financial he
 The **Open Fundamentals Engine** is the core analysis library behind the [Bullish & Foolish](https://bullishandfoolish.com) stock rating platform.  It is designed as a **standalone, reusable module** that can be embedded in other applications, research tools, or educational platforms.
 
 **Key principles:**
-- 📊 **Transparent methodology** — All scoring rules are explicit and auditable
-- 🏭 **Sector-aware** — Benchmarks adapt to industry context (biotech ≠ retail)
-- 🔓 **Open source (AGPL-3.0)** — Free to use, modify, and redistribute
-- 🧩 **Modular** — Use the full engine or import individual utilities
-- 🚫 **Price-Agnostic** — Fundamentals come first; price inputs are optional
-- 🗣️ **No black boxes** — Every score can be explained
+- 📊 **Transparent methodology** - All scoring rules are explicit and auditable
+- 🏭 **Sector-aware** - Benchmarks adapt to industry context (biotech ≠ retail)
+- 🔓 **Open source (AGPL-3.0)** - Free to use, modify, and redistribute
+- 🧩 **Modular** - Use the full engine or import individual utilities
+- 🚫 **Price-Agnostic** - Fundamentals come first; price inputs are optional
+- 🗣️ **No black boxes** - Every score can be explained
 
 ## Who Is This For?
 
@@ -42,7 +42,7 @@ engine/
 ```
 
 **Related modules** (in parent directory):
-- `server/edgar/` — SEC EDGAR data ingestion (US-specific adapter)
+- `server/edgar/` - SEC EDGAR data ingestion (US-specific adapter)
 
 ## Quick Start
 
@@ -110,7 +110,7 @@ const fintech = isFintech({ ticker: "SOFI", name: "SoFi Technologies" });
 |----------|-------|-------------|
 | `ONE_DAY_MS` | 86,400,000 | One day in milliseconds |
 | `ONE_YEAR_MS` | 31,536,000,000 | One year in milliseconds |
-| `STALE_DATA_THRESHOLD_MS` | 15,552,000,000 | 180 days — data staleness threshold |
+| `STALE_DATA_THRESHOLD_MS` | 15,552,000,000 | 180 days - data staleness threshold |
 
 #### Market Cap Thresholds
 | Constant | Value | Description |
@@ -175,7 +175,7 @@ SECTOR_BUCKETS = {
 |----------|-------------|
 | `fmtPct(num)` | Format as percentage: `12.5%` |
 | `fmtMoney(num)` | Format as currency: `$1.2B` |
-| `missing(val)` | Return '—' for null/undefined |
+| `missing(val)` | Return '-' for null/undefined |
 
 ### Rule Explainers
 
@@ -191,11 +191,11 @@ const explanation = getExplainerForRule("Revenue growth YoY", 8);
 
 ## Design Principles
 
-1. **Pure Functions** — No side effects, no hidden state
-2. **Null Safety** — Invalid inputs return `null`, not exceptions
-3. **Centralized Constants** — All magic numbers in `constants.js`
-4. **Sector Awareness** — Rules adapt to industry context
-5. **Explainability** — Every score decision can be explained
+1. **Pure Functions** - No side effects, no hidden state
+2. **Null Safety** - Invalid inputs return `null`, not exceptions
+3. **Centralized Constants** - All magic numbers in `constants.js`
+4. **Sector Awareness** - Rules adapt to industry context
+5. **Explainability** - Every score decision can be explained
 
 ## Extending the Engine
 
@@ -261,12 +261,12 @@ import { ENGINE_VERSION, ENGINE_BUILD_DATE } from './engine/index.js';
 
 ## Related Projects
 
-- **Bullish & Foolish** (bullishandfoolish.com) — Live demo analyzing US public companies
-- **SEC EDGAR** — US regulatory filing source
+- **Bullish & Foolish** (bullishandfoolish.com) - Live demo analyzing US public companies
+- **SEC EDGAR** - US regulatory filing source
 
 ## License
 
-**AGPL-3.0** — This ensures the engine remains open source even when used in network services.
+**AGPL-3.0** - This ensures the engine remains open source even when used in network services.
 
 See the root [LICENSE](../LICENSE) file for full terms.
 

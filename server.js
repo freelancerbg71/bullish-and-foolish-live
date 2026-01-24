@@ -61,7 +61,7 @@ const SP100_TICKERS = new Set([
 // Clickbait SEO templates for S&P 100 - rotates based on ticker hash for variety
 const SP100_SEO_TEMPLATES = [
     { title: 'Is {TICKER} Overrated? SEC Data Reveals All', desc: 'Everyone\'s hyped about {COMPANY}. But what do actual SEC filings show? {SCORE_TEXT}' },
-    { title: '{TICKER} Scored {SCORE}/100 — Here\'s Why', desc: 'We analyzed {COMPANY}\'s latest 10-K filings. The fundamentals might surprise you. Free quality score on Bullish & Foolish.' },
+    { title: '{TICKER} Scored {SCORE}/100 - Here\'s Why', desc: 'We analyzed {COMPANY}\'s latest 10-K filings. The fundamentals might surprise you. Free quality score on Bullish & Foolish.' },
     { title: 'Wall Street Loves {TICKER}. Should You?', desc: 'Analysts say buy {COMPANY}. The 10-K filings tell a different story. SEC-based fundamental analysis inside.' },
     { title: '{TICKER}: Buy, Hold, or Run? 10-K Breakdown', desc: 'Should you own {COMPANY} stock? We scored 100+ financial metrics from SEC filings. See the verdict.' },
     { title: 'The Truth About {TICKER} Nobody Talks About', desc: '{COMPANY}\'s SEC filings reveal what Wall Street won\'t tell you. Free fundamental analysis based on real data.' }
@@ -312,11 +312,15 @@ const PRICE_PATCH_MAX_AGE_MS = Number(process.env.PRICES_PATCH_MAX_AGE_MS) || 48
 const DATA_REQUEST_TIMEOUT_MS = Number(process.env.DATA_REQUEST_TIMEOUT_MS) || 30_000;
 const MAX_TICKER_CONCURRENCY = Number(process.env.TICKER_MAX_CONCURRENCY) || 50;
 const EDGAR_SYNC_MAX_QUEUE = Number(process.env.EDGAR_SYNC_MAX_QUEUE) || 25;
+const GOING_CONCERN_CACHE_TTL_MS = Number(process.env.GOING_CONCERN_CACHE_TTL_MS) || 10 * 60 * 1000;
+const GOING_CONCERN_LOOKBACK_DAYS = Number(process.env.GOING_CONCERN_LOOKBACK_DAYS) || 365;
+const GOING_CONCERN_FILE = process.env.GOING_CONCERN_FILE || path.join(DATA_DIR, 'going_concern.json');
 
 let outboundInFlight = 0;
 let nextOutboundSlot = Date.now();
 let activeTickerRequests = 0;
 let loggedStalePricePatch = false;
+let goingConcernCache = { fetchedAt: 0, payload: null };
 
 function safeParseDateMs(dateStr) {
     const ts = Date.parse(String(dateStr || ''));
@@ -353,6 +357,31 @@ function readPricesPatchMeta(filePath) {
         };
     } catch (err) {
         return { exists: false, entries: 0, newestAt: null, newestAtMs: null, error: err?.message || String(err) };
+    }
+}
+
+async function buildGoingConcernPayload() {
+    const now = Date.now();
+    if (goingConcernCache.payload && now - goingConcernCache.fetchedAt < GOING_CONCERN_CACHE_TTL_MS) {
+        return goingConcernCache.payload;
+    }
+    try {
+        const raw = await fsPromises.readFile(GOING_CONCERN_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        const payload = parsed && typeof parsed === 'object'
+            ? parsed
+            : { updatedAt: new Date().toISOString(), lookbackDays: GOING_CONCERN_LOOKBACK_DAYS, rows: [] };
+        goingConcernCache = { fetchedAt: now, payload };
+        return payload;
+    } catch (err) {
+        const payload = {
+            updatedAt: new Date().toISOString(),
+            lookbackDays: GOING_CONCERN_LOOKBACK_DAYS,
+            rows: [],
+            error: `Missing going_concern.json at ${GOING_CONCERN_FILE}`
+        };
+        goingConcernCache = { fetchedAt: now, payload };
+        return payload;
     }
 }
 
@@ -884,6 +913,10 @@ async function handleApi(req, res, url) {
         }
         if (url.pathname === '/api/screener') {
             const data = await queryScreener(url);
+            return sendJson(req, res, 200, data);
+        }
+        if (url.pathname === '/api/going-concern') {
+            const data = await buildGoingConcernPayload();
             return sendJson(req, res, 200, data);
         }
         // Local experiments: Serve extension JS directly to avoid plugin loading issues

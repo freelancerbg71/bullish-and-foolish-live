@@ -2,7 +2,7 @@
 
 Bullish & Foolish is a lightweight, explainable fundamentals engine that turns public SEC filings into a clear, sector-aware quality score and tier for public companies.
 
-The goal: **signal over noise** — a transparent, rules-based view of financial health that doesn’t depend on hype or short-term price action.
+The goal: **signal over noise** - a transparent, rules-based view of financial health that doesn’t depend on hype or short-term price action.
 
 ## What It Does
 

@@ -223,6 +223,7 @@
                 </div>
                 <nav class="header-nav text-muted">
                     <a href="/screener.html">Screener</a>
+                    <a href="/going-concern.html">Cash Runway Watch</a>
                     <a href="/articles.html">Articles</a>
                     <a href="/about.html">Methodology</a>
                     <a href="/index.html">Search</a>
@@ -282,7 +283,18 @@
                     </div>
                 </div>
                 <div style="flex-grow: 1;">
-                    <div class="label" style="margin-bottom: var(--space-md);">Strategic Financial Narrative</div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); margin-bottom: var(--space-md);">
+                        <div class="label">Strategic Financial Narrative</div>
+                        <div style="text-align: right;">
+                            <button id="watchlistToggle"
+                                style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-primary); font-weight: 700; cursor: pointer;">
+                                Save ticker
+                            </button>
+                            <div id="watchlistHint" class="text-muted" style="font-size: 0.7rem; margin-top: 4px;">
+                                Saved locally in this browser.
+                            </div>
+                        </div>
+                    </div>
                     <div class="narrative-container">
                         <div id="narrativeDisplay" class="narrative-text">
                             Loading narrative...
@@ -411,6 +423,54 @@
             <div id="relatedArticlesContainer" class="grid grid-2" style="gap: var(--space-xl);"></div>
         </section>
 
+        <section id="analysisSummarySection" class="section"
+            style="margin-bottom: var(--space-3xl); border-top: 1px solid var(--border); padding-top: var(--space-2xl);">
+            <div class="label" style="margin-bottom: var(--space-lg);">Key Facts + Signal Hygiene</div>
+            <div class="card" style="display: grid; gap: var(--space-lg);">
+                <div>
+                    <div class="label" style="margin-bottom: var(--space-sm);">Key Facts</div>
+                    <div class="grid grid-3">
+                        <div class="card" style="padding: var(--space-md);">
+                            <div class="label">Last Filing</div>
+                            <div id="summaryLastFiling" style="margin-top: 6px; font-weight: 700;">--</div>
+                        </div>
+                        <div class="card" style="padding: var(--space-md);">
+                            <div class="label">Reporting Period</div>
+                            <div id="summaryReportingPeriod" style="margin-top: 6px; font-weight: 700;">--</div>
+                        </div>
+                        <div class="card" style="padding: var(--space-md);">
+                            <div class="label">Cash Runway</div>
+                            <div id="summaryRunway" style="margin-top: 6px; font-weight: 700;">--</div>
+                        </div>
+                        <div class="card" style="padding: var(--space-md);">
+                            <div class="label">YoY Revenue Growth</div>
+                            <div id="summaryRevenueYoY" style="margin-top: 6px; font-weight: 700;">--</div>
+                        </div>
+                        <div class="card" style="padding: var(--space-md);">
+                        <div class="label"><span title="Current assets divided by current liabilities.">Liquidity Ratio</span></div>
+                            <div id="summaryLiquidity" style="margin-top: 6px; font-weight: 700;">--</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-2">
+                    <div>
+                        <div class="label" style="margin-bottom: var(--space-sm);">Signal Hygiene</div>
+                        <div id="summarySignalMeta" class="text-muted"
+                            style="font-size: 0.85rem; margin-bottom: var(--space-sm);">--</div>
+                        <div id="summaryPositives" class="text-muted" style="display: grid; gap: 8px;">--</div>
+                    </div>
+                    <div>
+                        <div class="label" style="margin-bottom: var(--space-sm);">Risk Signals</div>
+                        <div id="summaryNegatives" class="text-muted" style="display: grid; gap: 8px;">--</div>
+                    </div>
+                </div>
+                <div>
+                    <div class="label" style="margin-bottom: var(--space-sm);">Source + Scope</div>
+                    <div id="summarySourceScope" class="text-muted" style="display: grid; gap: 6px;">--</div>
+                </div>
+            </div>
+        </section>
+
         </div>
     </main>
 
@@ -428,11 +488,11 @@
         }
 
         const loadingMessages = [
-            "Loading fundamentals and prices…",
-            "Checking filing signals for recent 10-K/10-Q/8-K mentions…",
-            "Computing quality score from fundamentals…",
-            "Summarizing the strategic narrative…",
-            "Measuring operational momentum and trajectory…"
+            "Loading fundamentals and prices&hellip;",
+            "Checking filing signals for recent 10-K/10-Q/8-K mentions&hellip;",
+            "Computing quality score from fundamentals&hellip;",
+            "Summarizing the strategic narrative&hellip;",
+            "Measuring operational momentum and trajectory&hellip;"
         ];
         let narratorTimer = null;
         let narratorIndex = 0;
@@ -576,6 +636,75 @@
             if (Math.abs(num - Math.round(num)) < 1e-6) return String(Math.round(num));
             return num.toFixed(dec);
         }
+
+        function formatDate(val) {
+            if (!val) return '--';
+            const parsed = new Date(val);
+            if (Number.isNaN(parsed.getTime())) return String(val);
+            return parsed.toISOString().slice(0, 10);
+        }
+
+        const WATCHLIST_KEY = 'savedTickers';
+
+        function normalizeTicker(val) {
+            return String(val || '').trim().toUpperCase();
+        }
+
+        function readWatchlist() {
+            try {
+                const raw = localStorage.getItem(WATCHLIST_KEY);
+                const list = raw ? JSON.parse(raw) : [];
+                if (!Array.isArray(list)) return [];
+                return list.map(normalizeTicker).filter(Boolean);
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function writeWatchlist(list) {
+            try {
+                localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list));
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function initWatchlist(tickerSymbol) {
+            const btn = document.getElementById('watchlistToggle');
+            const hint = document.getElementById('watchlistHint');
+            if (!btn) return;
+            const key = normalizeTicker(tickerSymbol);
+
+            const update = () => {
+                const saved = readWatchlist();
+                const isSaved = saved.includes(key);
+                btn.textContent = isSaved ? 'Saved' : 'Save ticker';
+                btn.style.borderColor = isSaved ? 'var(--accent)' : 'var(--border)';
+                btn.style.color = isSaved ? 'var(--accent)' : 'var(--text-primary)';
+            };
+
+            const saveEnabled = writeWatchlist(readWatchlist());
+            if (!saveEnabled) {
+                btn.textContent = 'Save unavailable';
+                btn.disabled = true;
+                if (hint) {
+                    hint.textContent = 'Local storage is disabled in this browser.';
+                }
+                return;
+            }
+
+            btn.addEventListener('click', () => {
+                const saved = readWatchlist();
+                const next = saved.includes(key)
+                    ? saved.filter(t => t !== key)
+                    : [...saved, key].slice(0, 50);
+                writeWatchlist(next);
+                update();
+            });
+
+            update();
+        }
         // Detect non-SEC-filing tickers (warrants, units, rights, preferred shares, etc.)
         function isNonFilingTicker(tickerSymbol) {
             const t = tickerSymbol.toUpperCase();
@@ -697,7 +826,7 @@
 
             container.innerHTML = articles.map((article, index) => {
                 const isFeature = index === 0 && articles.length > 1;
-                const meta = [article.tag, article.readTime].filter(Boolean).join(' • ');
+                const meta = [article.tag, article.readTime].filter(Boolean).join(' &bull; ');
 
                 return `
                 <div class="card" style="${isFeature ? 'grid-column: span 2; border-left: 4px solid var(--accent);' : ''} background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.15)); padding: var(--space-xl); border: 1px solid var(--border); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);">
@@ -712,7 +841,7 @@
                         ${article.description}
                     </p>
                     <a href="${article.path}" style="margin-top: var(--space-md); display: inline-flex; align-items: center; gap: 10px; color: var(--accent); text-decoration: none; font-weight: 700;">
-                        Read the memo <span aria-hidden="true">→</span>
+                        Read the memo <span aria-hidden="true">&rarr;</span>
                     </a>
                 </div>
                 `;
@@ -801,7 +930,7 @@
                 const isPos = delta > 0;
                 const isNeg = delta < 0;
                 const deltaClass = isPos ? 'positive' : (isNeg ? 'negative' : 'neutral');
-                const deltaIcon = isPos ? '▲' : (isNeg ? '▼' : '');
+                const deltaIcon = isPos ? '&#9650;' : (isNeg ? '&#9660;' : '');
                 const deltaValue = Number.isFinite(delta) ? `${delta > 0 ? '+' : ''}${delta}` : '--';
 
                 if (past && Number.isFinite(past.score) && past.periodStart && past.periodEnd) {
@@ -819,7 +948,7 @@
                                 </div>
                             </div>
                             <div class="momentum-period">
-                                Prior: ${past.periodStart} → ${past.periodEnd}
+                                Prior: ${past.periodStart} &rarr; ${past.periodEnd}
                             </div>
                         </div>
                     `;
@@ -898,7 +1027,7 @@
                     <div class="price-stat-value">$${formatNum(price, 2)}</div>
                     <div style="font-size: 0.8rem; line-height: 1.4; color: var(--text-muted);">
                         Price last updated:<br>
-                        ${data.priceSummary?.lastCloseDate ? data.priceSummary.lastCloseDate.split('T')[0] : '--'} •<br>
+                        ${data.priceSummary?.lastCloseDate ? data.priceSummary.lastCloseDate.split('T')[0] : '--'} &bull;<br>
                         official Daily Close<br>
                         Bullish And Foolish uses official EOD data from Nasdaq.
                     </div>
@@ -1049,11 +1178,293 @@
                             </div>
                             ${hasStaleData ? `<div class="dq-badge">Stale Data (&gt;180d)</div>` : ''}
                             <div class="indicator-track">
-                                <div class="indicator-fill" style="width: ${Math.min(100, Math.abs(scoreVal) * 10)}%; background: ${color};"></div>
+                            <div class="indicator-fill" style="width: ${Math.min(100, Math.abs(scoreVal) * 10)}%; background: ${color};"></div>
                             </div>
                         </div>
                     `;
                 }).join('');
+
+                const summaryPositives = document.getElementById('summaryPositives');
+                const summaryNegatives = document.getElementById('summaryNegatives');
+                const summarySignalMeta = document.getElementById('summarySignalMeta');
+                const summaryLastFiling = document.getElementById('summaryLastFiling');
+                const summaryReportingPeriod = document.getElementById('summaryReportingPeriod');
+                const summaryRunway = document.getElementById('summaryRunway');
+                const summaryRevenueYoY = document.getElementById('summaryRevenueYoY');
+                const summaryLiquidity = document.getElementById('summaryLiquidity');
+                const summarySourceScope = document.getElementById('summarySourceScope');
+
+                const cleanReasonName = (name) => String(name || '')
+                    .replace(/ YoY/i, '')
+                    .replace(/ TTM/i, '')
+                    .replace(/ \(3Y\)/i, '');
+
+                const formatReasonLabel = (reason) => cleanReasonName(reason.name) || 'Signal';
+
+                const stripNumbers = (text) =>
+                    String(text || '').replace(/[$]?\d+(\.\d+)?%?([BMK]?)?/g, '').replace(/\s+/g, ' ').trim();
+
+                const formatPercentSmart = (val) => {
+                    if (val == null) return '--';
+                    const num = Number(val);
+                    if (!Number.isFinite(num)) return '--';
+                    const pct = Math.abs(num) <= 1 ? num * 100 : num;
+                    return `${pct.toFixed(1)}%`;
+                };
+
+                const computeRevenueYoYFromSeries = (quarterlySeries, annualSeries, annualMode) => {
+                    const quarters = Array.isArray(quarterlySeries)
+                        ? quarterlySeries.filter(p => p && p.periodEnd && Number.isFinite(Number(p.revenue)))
+                            .sort((a, b) => Date.parse(a.periodEnd) - Date.parse(b.periodEnd))
+                        : [];
+                    if (!annualMode && quarters.length >= 8) {
+                        const last4 = quarters.slice(-4);
+                        const prev4 = quarters.slice(-8, -4);
+                        const sum = (arr) => arr.reduce((acc, q) => acc + Number(q.revenue), 0);
+                        const lastSum = sum(last4);
+                        const prevSum = sum(prev4);
+                        if (Number.isFinite(lastSum) && Number.isFinite(prevSum) && prevSum !== 0) {
+                            return (lastSum - prevSum) / Math.abs(prevSum);
+                        }
+                    }
+                    const annuals = Array.isArray(annualSeries)
+                        ? annualSeries
+                            .filter(p => p && p.periodEnd && Number.isFinite(Number(p.revenue)))
+                            .filter(p => String(p.periodType || '').toLowerCase() === 'year' || !p.periodType)
+                            .sort((a, b) => Date.parse(a.periodEnd) - Date.parse(b.periodEnd))
+                        : [];
+                    if (annuals.length >= 2) {
+                        const last = Number(annuals[annuals.length - 1].revenue);
+                        const prev = Number(annuals[annuals.length - 2].revenue);
+                        if (Number.isFinite(last) && Number.isFinite(prev) && prev !== 0) {
+                            return (last - prev) / Math.abs(prev);
+                        }
+                    }
+                    return null;
+                };
+
+                const normalizeSignalText = (text) =>
+                    String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+                const dedupeSignals = (signals) => {
+                    const map = new Map();
+                    (signals || []).forEach(sig => {
+                        const title = String(sig.title || sig.id || 'Signal').trim();
+                        const snippet = stripNumbers(sig.snippet || '').trim();
+                        const titleKey = normalizeSignalText(title) || 'signal';
+                        const snippetKey = normalizeSignalText(snippet);
+                        const key = snippetKey ? `${titleKey}|${snippetKey.slice(0, 60)}` : titleKey;
+                        const scoreVal = Number(sig.score) || 0;
+                        if (map.has(key)) {
+                            const existing = map.get(key);
+                            existing.count += 1;
+                            if (Math.abs(scoreVal) > Math.abs(existing.score)) {
+                                existing.score = scoreVal;
+                                existing.title = title;
+                                existing.snippet = snippet;
+                            }
+                            return;
+                        }
+                        map.set(key, { title, snippet, score: scoreVal, count: 1 });
+                    });
+                    return Array.from(map.values());
+                };
+
+                const formatReasonText = (reason) => {
+                    const label = cleanReasonName(reason.name);
+                    const explainer = ruleExplainers[reason.name]
+                        ? (reason.score >= 0 ? ruleExplainers[reason.name].pos : ruleExplainers[reason.name].neg)
+                        : '';
+                    const rawMessage = stripNumbers(reason.message || '');
+                    const detail = explainer || rawMessage || 'Flagged in the scoring rules.';
+                    return `${label}: ${detail}`.trim();
+                };
+
+                const renderSummaryList = (target, items, emptyText) => {
+                    if (!target) return;
+                    target.innerHTML = '';
+                    if (!items.length) {
+                        target.textContent = emptyText;
+                        return;
+                    }
+                    items.forEach(item => {
+                        const row = document.createElement('div');
+                        row.textContent = `&bull; ${item}`;
+                        target.appendChild(row);
+                    });
+                };
+
+                const filingSignalsList = Array.isArray(data.filingSignals) ? data.filingSignals : [];
+                const dedupedSignals = dedupeSignals(filingSignalsList);
+                const duplicatesMerged = Math.max(0, filingSignalsList.length - dedupedSignals.length);
+
+                const confidenceLevel = String(data.confidenceMeta?.level || data.confidence || '').toLowerCase() || null;
+                const completenessPct = Number.isFinite(Number(data.dataCompleteness?.percent))
+                    ? Number(data.dataCompleteness.percent)
+                    : null;
+                const signalConfidenceScore = Number.isFinite(Number(data.confidenceMeta?.score))
+                    ? Math.round(Number(data.confidenceMeta.score))
+                    : (completenessPct != null ? Math.round(completenessPct) : null);
+                const lowCoverage = completenessPct != null && completenessPct < 50;
+                const lowConfidence = confidenceLevel === 'low';
+                const suppressSignals = lowCoverage && lowConfidence;
+
+                const cleanedSignals = suppressSignals ? [] : dedupedSignals;
+                const signalPos = cleanedSignals
+                    .filter(s => Number(s.score) > 0)
+                    .sort((a, b) => Math.abs(Number(b.score) || 0) - Math.abs(Number(a.score) || 0))
+                    .slice(0, 3)
+                    .map(s => {
+                        const detail = stripNumbers(s.snippet || '').trim() || 'Positive filing signal.';
+                        const countLabel = s.count > 1 ? ` (x${s.count})` : '';
+                        return `${s.title}${countLabel}: ${detail}`;
+                    });
+                const signalNeg = cleanedSignals
+                    .filter(s => Number(s.score) < 0)
+                    .sort((a, b) => Math.abs(Number(b.score) || 0) - Math.abs(Number(a.score) || 0))
+                    .slice(0, 3)
+                    .map(s => {
+                        const countLabel = s.count > 1 ? ` (x${s.count})` : '';
+                        return `${s.title}${countLabel}`;
+                    });
+
+                const positives = suppressSignals
+                    ? []
+                    : (signalPos.length
+                        ? signalPos
+                        : ratingReasons.filter(r => Number(r.score) > 0).slice(0, 2).map(formatReasonText));
+                const negatives = suppressSignals
+                    ? []
+                    : (signalNeg.length
+                        ? signalNeg
+                        : ratingReasons.filter(r => Number(r.score) < 0).slice(0, 2).map(formatReasonLabel));
+
+                const emptyPosText = suppressSignals
+                    ? 'Signals hidden due to low confidence/coverage.'
+                    : 'No major positive drivers flagged.';
+                const emptyNegText = suppressSignals
+                    ? 'Signals hidden due to low confidence/coverage.'
+                    : 'No major risks surfaced.';
+
+                renderSummaryList(summaryPositives, positives, emptyPosText);
+                renderSummaryList(summaryNegatives, negatives, emptyNegText);
+
+                if (summarySignalMeta) {
+                    const metaLines = [];
+                    if (cleanedSignals.length) {
+                        const posCount = cleanedSignals.filter(s => Number(s.score) > 0).length;
+                        const negCount = cleanedSignals.filter(s => Number(s.score) < 0).length;
+                        metaLines.push(`Signals shown: ${posCount} positive, ${negCount} negative.`);
+                        if (duplicatesMerged > 0) {
+                            metaLines.push(`${duplicatesMerged} duplicate${duplicatesMerged === 1 ? '' : 's'} merged.`);
+                        }
+                    } else if (suppressSignals) {
+                        metaLines.push('Signals hidden due to low confidence/coverage.');
+                    } else {
+                        metaLines.push('No filing signal text available; using scoring rule highlights.');
+                    }
+                    if (!suppressSignals && (lowConfidence || lowCoverage)) {
+                        metaLines.push('Low confidence/coverage; treat signals cautiously.');
+                    }
+                    const confidenceLine = (() => {
+                        if (confidenceLevel) {
+                            const confLabel = signalConfidenceScore != null ? `${confidenceLevel} (${signalConfidenceScore}%)` : confidenceLevel;
+                            return `Confidence of data: ${confLabel}.`;
+                        }
+                        if (signalConfidenceScore != null) {
+                            return `Confidence of data: ${signalConfidenceScore}%.`;
+                        }
+                        return null;
+                    })();
+                    const lines = confidenceLine ? [...metaLines, confidenceLine] : metaLines;
+                    summarySignalMeta.innerHTML = lines.map(line => `<div>${line}</div>`).join('');
+                }
+
+                if (summaryLastFiling) {
+                    const lastForm = data.filingSignalsMeta?.latestForm
+                        || data.filingProfile?.interim
+                        || data.filingProfile?.annual
+                        || '--';
+                    const lastFiled = formatDate(data.lastFilingDate || data.filingSignalsMeta?.latestFiled);
+                    summaryLastFiling.textContent = lastFiled === '--' ? lastForm : `${lastForm} - ${lastFiled}`;
+                }
+
+                if (summaryReportingPeriod) {
+                    const basis = data.ratingBasis ? data.ratingBasis.toLowerCase() : '';
+                    const basisLabel = basis ? (basis === 'annual' ? 'Annual' : 'Quarterly') : '';
+                    const series = (Array.isArray(data.quarterlySeries) && data.quarterlySeries.length)
+                        ? data.quarterlySeries
+                        : (Array.isArray(data.annualSeries) ? data.annualSeries : []);
+                    const latestPeriod = [...series]
+                        .filter(p => p && p.periodEnd)
+                        .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0];
+                    const asOf = data.fundamentalsAsOf || latestPeriod?.periodEnd || null;
+                    const label = asOf ? `As of ${formatDate(asOf)}` : '--';
+                    summaryReportingPeriod.textContent = basisLabel ? `${label} (${basisLabel})` : label;
+                }
+
+                if (summaryRunway) {
+                    const runwayYears = Number(data.runwayYears ?? data.snapshot?.runwayYears);
+                    if (Number.isFinite(runwayYears)) {
+                        if (runwayYears < 2) {
+                            const months = Math.max(0, Math.round(runwayYears * 12));
+                            summaryRunway.textContent = `${months} mo`;
+                        } else {
+                            summaryRunway.textContent = `${runwayYears.toFixed(1)}y`;
+                        }
+                    } else {
+                        const fcf = Number(data.snapshot?.freeCashFlowTTM ?? data.cash?.freeCashFlowTTM);
+                        if (Number.isFinite(fcf) && fcf > 0) {
+                            summaryRunway.textContent = 'Self-funded';
+                        } else {
+                            const runwayReason = ratingReasons.find(r => /cash runway/i.test(r.name));
+                            summaryRunway.textContent = runwayReason?.message ? runwayReason.message : '--';
+                        }
+                    }
+                }
+
+                if (summaryRevenueYoY) {
+                    let revenueGrowth = data.growth?.revenueGrowthTTM ?? data.snapshot?.revenueGrowthYoY ?? null;
+                    if (revenueGrowth == null) {
+                        revenueGrowth = computeRevenueYoYFromSeries(data.quarterlySeries, data.annualSeries, annualMode);
+                    }
+                    summaryRevenueYoY.textContent = formatPercentSmart(revenueGrowth);
+                }
+
+                if (summaryLiquidity) {
+                    const series = (Array.isArray(data.quarterlySeries) && data.quarterlySeries.length)
+                        ? data.quarterlySeries
+                        : (Array.isArray(data.annualSeries) ? data.annualSeries : []);
+                    const latestBalance = [...series]
+                        .filter(p => p && p.periodEnd)
+                        .sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0];
+                    const currentAssets = Number(latestBalance?.currentAssets ?? latestBalance?.totalCurrentAssets);
+                    const currentLiabilities = Number(latestBalance?.currentLiabilities ?? latestBalance?.totalCurrentLiabilities);
+                    const ratio = Number.isFinite(currentAssets) && Number.isFinite(currentLiabilities) && currentLiabilities > 0
+                        ? currentAssets / currentLiabilities
+                        : null;
+                    summaryLiquidity.textContent = ratio == null ? '--' : ratio.toFixed(2);
+                }
+
+                if (summarySourceScope) {
+                    const profile = data.filingProfile || { annual: '10-K', interim: '10-Q', current: '8-K' };
+                    const forms = [profile.annual, profile.interim, profile.current].filter(Boolean).join(', ');
+                    const qCount = Array.isArray(data.quarterlySeries) ? data.quarterlySeries.length : 0;
+                    const aCount = Array.isArray(data.annualSeries) ? data.annualSeries.length : 0;
+                    const seriesLine = qCount
+                        ? `Financials window: ${qCount} quarter${qCount === 1 ? '' : 's'} and ${aCount} annual period${aCount === 1 ? '' : 's'}.`
+                        : `Financials window: ${aCount} annual period${aCount === 1 ? '' : 's'}.`;
+                    const missingNotes = [];
+                    if (annualMode) missingNotes.push('Quarterly filings limited (annual-only issuer).');
+                    if (qCount > 0 && qCount < 4) missingNotes.push(`Limited quarterly history (${qCount} quarter${qCount === 1 ? '' : 's'}).`);
+                    missingNotes.push('No non-SEC sources (press releases, earnings calls).');
+                    const missingLine = `Missing: ${missingNotes.join(' ')}`;
+                    summarySourceScope.innerHTML = `
+                        <div>- Filings scanned: ${forms || 'SEC filings'}.</div>
+                        <div>- ${seriesLine}</div>
+                        <div>- ${missingLine}</div>
+                    `;
+                }
 
                 // 3. Strategic Outlook
                 const outlook = data.strategicOutlook || {};
@@ -1148,11 +1559,11 @@
                 }
 
                 if (trajLabel === 'Accelerating' || trajLabel === 'Improving' || trajLabel === 'Compounder') {
-                    trajIcon.innerHTML = '▲';
+                    trajIcon.innerHTML = '&#9650;';
                     trajIcon.style.color = 'var(--accent)';
                     document.getElementById('trajLabel').style.color = 'var(--accent)';
                 } else if (trajLabel === 'Recovering') {
-                    trajIcon.innerHTML = '▲';
+                    trajIcon.innerHTML = '&#9650;';
                     trajIcon.style.color = 'var(--warning)';
                     document.getElementById('trajLabel').style.color = 'var(--warning)';
                 } else if (trajLabel === 'Stalling' || trajLabel === 'Cooling') {
@@ -1160,7 +1571,7 @@
                     trajIcon.style.color = 'var(--warning)';
                     document.getElementById('trajLabel').style.color = 'var(--warning)';
                 } else if (trajLabel === 'Deteriorating' || trajLabel === 'Falling') {
-                    trajIcon.innerHTML = '▼';
+                    trajIcon.innerHTML = '&#9660;';
                     trajIcon.style.color = 'var(--danger)';
                     document.getElementById('trajLabel').style.color = 'var(--danger)';
                 } else {
@@ -1213,7 +1624,7 @@
                                             ${title || sig.title}
                                         </div>
                                         <div style="font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">
-                                            Filed: ${sig.filed} • Form ${sig.form}
+                                            Filed: ${sig.filed} &bull; Form ${sig.form}
                                         </div>
                                     </div>
                                     <div class="badge" style="background: ${badgeBg}; color: ${color};">
@@ -1224,7 +1635,7 @@
                                     "${sig.snippet || 'Significant phrasing detected in recent document.'}"
                                 </div>
                                 <a href="${sig.docUrl}" target="_blank" class="filing-link">
-                                    View SEC Filing <span style="font-size: 1.1em;">↗</span>
+                                    View SEC Filing <span style="font-size: 1.1em;">&nearr;</span>
                                 </a>
                             </div>
                         `;
@@ -1303,6 +1714,7 @@
 
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('content').style.display = 'block';
+                initWatchlist(data.ticker);
                 initScrollCue();
                 stopLoadingNarrator();
 
