@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/webp" href="/assets/images/bullfavicon.webp">
     <link rel="icon" href="/favicon.ico" sizes="any">
-    <meta name='impact-site-verification' value='1e5092ab-b1bd-42ef-b694-8ab66bf3e0f9'>
+    <meta name='impact-site-verification' value='30060c9d-d4f7-4ab2-adcf-dae50f3c84ee'>
     <meta name="description"
         content="Bullish and Foolish: An independent rating engine analyzing public SEC filings to deliver transparent, rules-based fundamental health scores for US public companies.">
 
@@ -305,7 +305,7 @@
                             if (metaEl) {
                                 const score = data.ratingNormalizedScore != null ? `${data.ratingNormalizedScore}/100` : '--/100';
                                 const lastFiled = data.lastFilingDate ? String(data.lastFilingDate).slice(0, 10) : 'n/a';
-                                metaEl.textContent = `Score ${score} &bull; Last filing ${lastFiled}`;
+                                metaEl.textContent = `Score ${score} • Last filing ${lastFiled}`;
                             }
                         } catch (_) {
                             const nameEl = document.querySelector(`[data-saved-name="${symbol}"]`);
@@ -565,3 +565,4 @@
 </body>
 
 </html>
+
