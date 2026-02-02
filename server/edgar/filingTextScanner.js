@@ -20,7 +20,7 @@ const CACHE_TTL_MS =
   72 * 60 * 60 * 1000; // default: 72 hours
 const FILING_SIGNALS_ALLOW_STALE = process.env.FILING_SIGNALS_ALLOW_STALE !== "0"; // default: allow stale disk cache
 const EDGAR_FILING_SIGNALS_ENABLED = process.env.EDGAR_FILING_SIGNALS_ENABLED !== "0"; // default: enabled
-const FILING_SIGNALS_SCANNER_VERSION = "2025-12-24-label-fix-v7";
+const FILING_SIGNALS_SCANNER_VERSION = "2026-02-02-no-ai-disruption-v2";
 const goingConcernCache = new Map();
 const filingSignalCache = new Map();
 const MAX_RECENT_FILINGS_DEFAULT = Number(process.env.FILING_SIGNALS_MAX_FILINGS) || 3;
@@ -1173,21 +1173,6 @@ const SIGNAL_DEFS = [
     ]
   },
   {
-    id: "ai_disruption_risk",
-    score: -4,
-    title: "AI Disruption Risk",
-    phrases: [
-      "ai may disrupt our business",
-      "artificial intelligence competition",
-      "generative ai",
-      "ai models may reduce demand",
-      "competitors using ai",
-      "ai-powered alternatives",
-      "machine learning competition",
-      "automation of our services"
-    ]
-  },
-  {
     id: "guidance_cut",
     score: -6,
     title: "Guidance Cut",
@@ -1292,6 +1277,13 @@ export async function scanFilingForSignals(ticker, opts = {}) {
         }
 
         if (foundSnippet) {
+          // Suppress stale regulatory investigation references (e.g., legacy 2019 mentions).
+          if (def.id === "reg_investigation") {
+            const ctx = contextWindow(text, foundIdx);
+            if (STALE_YEARS.some((year) => ctx.includes(year))) {
+              continue;
+            }
+          }
           // Track counts for threshold logic (Foreign GC check)
           const id = def.id;
           if (!signalCounts.has(id)) signalCounts.set(id, 0);
