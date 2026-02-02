@@ -1115,6 +1115,23 @@ async function handleApi(req, res, url) {
                             : 202;
             return sendJson(req, res, statusCode, statusPayload);
         }
+        // Related articles endpoint
+        if (url.pathname === '/api/articles') {
+            const ticker = url.searchParams.get('ticker')?.toUpperCase();
+            if (!ticker) {
+                return sendJson(req, res, 400, { error: 'ticker param is required' });
+            }
+            try {
+                const articlesPath = path.join(DATA_DIR, 'related-articles.json');
+                const raw = await fsPromises.readFile(articlesPath, 'utf8');
+                const allArticles = JSON.parse(raw);
+                const articles = allArticles[ticker] || [];
+                return sendJson(req, res, 200, { ticker, articles, count: articles.length });
+            } catch (err) {
+                console.warn('[api/articles] error loading articles:', err.message);
+                return sendJson(req, res, 200, { ticker, articles: [], count: 0 });
+            }
+        }
         // Admin price update endpoint
         if (url.pathname === '/api/admin/update-prices' && req.method === 'POST') {
             return handleAdminPriceUpdate(req, res, { sendJson });

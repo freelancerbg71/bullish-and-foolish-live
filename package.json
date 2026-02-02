@@ -21,9 +21,16 @@
     "test:prices": "node server/prices/priceStore.test.js",
     "test:engine": "node engine/tests/utils.test.js && node engine/tests/rules.test.js",
     "engine:demo": "node engine/cli.js",
-    "test": "npm run test:engine && npm run test:prices"
+    "test": "npm run test:engine && npm run test:prices",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "security:scan": "snyk test",
+    "security:monitor": "snyk monitor"
   },
   "dependencies": {
     "better-sqlite3": "^12.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0"
   }
 }

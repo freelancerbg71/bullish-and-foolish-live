@@ -710,7 +710,17 @@ const SIGNAL_DEFS = [
     phrases: [
       "decline in demand",
       "soft market conditions",
-      "reduced customer orders"
+      "reduced customer orders",
+      "deceleration in revenue growth",
+      "slowing growth",
+      "growth moderated",
+      "lower than expected demand",
+      "customer churn increased",
+      "user growth slowed",
+      "engagement declined",
+      "retention rates declined",
+      "average revenue per user declined",
+      "arpu declined"
     ]
   },
   {
@@ -741,7 +751,16 @@ const SIGNAL_DEFS = [
       "under investigation by",
       "received a subpoena",
       "regulatory inquiry",
-      "doj/ftc/sec investigation"
+      "doj/ftc/sec investigation",
+      "sec inquiry",
+      "doj investigation",
+      "ftc investigation",
+      "antitrust investigation",
+      "competition authority",
+      "privacy breach",
+      "data breach",
+      "cybersecurity incident",
+      "unauthorized access"
     ]
   },
   {
@@ -752,7 +771,15 @@ const SIGNAL_DEFS = [
       "class action lawsuit",
       "material litigation",
       "significant legal exposure",
-      "pending litigation could materially affect results"
+      "pending litigation could materially affect results",
+      "shareholder lawsuit",
+      "derivative action",
+      "securities fraud",
+      "patent infringement claim",
+      "breach of contract",
+      "indemnification claim",
+      "settlement discussions ongoing",
+      "reserve for litigation"
     ]
   },
   {
@@ -970,12 +997,22 @@ const SIGNAL_DEFS = [
   {
     id: "moa_weak",
     score: -3,
-    title: "Crowded Mechanism",
+    title: "Competitive Pressure",
     phrases: [
       "crowded space",
       "generic competition",
       "biosimilar threat",
-      "market dominated by"
+      "market dominated by",
+      "increased competition",
+      "competitive pressure",
+      "pricing pressure",
+      "compressed margins",
+      "new entrants",
+      "disruption from",
+      "market share loss",
+      "losing market share",
+      "aggressive pricing by competitors",
+      "intensifying competition"
     ]
   },
   {
@@ -1008,7 +1045,17 @@ const SIGNAL_DEFS = [
     phrases: [
       "ceo resigned",
       "cfo departure",
-      "executive turnover"
+      "executive turnover",
+      "chief executive officer resigned",
+      "chief financial officer resigned",
+      "chief operating officer resigned",
+      "president resigned",
+      "board member resigned",
+      "departure of executive",
+      "transition in leadership",
+      "search for new ceo",
+      "interim ceo",
+      "acting cfo"
     ]
   },
   {
@@ -1123,6 +1170,36 @@ const SIGNAL_DEFS = [
       "unqualified opinion",
       "clean opinion",
       "no material weaknesses identified"
+    ]
+  },
+  {
+    id: "ai_disruption_risk",
+    score: -4,
+    title: "AI Disruption Risk",
+    phrases: [
+      "ai may disrupt our business",
+      "artificial intelligence competition",
+      "generative ai",
+      "ai models may reduce demand",
+      "competitors using ai",
+      "ai-powered alternatives",
+      "machine learning competition",
+      "automation of our services"
+    ]
+  },
+  {
+    id: "guidance_cut",
+    score: -6,
+    title: "Guidance Cut",
+    phrases: [
+      "lowered guidance",
+      "reduced guidance",
+      "guidance below expectations",
+      "revised guidance downward",
+      "expect lower revenue",
+      "expect lower earnings",
+      "below our prior guidance",
+      "no longer expect to achieve"
     ]
   }
 ];
