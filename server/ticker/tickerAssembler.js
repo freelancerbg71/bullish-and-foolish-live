@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { getFundamentalsForTicker } from "../edgar/fundamentalsStore.js";
 import { getLatestCachedPrice, getRecentPrices } from "../prices/priceStore.js";
+import { getLatestRatingSnapshots, insertRatingSnapshot } from "../ratings/ratingsHistoryStore.js";
 import { classifySector } from "../sector/sectorClassifier.js";
 import { normalize } from "./tickerUtils.js";
 // import { fetchShortInterest } from "../prices/shortInterestFetcher.js"; // Removed
@@ -1291,6 +1292,44 @@ function computeRuleRating({
     // Only apply when we have meaningful expansion-phase evidence.
     if (growthStageIntensity < 0.4) return 0;
 
+    // GUARDRAIL 1: Dilution Cap - Heavy dilution signals desperation, not growth
+    if (Number.isFinite(dilutionYoY) && dilutionYoY > 50) {
+      if (ratingDebug) {
+        console.log(`[GROWTH ADJUST] ${ticker} | Skipped: Dilution ${dilutionYoY.toFixed(1)}% > 50% threshold`);
+      }
+      return 0;
+    }
+
+    // GUARDRAIL 2: Runway Floor - Growth thesis needs time to materialize
+    let runwayMultiplier = 1.0;
+    if (Number.isFinite(runwayYears)) {
+      if (runwayYears < 1.0) {
+        runwayMultiplier = 0.0; // Survival mode, not growth
+        if (ratingDebug) {
+          console.log(`[GROWTH ADJUST] ${ticker} | Skipped: Runway ${runwayYears.toFixed(1)}y < 1yr (survival mode)`);
+        }
+        return 0;
+      } else if (runwayYears < 1.5) {
+        runwayMultiplier = 0.5; // Tight runway
+      } else if (runwayYears < 2.0) {
+        runwayMultiplier = 0.75; // Moderate runway
+      }
+    }
+
+    // GUARDRAIL 3: Quality Check (Rule of 40) - Growth must be relatively efficient
+    // Rule of 40 = Revenue Growth % + FCF Margin %
+    // Example: 50% growth + (-20%) FCF = 30 (passes)
+    // Example: 35% growth + (-40%) FCF = -5 (fails - too much burn)
+    if (Number.isFinite(revenueGrowth) && Number.isFinite(fcfMargin)) {
+      const ruleOf40 = revenueGrowth + fcfMargin;
+      if (ruleOf40 < 20) {
+        if (ratingDebug) {
+          console.log(`[GROWTH ADJUST] ${ticker} | Skipped: Rule of 40 = ${ruleOf40.toFixed(1)} (below 20 threshold)`);
+        }
+        return 0;
+      }
+    }
+
     // Calculate total profitability penalties (negative scores from efficiency metrics)
     const profitabilityPenaltyRules = [
       "ROE quality", "ROIC", "Return on Assets", "Asset Efficiency",
@@ -1315,22 +1354,42 @@ function computeRuleRating({
     }
 
     // Scale the adjustment smoothly to avoid threshold cliffs.
-    offset = offset * growthStageIntensity;
+    offset = offset * growthStageIntensity * runwayMultiplier;
 
     // Cap the offset so it only recovers up to 50% of the profitability penalties
     // This prevents full erasure of legitimate concerns
     const maxRecovery = Math.abs(profitPenalties) * 0.5;
     offset = Math.min(offset, maxRecovery);
 
-    return Math.round(offset);
+    const finalOffset = Math.round(offset);
+    
+    if (ratingDebug && finalOffset > 0) {
+      console.log(`[GROWTH ADJUST] ${ticker} | +${finalOffset} pts (Intensity: ${growthStageIntensity.toFixed(2)}, RunwayMult: ${runwayMultiplier}, RuleOf40: ${(revenueGrowth + fcfMargin).toFixed(1)})`);
+    }
+    
+    return finalOffset;
   })();
 
   if (growthPhaseAdjustment > 0) {
     total += growthPhaseAdjustment;
+    
+    // Build descriptive message based on what triggered the adjustment
+    const ruleOf40 = Number.isFinite(revenueGrowth) && Number.isFinite(fcfMargin) 
+      ? (revenueGrowth + fcfMargin).toFixed(0) 
+      : null;
+    const runwayText = Number.isFinite(runwayYears) 
+      ? (runwayYears >= 2 ? `${runwayYears.toFixed(1)}y runway` : `${Math.round(runwayYears * 12)}mo runway`)
+      : null;
+    
+    let message = `+${growthPhaseAdjustment} pts (Growth Phase Investment: ${revenueGrowth?.toFixed(0) || '?'}% growth`;
+    if (ruleOf40) message += `, Rule of 40: ${ruleOf40}`;
+    if (runwayText) message += `, ${runwayText}`;
+    message += `)`;
+    
     reasons.push({
-      name: "Growth Phase Adjustment",
+      name: "Growth Phase Investment",
       score: growthPhaseAdjustment,
-      message: `+${growthPhaseAdjustment} pts (offsetting profitability penalties during expansion)`,
+      message,
       missing: false,
       notApplicable: false,
       weight: null,
@@ -2178,6 +2237,7 @@ export async function buildTickerViewModel(
 
     let priceSummary = emptyPriceSummary();
     let priceHistory = [];
+    let priceHistoryFull = [];
     let pricePending = true;
     let externalMarketCap = null;
     let externalCurrency = null;
@@ -2215,6 +2275,7 @@ export async function buildTickerViewModel(
         const fallbackPieces = buildPricePieces(localPrices);
         priceSummary = fallbackPieces.priceSummary;
         priceHistory = fallbackPieces.priceHistory;
+        priceHistoryFull = localPrices;
         logPriceOnce("local-fallback", ticker, `[tickerAssembler] using local price fallback for ${ticker}`);
         // If we have a usable local close, don't show "pending" in the UI.
         if (Number.isFinite(priceSummary?.lastClose) && !isDateStale(priceSummary?.lastCloseDate, 7)) {
@@ -3155,6 +3216,112 @@ export async function buildTickerViewModel(
       "interest coverage"
     ]);
 
+    let ratingHistory = [];
+    try {
+      const ratingBasis = annualMode ? "annual" : "quarterly";
+      const priceHistoryForSnapshot = priceHistoryFull.length ? priceHistoryFull : priceHistory;
+      const modelVersion = process.env.RATING_MODEL_VERSION || null;
+
+      const selectRatingPeriod = (periods) => {
+        const list = Array.isArray(periods) ? periods.filter(p => p?.periodEnd) : [];
+        if (!list.length) return null;
+        return [...list].sort((a, b) => Date.parse(b.periodEnd) - Date.parse(a.periodEnd))[0] || null;
+      };
+
+      const insertPeriodSnapshot = async (period, computedRating, fallbackFiledDate = null) => {
+        if (!period?.periodEnd || !computedRating) return;
+        const filedDate = period?.filedDate || fallbackFiledDate || null;
+        const priceAtFiling = filedDate
+          ? buildPriceSummaryAt(priceHistoryForSnapshot, filedDate)
+          : { priceSummary: emptyPriceSummary(), priceHistory: [] };
+        await insertRatingSnapshot({
+          ticker: ticker.toUpperCase(),
+          periodEnd: period.periodEnd,
+          filedDate,
+          basis: ratingBasis,
+          score: computedRating.normalizedScore ?? null,
+          rawScore: computedRating.rawScore ?? null,
+          tier: computedRating.tierLabel ?? null,
+          priceAt: priceAtFiling.priceSummary?.lastClose ?? null,
+          priceDate: priceAtFiling.priceSummary?.lastCloseDate ?? null,
+          modelVersion,
+          computedAt: new Date().toISOString()
+        });
+      };
+
+      const currentPeriod = annualMode ? latestAnnual : latestQuarter;
+      await insertPeriodSnapshot(currentPeriod, rating, latestFiledDate);
+
+      ratingHistory = await getLatestRatingSnapshots(ticker, { basis: ratingBasis, limit: 2 });
+
+      if (ratingHistory.length < 2 && !annualMode) {
+        const quartersAsc = sortByPeriodEndAsc(statementQuarterlySeries);
+        if (quartersAsc.length >= 8) {
+          const priorEnd = quartersAsc.slice(0, -4).at(-1)?.periodEnd || null;
+          if (priorEnd) {
+            const priorQuarterly = statementQuarterlySeries.filter(
+              (q) => q?.periodEnd && Date.parse(q.periodEnd) <= Date.parse(priorEnd)
+            );
+            const priorAnnual = annualSeries.filter(
+              (p) => p?.periodEnd && Date.parse(p.periodEnd) <= Date.parse(priorEnd)
+            );
+            const priorPeriod = selectRatingPeriod(priorQuarterly);
+            const priceAt = buildPriceSummaryAt(
+              priceHistoryForSnapshot,
+              priorPeriod?.filedDate || priorEnd
+            );
+            const priorRating = computeRuleRating({
+              ticker: ticker.toUpperCase(),
+              sector,
+              quarterlySeries: priorQuarterly.length ? priorQuarterly : priorAnnual,
+              annualSeries: priorAnnual,
+              annualMode,
+              snapshot,
+              ttm: priorTtmMeta?.ttm || null,
+              priceSummary: priceAt.priceSummary,
+              priceHistory: priceAt.priceHistory,
+              growth,
+              filingSignals: filingSignalsFinal,
+              projections,
+              issuerType
+            });
+            await insertPeriodSnapshot(priorPeriod, priorRating, priorPeriod?.filedDate || null);
+          }
+        }
+      }
+
+      if (ratingHistory.length < 2 && annualMode) {
+        const priorAnnual = annualSeries[1] || null;
+        if (priorAnnual) {
+          const priorTtm = buildTtmWithDerived({ quartersAsc: [], latestAnnual: priorAnnual })?.ttm || null;
+          const priceAt = buildPriceSummaryAt(priceHistoryForSnapshot, priorAnnual?.filedDate || priorAnnual.periodEnd);
+          const priorAnnualSeries = annualSeries.filter(
+            (p) => p?.periodEnd && Date.parse(p.periodEnd) <= Date.parse(priorAnnual.periodEnd)
+          );
+          const priorRating = computeRuleRating({
+            ticker: ticker.toUpperCase(),
+            sector,
+            quarterlySeries: priorAnnualSeries,
+            annualSeries: priorAnnualSeries,
+            annualMode,
+            snapshot,
+            ttm: priorTtm,
+            priceSummary: priceAt.priceSummary,
+            priceHistory: priceAt.priceHistory,
+            growth,
+            filingSignals: filingSignalsFinal,
+            projections,
+            issuerType
+          });
+          await insertPeriodSnapshot(priorAnnual, priorRating, priorAnnual?.filedDate || null);
+        }
+      }
+
+      ratingHistory = await getLatestRatingSnapshots(ticker, { basis: ratingBasis, limit: 2 });
+    } catch (err) {
+      console.warn("[tickerAssembler] rating history update failed", ticker, err?.message || err);
+    }
+
     const vm = {
       ticker: ticker.toUpperCase(),
       companyName: fundamentals[0]?.companyName || undefined,
@@ -3182,6 +3349,7 @@ export async function buildTickerViewModel(
       pastRatingDelta: (pastRating?.score != null && rating.normalizedScore != null)
         ? Number(rating.normalizedScore - pastRating.score)
         : null,
+      ratingHistory,
       ratingBasis: annualMode ? "annual" : "quarterly",
       annualMode,
       ratingNotes,

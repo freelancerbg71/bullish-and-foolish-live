@@ -1,3044 +1,3482 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
+        <loc>https://bullishandfoolish.com/ticker/UCIB</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UCL</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UCO</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UCTT</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UDMY</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UDN</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UDR</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UE</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UEC</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UEIC</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UFCS</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UFG</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UFI</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UFPI</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UFPT</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UG</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UGA</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UGI</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UGL</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UGP</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UGRO</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UHAL</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UHAL-B</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UHG</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UHGWW</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UHS</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UHT</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UI</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UIS</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UK</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UL</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/ULBI</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/ULCC</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/ULE</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/ULH</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/ULS</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/ULTA</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/ULY</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UMAC</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UMBF</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UMBFO</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UMC</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UMH</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNB</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNCY</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNF</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNFI</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNG</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNH</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNIT</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNL</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNM</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNMA</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNP</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNTY</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UNXP</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UOKA</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UONE</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UONEK</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UP</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UPB</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UPBD</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UPC</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UPLD</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UPS</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UPST</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UPWK</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/UPXI</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/URBN</loc>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
         <loc>https://bullishandfoolish.com/ticker/URG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/URGN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/URI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UROY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USAC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USAR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USAS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USAU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USBC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USCB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USCI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USEA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USEG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USFD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USGO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USGOW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USIO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USLM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USML</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USNA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USOI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/USPH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UTHR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UTI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UTL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UTMD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UTSI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UTZ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UUP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UUU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UUUU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UVE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UVSP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UVV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UWMC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UXIN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UYSC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UYSCR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UYSCU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UZD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UZE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/UZF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/V</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VABK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VAC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VACH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VACHU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VACHW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VACI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VAL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VALE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VALN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VALU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VANI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VATE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VBIX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VBNK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VCEL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VCIC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VCICU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VCICW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VCIG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VCTR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VCYT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VECO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VEEA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VEEAW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VEEE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VEEV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VEL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VELO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VENU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VEON</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VERA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VERI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VERO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VERU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VERX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VEST</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VET</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VFC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VFF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VFS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VFSWW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VGAS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VGASW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VGZ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VHC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VHI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIASP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIAV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VICI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VICR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VINC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VINP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIOT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIPS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIRC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIRT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIRX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/VISN</loc>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIST</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VITL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIVK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VIVS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VKTX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VLGEA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VLN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VLO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VLRS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VLTO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VLY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VLYPN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VLYPO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VLYPP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VMAR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VMC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VMD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VMI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNCE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNDA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNET</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNME</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNMEU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNMEW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNOM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNRX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VNTG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VOD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VOR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VOXR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VOYA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VOYG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VPG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRAR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRAX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRCA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRDN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VREX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRME</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRNS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRRM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRSK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRSN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRTS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VRTX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSAT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSCO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSEC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSEE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSEEW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSME</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSSYW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VST</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSTA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSTD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSTM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VSTS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTAK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTEX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTGN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTLE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTMX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTOL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTRS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTSI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTVT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VTYX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VUZI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VVOS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VVPR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VVV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VVX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VWAV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VWAVW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VYGR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VYLD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VYNE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VYX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VZ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/VZLA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/W</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WAB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WABC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WAFD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WAFDP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WAFU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WAI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WAL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WALD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WALDW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WASH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WAT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WATT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WAVE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WAY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WBD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WBI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WBS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WBTN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WBUY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WBX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WCC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WCN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WCT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WDAY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WDC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WDFC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WDH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WDS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WEAT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WEAV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WEC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WELL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WEN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WENN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WENNU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WENNW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WERN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WES</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WEST</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WETH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WETO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WEX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WEYS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WFC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WFCF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WFF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WFG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WFRD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WGO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WGRX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WGS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WGSWW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHFCL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHLR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHLRD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHLRL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHLRP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WHWK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WILC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WIMI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WINA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WING</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WIT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WIX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WKC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WKEY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WKHS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WKSP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLAC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLACU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLACW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLDN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLDS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLDSW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLFC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLKP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/WLTH</loc>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WLYB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WMB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WMG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WMK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WMS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WMT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WNC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WNEB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WNS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WNW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WOK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WOLF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WOLV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WOOF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WOR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WORX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WOW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WPC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WPM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WPP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WPRT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WRAP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WRB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WRBY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WRD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WRLD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WRN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WRPT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSBC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSBCO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSBF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSBK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSFS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSO-B</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WST</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSTN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WSTNU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTBA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/WTER</loc>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTFC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTFCN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTGUR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTGUU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTID</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTIU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTRG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTTR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WTW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WULF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WVE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WVVI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WVVIP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WWD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WWR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WWW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WXM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WYFI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WYHG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WYNN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/WYY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XAIR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XBIO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XBIT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XBP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XBPEW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XCH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XCUR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XEL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XELB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XELLL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XENE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XERS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XFOR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XGN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XHG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XHLD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XHR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XIFR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XIN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XLO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XMTR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XNCR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XNET</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XOM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XOMA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XOMAO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XOMAP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XOS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XOSWW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XPEL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XPER</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XPEV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XPL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XPO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XPOF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XPON</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XPRO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XRAY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XRPN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XRPNU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XRPNW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XRTX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XRX</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XTIA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XTKG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XTLB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XTNT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XWEL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XWIN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XXC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XXI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XXII</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XYF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XYL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XYZ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/XZO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YAAS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YALA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YCBD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YCL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YCS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YCY</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YDES</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YDESW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YDKG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YELP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YETI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YEXT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YGMZ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YHC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YHGJ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YHNA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YHNAR</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YHNAU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YIBO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YJ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YMM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YORW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YOTA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YOU</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YOUL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YPF</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YQ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YRD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YSG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YSXT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YTRA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YUM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YUMC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YXT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YYAI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/YYGH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/Z</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZBAI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZBAO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZBH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZBIO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZBRA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZCMD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZD</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZDAI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZDGE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZENA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZENV</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZEO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZEOWW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZEPP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZETA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZEUS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZG</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.5</priority>
+    </url>
+    <url>
+        <loc>https://bullishandfoolish.com/ticker/ZGM</loc>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZGN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZIM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZION</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZIONP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZIP</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZJK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZJYL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZKH</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZKIN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZLAB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZM</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZNB</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZNTL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZONE</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZOOZ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZOOZW</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZRCN</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZSL</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZSPC</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZTEK</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZTO</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZTS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZUMZ</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZURA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZVIA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZVRA</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZWS</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZYBT</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZYME</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>
     <url>
         <loc>https://bullishandfoolish.com/ticker/ZYXI</loc>
-        <lastmod>2026-01-14</lastmod>
+        <lastmod>2026-01-31</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.5</priority>
     </url>

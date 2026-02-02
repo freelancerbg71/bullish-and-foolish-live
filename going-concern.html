@@ -26,6 +26,15 @@
     <meta name="twitter:image" content="https://bullishandfoolish.com/assets/images/bullishandfoolish.png">
 
     <link rel="stylesheet" href="/style.css?v=20260104.2">
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-GFS8VB2GT4"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-GFS8VB2GT4');
+    </script>
     <style>
         .gc-hero {
             display: grid;
@@ -412,24 +421,7 @@
 
         <section class="section" style="padding-top: 0;">
             <div class="label" style="margin-bottom: var(--space-md);">Danger Tiers</div>
-            <div class="gc-tier-grid">
-                <div class="gc-tier-card">
-                    <div class="gc-tier-title"> Critical</div>
-                    <div class="gc-tier-desc">Likely to run out of cash before the next filing.</div>
-                </div>
-                <div class="gc-tier-card">
-                    <div class="gc-tier-title"> At Risk</div>
-                    <div class="gc-tier-desc">Runway under 12 months with no clear financing path.</div>
-                </div>
-                <div class="gc-tier-card">
-                    <div class="gc-tier-title"> Watch List</div>
-                    <div class="gc-tier-desc">Going concern flagged, but levers exist to extend runway.</div>
-                </div>
-                <div class="gc-tier-card">
-                    <div class="gc-tier-title"> Managed Risk</div>
-                    <div class="gc-tier-desc">Going concern flagged, with recent capital or refinancing action.</div>
-                </div>
-            </div>
+            <div class="gc-tier-grid" id="gcTierLegend"></div>
         </section>
 
         <section class="section" style="padding-top: 0;">
@@ -511,6 +503,34 @@
             detailRowEl: null
         };
 
+        // Keep the legend in sync with the same tier semantics used in the data.
+        const riskTierLegend = [
+            {
+                tier: 'critical',
+                label: 'Critical',
+                icon: '🟥',
+                desc: 'Likely to run out of cash before the next filing.'
+            },
+            {
+                tier: 'at_risk',
+                label: 'At Risk',
+                icon: '🟧',
+                desc: 'Runway under 12 months with no clear financing path.'
+            },
+            {
+                tier: 'watch',
+                label: 'Watch List',
+                icon: '🟨',
+                desc: 'Going concern flagged, but levers exist to extend runway.'
+            },
+            {
+                tier: 'managed',
+                label: 'Managed Risk',
+                icon: '🟩',
+                desc: 'Going concern flagged, with recent capital or refinancing action.'
+            }
+        ];
+
         function escapeHtml(str) {
             return String(str || '')
                 .replace(/&/g, '&amp;')
@@ -587,6 +607,19 @@
         function normalizeRiskPointLabel(label) {
             if (!label || label === '--') return '--';
             return String(label).replace(/\s*-\s*/g, ' \u2013 ').replace(/\s*\u2013\s*/g, ' \u2013 ');
+        }
+
+        function renderTierLegend() {
+            const container = document.getElementById('gcTierLegend');
+            if (!container) return;
+            container.innerHTML = riskTierLegend.map((tier) => `
+                <div class="gc-tier-card">
+                    <div class="gc-tier-title">
+                        <span class="gc-tier-badge gc-tier-${tier.tier}">${tier.icon} ${tier.label}</span>
+                    </div>
+                    <div class="gc-tier-desc">${tier.desc}</div>
+                </div>
+            `).join('');
         }
 
         function setDetailVisibility(visible) {
@@ -927,6 +960,7 @@
             }
         });
 
+        renderTierLegend();
         loadGoingConcern();
     </script>
 </body>

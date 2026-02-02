@@ -237,7 +237,7 @@
         <h1 id="pageTitle" class="page-title visually-hidden"
             style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Stock Analysis</h1>
         <!-- Loading State -->
-        <div id="loading" class="section" style="text-align: center; padding-top: 10vh;">
+        <div id="loading" class="section" style="text-align: center; padding-top: 10vh; min-height: 60vh; background: var(--bg-primary);">
             <div id="scanningNotice"
                 style="font-size: 1.1rem; color: var(--text-primary); margin-bottom: 10px; display: block;">
                 Deep Scanning SEC Filings (this can take 10-15 seconds)...
@@ -448,6 +448,10 @@
                             <div class="label">YoY Revenue Growth</div>
                             <div id="summaryRevenueYoY" style="margin-top: 6px; font-weight: 700;">--</div>
                         </div>
+                        <div class="card" style="padding: var(--space-md); display: none;">
+                            <div class="label">Rating Shift</div>
+                            <div id="summaryRatingShift" style="margin-top: 6px; font-weight: 700;">--</div>
+                        </div>
                         <div class="card" style="padding: var(--space-md);">
                             <div class="label"><span title="Current assets divided by current liabilities.">Liquidity
                                     Ratio</span></div>
@@ -647,6 +651,16 @@
             return parsed.toISOString().slice(0, 10);
         }
 
+        function cleanSnippet(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/&nbsp;|&#160;|&#xA0;|&#xa0;/g, ' ')
+                .replace(/&#\d+;|&#x[0-9a-f]+;/gi, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
         const WATCHLIST_KEY = 'savedTickers';
 
         function normalizeTicker(val) {
@@ -763,65 +777,20 @@
             `;
         }
 
-        const relatedArticlesByTicker = {
-            PLTR: [
-                {
-                    title: 'Palantir: The $80B Sci-Fi Story',
-                    path: '/articles/palantir-sci-fi-reality.html',
-                    description: 'A deep look at PLTR fundamentals beyond the hype.',
-                    tag: 'Fundamental Research',
-                    readTime: '6 min'
-                }
-            ],
-            ACHR: [
-                {
-                    title: 'Flying Cars: Are Archer\'s Fundamentals Grounded?',
-                    path: '/articles/archer-aviation-flying-cars.html',
-                    description: 'What the filings say about Archer Aviation\'s runway.',
-                    tag: 'Speculative Growth',
-                    readTime: '5 min'
-                }
-            ],
-            TSLA: [
-                {
-                    title: 'Tesla: Overvalued or Misunderstood?',
-                    path: '/articles/tesla-overvalued-reality-check.html',
-                    description: 'A reality check on TSLA fundamentals and risk.',
-                    tag: 'Fundamental Analysis',
-                    readTime: '6 min'
-                }
-            ],
-            META: [
-                {
-                    title: 'Meta: Fundamental Reality Check',
-                    path: '/articles/meta-fundamental-reality-check.html',
-                    description: 'A closer read of META\'s balance sheet and signals.',
-                    tag: 'Fundamental Analysis',
-                    readTime: '6 min'
-                }
-            ],
-            KULR: [
-                {
-                    title: 'The "Kiss of Death" Signature',
-                    path: '/articles/going-concern.html',
-                    description: 'Understanding going concern warnings through real filings.',
-                    tag: 'Financial Intelligence',
-                    readTime: '5 min'
-                }
-            ],
-            BINI: [
-                {
-                    title: 'The "Kiss of Death" Signature',
-                    path: '/articles/going-concern.html',
-                    description: 'Understanding going concern warnings through real filings.',
-                    tag: 'Financial Intelligence',
-                    readTime: '5 min'
-                }
-            ]
-        };
+        async function fetchRelatedArticles(tickerSymbol) {
+            try {
+                const res = await fetch(`/api/articles?ticker=${encodeURIComponent(tickerSymbol)}`);
+                if (!res.ok) return [];
+                const data = await res.json();
+                return data.articles || [];
+            } catch (err) {
+                console.warn('Failed to fetch related articles:', err);
+                return [];
+            }
+        }
 
-        function renderRelatedArticles(tickerSymbol) {
-            const articles = relatedArticlesByTicker[tickerSymbol];
+        async function renderRelatedArticles(tickerSymbol) {
+            const articles = await fetchRelatedArticles(tickerSymbol);
             if (!articles || articles.length === 0) return;
             const section = document.getElementById('relatedArticlesSection');
             const container = document.getElementById('relatedArticlesContainer');
@@ -829,13 +798,15 @@
 
             container.innerHTML = articles.map((article, index) => {
                 const isFeature = index === 0 && articles.length > 1;
-                const meta = [article.tag, article.readTime].filter(Boolean).join(' &bull; ');
+                const meta = [article.tag, article.readTime, article.date].filter(Boolean).join(' • ');
 
                 return `
                 <div class="card" style="${isFeature ? 'grid-column: span 2; border-left: 4px solid var(--accent);' : ''} background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.15)); padding: var(--space-xl); border: 1px solid var(--border); box-shadow: 0 14px 40px rgba(0, 0, 0, 0.18);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <div class="label" style="font-size: 0.75rem; letter-spacing: 0.12em; color: var(--text-muted);">${article.tag || 'Research'}</div>
-                        ${article.readTime ? `<div class="text-muted" style="font-size: 0.8rem;">${article.readTime} read</div>` : ''}
+                        <div class="text-muted" style="font-size: 0.8rem;">
+                            ${[article.readTime ? `${article.readTime} read` : null, article.date].filter(Boolean).join(' • ')}
+                        </div>
                     </div>
                     <div style="font-family: var(--font-serif); font-size: ${isFeature ? '1.6rem' : '1.35rem'}; font-weight: 700; margin-top: var(--space-sm);">
                         ${article.title}
@@ -865,8 +836,8 @@
                 renderUnsupportedTickerPage(ticker, nonFilingInfo);
                 return;
             }
-            renderRelatedArticles(ticker);
-
+            // Load related articles asynchronously (non-blocking)
+            renderRelatedArticles(ticker).catch(err => console.warn('Related articles error:', err));
 
             try {
                 const controller = new AbortController();
@@ -1194,13 +1165,17 @@
                 const summaryReportingPeriod = document.getElementById('summaryReportingPeriod');
                 const summaryRunway = document.getElementById('summaryRunway');
                 const summaryRevenueYoY = document.getElementById('summaryRevenueYoY');
+                const summaryRatingShift = document.getElementById('summaryRatingShift');
                 const summaryLiquidity = document.getElementById('summaryLiquidity');
                 const summarySourceScope = document.getElementById('summarySourceScope');
 
-                const cleanReasonName = (name) => String(name || '')
+                const stripLeadingBullet = (text) => String(text || '')
+                    .replace(/^\s*(?:&bull;|&#8226;|\u2022|\u25E6)\s*/i, '');
+
+                const cleanReasonName = (name) => stripLeadingBullet(String(name || '')
                     .replace(/ YoY/i, '')
                     .replace(/ TTM/i, '')
-                    .replace(/ \(3Y\)/i, '');
+                    .replace(/ \(3Y\)/i, ''));
 
                 const formatReasonLabel = (reason) => cleanReasonName(reason.name) || 'Signal';
 
@@ -1292,7 +1267,8 @@
                     }
                     items.forEach(item => {
                         const row = document.createElement('div');
-                        row.textContent = `&bull; ${item}`;
+                        row.className = 'summary-list-item';
+                        row.textContent = stripLeadingBullet(item);
                         target.appendChild(row);
                     });
                 };
@@ -1447,6 +1423,34 @@
                         ? currentAssets / currentLiabilities
                         : null;
                     summaryLiquidity.textContent = ratio == null ? '--' : ratio.toFixed(2);
+                }
+
+                if (summaryRatingShift) {
+                    const history = Array.isArray(data.ratingHistory) ? data.ratingHistory : [];
+                    if (history.length >= 2) {
+                        const current = history[0];
+                        const prev = history[1];
+                        const delta = (Number.isFinite(Number(current?.score)) && Number.isFinite(Number(prev?.score)))
+                            ? Number(current.score) - Number(prev.score)
+                            : null;
+                        const deltaText = delta == null ? '--' : `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}`;
+                        const currentScore = current?.score != null ? formatScore(current.score) : '--';
+                        const prevScore = prev?.score != null ? formatScore(prev.score) : '--';
+                        const currentTier = current?.tier || 'N/A';
+                        const prevTier = prev?.tier || 'N/A';
+                        const filedLine = current?.filedDate ? `Filed ${formatDate(current.filedDate)}` : '';
+                        const periodLine = current?.periodEnd ? `Period ${formatDate(current.periodEnd)}` : '';
+                        const metaLine = [filedLine, periodLine].filter(Boolean).join(' • ');
+
+                        summaryRatingShift.innerHTML = `
+                            <div style="font-weight: 800;">${currentScore} (${currentTier})</div>
+                            <div class="text-muted" style="font-size: 0.7rem; margin-top: 4px;">Prev ${prevScore} (${prevTier})</div>
+                            <div style="margin-top: 6px; font-size: 0.85rem;">Δ ${deltaText}</div>
+                            ${metaLine ? `<div class="text-muted" style="font-size: 0.65rem; margin-top: 6px;">${metaLine}</div>` : ''}
+                        `;
+                    } else {
+                        summaryRatingShift.textContent = 'No prior filing to compare.';
+                    }
                 }
 
                 if (summarySourceScope) {
@@ -1635,7 +1639,7 @@
                                     </div>
                                 </div>
                                 <div class="filing-quote">
-                                    "${sig.snippet || 'Significant phrasing detected in recent document.'}"
+                                    "${cleanSnippet(sig.snippet) || 'Significant phrasing detected in recent document.'}"
                                 </div>
                                 <a href="${sig.docUrl}" target="_blank" class="filing-link">
                                     View SEC Filing <span style="font-size: 1.1em;">&nearr;</span>
@@ -1686,7 +1690,7 @@
                         const scoreText = formatScore(scoreVal);
                         const color = isPos ? 'var(--accent)' : (isNeg ? 'var(--danger)' : 'var(--warning)');
                         const badgeBg = isPos ? 'var(--accent-muted)' : (isNeg ? 'var(--danger-muted)' : 'var(--warning-muted)');
-                        const snippet = sig.snippet || 'Biotech-specific signal detected in recent filing.';
+                        const snippet = cleanSnippet(sig.snippet) || 'Biotech-specific signal detected in recent filing.';
                         return `
                             <div class="filing-card" style="border-top: 2px solid ${color};">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
@@ -1739,10 +1743,93 @@
 
             } catch (err) {
                 stopLoadingNarrator('Could not load data.');
-                document.getElementById('loading').innerHTML = `
-                    <div class="badge badge-bearish">Error: ${err.message}</div>
-                    <p class="text-muted" style="margin-top: var(--space-md);">Ensure "${ticker}" is valid and has data.</p>
+                console.error('[Ticker Error]', err);
+                
+                const errorContainer = document.getElementById('loading');
+                const isNetworkError = err.name === 'TypeError' || err.message?.includes('fetch') || err.message?.includes('network');
+                const isTimeout = err.name === 'AbortError';
+                const isNotFound = err.message?.includes('not found') || err.message?.includes('404');
+                
+                let title, message, suggestion;
+                
+                if (isTimeout) {
+                    title = 'Request Timed Out';
+                    message = 'This ticker may have complex filings that take longer to analyze.';
+                    suggestion = 'Please try again in a moment.';
+                } else if (isNetworkError) {
+                    title = 'Connection Issue';
+                    message = 'Unable to reach our servers.';
+                    suggestion = 'Please check your internet connection and try again.';
+                } else if (isNotFound) {
+                    title = `Ticker "${escapeHtml(ticker)}" Not Found`;
+                    message = 'We couldn\'t find this company in our database.';
+                    suggestion = 'Try searching for a different ticker symbol, or check that it\'s a valid US publicly traded company.';
+                } else {
+                    title = 'Unable to Load Analysis';
+                    message = 'Something went wrong while analyzing this ticker.';
+                    suggestion = 'This might be a temporary issue. Please try again.';
+                }
+                
+                const errorHtml = `
+                    <div style="max-width: 500px; margin: 0 auto; text-align: center; padding: 40px 20px; background: var(--bg-primary, #FCF9ED); border-radius: 12px;">
+                        <div style="font-size: 3.5rem; margin-bottom: 20px;">
+                            ${isNotFound ? '🔍' : (isNetworkError || isTimeout ? '🌐' : '⚠️')}
+                        </div>
+                        <h2 style="font-size: 1.5rem; margin-bottom: 12px; color: var(--text-primary); font-family: var(--font-serif);">
+                            ${escapeHtml(title)}
+                        </h2>
+                        <p style="color: var(--text-muted); line-height: 1.6; margin-bottom: 8px;">
+                            ${escapeHtml(message)}
+                        </p>
+                        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 28px;">
+                            ${escapeHtml(suggestion)}
+                        </p>
+                        <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px;">
+                            <button onclick="location.reload()" 
+                                style="background: var(--accent); color: white; border: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.95rem;">
+                                Try Again
+                            </button>
+                            <a href="/" 
+                                style="background: var(--bg-tertiary); color: var(--text-primary); padding: 12px 28px; border-radius: 6px; font-weight: 600; text-decoration: none; font-size: 0.95rem; border: 1px solid var(--border);">
+                                Search Another
+                            </a>
+                        </div>
+                        ${!isNotFound ? `
+                            <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px;">
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+                                    Still having issues?
+                                </p>
+                                <a href="https://forms.gle/R2PBuazjAmqY2VZc8" target="_blank" rel="noopener"
+                                    style="color: var(--accent); font-size: 0.85rem; font-weight: 500;">
+                                    Report a bug →
+                                </a>
+                            </div>
+                        ` : `
+                            <div style="border-top: 1px solid var(--border); padding-top: 20px; margin-top: 20px;">
+                                <p style="font-size: 0.8rem; color: var(--text-muted);">
+                                    Looking for a specific company? 
+                                    <a href="https://www.sec.gov/edgar/search/" target="_blank" rel="noopener" style="color: var(--accent);">
+                                        Search SEC EDGAR →
+                                    </a>
+                                </p>
+                            </div>
+                        `}
+                    </div>
                 `;
+                
+                errorContainer.innerHTML = errorHtml;
+            }
+            
+            // Escape HTML utility for error messages
+            function escapeHtml(text) {
+                if (text == null) return '';
+                return String(text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#x27;')
+                    .replace(/\//g, '&#x2F;');
             }
         }
 

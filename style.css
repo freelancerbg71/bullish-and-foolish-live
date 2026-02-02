@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
 
 :root {
   /* Color System - Financial Paper Theme */
@@ -51,8 +51,14 @@
   padding: 0;
 }
 
+html {
+  min-height: 100%;
+  background-color: #FCF9ED; /* Fallback before CSS variables load */
+}
+
 body {
-  background-color: var(--bg-primary);
+  min-height: 100vh;
+  background-color: var(--bg-primary, #FCF9ED);
   color: var(--text-primary);
   font-family: var(--font-sans);
   line-height: 1.6;
@@ -1170,4 +1176,17 @@ a:hover {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: 1.2;
+}
+
+.summary-list-item {
+  position: relative;
+  padding-left: 1rem;
+}
+
+.summary-list-item::before {
+  content: "\2022";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--text-muted);
 }
