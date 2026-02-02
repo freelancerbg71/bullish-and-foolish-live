@@ -20,7 +20,7 @@ const CACHE_TTL_MS =
   72 * 60 * 60 * 1000; // default: 72 hours
 const FILING_SIGNALS_ALLOW_STALE = process.env.FILING_SIGNALS_ALLOW_STALE !== "0"; // default: allow stale disk cache
 const EDGAR_FILING_SIGNALS_ENABLED = process.env.EDGAR_FILING_SIGNALS_ENABLED !== "0"; // default: enabled
-const FILING_SIGNALS_SCANNER_VERSION = "2026-02-02-no-ai-disruption-v2";
+const FILING_SIGNALS_SCANNER_VERSION = "2025-12-24-label-fix-v7";
 const goingConcernCache = new Map();
 const filingSignalCache = new Map();
 const MAX_RECENT_FILINGS_DEFAULT = Number(process.env.FILING_SIGNALS_MAX_FILINGS) || 3;
@@ -710,17 +710,7 @@ const SIGNAL_DEFS = [
     phrases: [
       "decline in demand",
       "soft market conditions",
-      "reduced customer orders",
-      "deceleration in revenue growth",
-      "slowing growth",
-      "growth moderated",
-      "lower than expected demand",
-      "customer churn increased",
-      "user growth slowed",
-      "engagement declined",
-      "retention rates declined",
-      "average revenue per user declined",
-      "arpu declined"
+      "reduced customer orders"
     ]
   },
   {
@@ -751,16 +741,7 @@ const SIGNAL_DEFS = [
       "under investigation by",
       "received a subpoena",
       "regulatory inquiry",
-      "doj/ftc/sec investigation",
-      "sec inquiry",
-      "doj investigation",
-      "ftc investigation",
-      "antitrust investigation",
-      "competition authority",
-      "privacy breach",
-      "data breach",
-      "cybersecurity incident",
-      "unauthorized access"
+      "doj/ftc/sec investigation"
     ]
   },
   {
@@ -771,15 +752,7 @@ const SIGNAL_DEFS = [
       "class action lawsuit",
       "material litigation",
       "significant legal exposure",
-      "pending litigation could materially affect results",
-      "shareholder lawsuit",
-      "derivative action",
-      "securities fraud",
-      "patent infringement claim",
-      "breach of contract",
-      "indemnification claim",
-      "settlement discussions ongoing",
-      "reserve for litigation"
+      "pending litigation could materially affect results"
     ]
   },
   {
@@ -997,22 +970,12 @@ const SIGNAL_DEFS = [
   {
     id: "moa_weak",
     score: -3,
-    title: "Competitive Pressure",
+    title: "Crowded Mechanism",
     phrases: [
       "crowded space",
       "generic competition",
       "biosimilar threat",
-      "market dominated by",
-      "increased competition",
-      "competitive pressure",
-      "pricing pressure",
-      "compressed margins",
-      "new entrants",
-      "disruption from",
-      "market share loss",
-      "losing market share",
-      "aggressive pricing by competitors",
-      "intensifying competition"
+      "market dominated by"
     ]
   },
   {
@@ -1045,17 +1008,7 @@ const SIGNAL_DEFS = [
     phrases: [
       "ceo resigned",
       "cfo departure",
-      "executive turnover",
-      "chief executive officer resigned",
-      "chief financial officer resigned",
-      "chief operating officer resigned",
-      "president resigned",
-      "board member resigned",
-      "departure of executive",
-      "transition in leadership",
-      "search for new ceo",
-      "interim ceo",
-      "acting cfo"
+      "executive turnover"
     ]
   },
   {
@@ -1171,21 +1124,6 @@ const SIGNAL_DEFS = [
       "clean opinion",
       "no material weaknesses identified"
     ]
-  },
-  {
-    id: "guidance_cut",
-    score: -6,
-    title: "Guidance Cut",
-    phrases: [
-      "lowered guidance",
-      "reduced guidance",
-      "guidance below expectations",
-      "revised guidance downward",
-      "expect lower revenue",
-      "expect lower earnings",
-      "below our prior guidance",
-      "no longer expect to achieve"
-    ]
   }
 ];
 
@@ -1277,13 +1215,6 @@ export async function scanFilingForSignals(ticker, opts = {}) {
         }
 
         if (foundSnippet) {
-          // Suppress stale regulatory investigation references (e.g., legacy 2019 mentions).
-          if (def.id === "reg_investigation") {
-            const ctx = contextWindow(text, foundIdx);
-            if (STALE_YEARS.some((year) => ctx.includes(year))) {
-              continue;
-            }
-          }
           // Track counts for threshold logic (Foreign GC check)
           const id = def.id;
           if (!signalCounts.has(id)) signalCounts.set(id, 0);
