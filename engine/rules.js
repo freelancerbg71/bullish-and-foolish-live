@@ -432,7 +432,8 @@ export const rules = [
         { min: 0, score: 0 },
         { min: -1000, score: -4 }
       ]);
-      return { score, message: `${fmtPct(g)} (Industrial YoY)` };
+      const baseLabel = bucket === "Financials" ? "Financials" : "Industrial";
+      return { score, message: `${fmtPct(g)} (${baseLabel} YoY)` };
     }
   },
   // Price / Sales (Valuation)
@@ -512,20 +513,40 @@ export const rules = [
       }
       let msg = `${pe.toFixed(1)}x`;
       if (Math.abs(pe) > 1000) msg = pe > 0 ? "> 1000x" : "< -1000x";
+      const pretaxIncome = Number(stock?.ttm?.incomeBeforeIncomeTaxes);
+      const taxExpense = Number(stock?.ttm?.incomeTaxExpenseBenefit);
+      const netIncome = Number(stock?.ttm?.netIncome);
+      const taxBenefitDrivenEarnings =
+        Number.isFinite(pretaxIncome) &&
+        pretaxIncome > 0 &&
+        Number.isFinite(taxExpense) &&
+        taxExpense < 0;
+      const inflatedVsPretax =
+        Number.isFinite(netIncome) &&
+        Number.isFinite(pretaxIncome) &&
+        pretaxIncome > 0 &&
+        (netIncome / pretaxIncome) > 1.25;
+      const lowQualityEarnings = taxBenefitDrivenEarnings || inflatedVsPretax;
 
       // Fintech-specific P/E bands (hybrid: more lenient than banks, more strict than pure tech)
       if (isFintech(stock)) {
-        const score = bandScore(-pe, [
+        let score = bandScore(-pe, [
           { min: -25, score: 8 },   // < 25x (healthy for growth fintech)
           { min: -40, score: 5 },   // < 40x (acceptable for high growth)
           { min: -60, score: 0 },   // < 60x (stretched but not penalized)
           { min: -100, score: -4 }, // > 60x (expensive)
           { min: -1000, score: -6 }
         ]);
-        return { score, message: `${msg} (Fintech)` };
+        let message = `${msg} (Fintech)`;
+        // Guardrail: avoid over-rewarding P/E when net income quality is materially distorted.
+        if (lowQualityEarnings && score > 2) {
+          score = 2;
+          message = `${message} (earnings quality adjusted)`;
+        }
+        return { score, message };
       }
 
-      const score = bandScore(
+      let score = bandScore(
         -pe,
         bucket === "Financials"
           ? [
@@ -543,7 +564,13 @@ export const rules = [
             { min: -1000, score: -8 }
           ]
       );
-      return { score, message: msg };
+      let message = msg;
+      // Guardrail: avoid over-rewarding P/E when net income quality is materially distorted.
+      if (lowQualityEarnings && score > 2) {
+        score = 2;
+        message = `${message} (earnings quality adjusted)`;
+      }
+      return { score, message };
     }
   },
   // Price / Book (Financials/REITs)
