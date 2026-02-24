@@ -65,6 +65,34 @@ const staticPricePatchCache = { loadedAt: 0, data: null };
 
 const SAFE_THRESHOLD = SAFE_DIVISION_THRESHOLD;
 const tickerDebug = process.env.TICKER_DEBUG === '1';
+const BIOTECH_ONLY_FILING_SIGNALS = new Set([
+  "clinical_failure",
+  "clinical_negative",
+  "clinical_positive",
+  "regulatory_setback",
+  "regulatory_positive",
+  "regulatory_negative",
+  "biotech_cash_dependency",
+  "safety_bad",
+  "safety_good",
+  "moa_strength",
+  "moa_weak",
+  "trial_execution_risk",
+  "non_dilutive_finance"
+]);
+
+function isFilingSignalApplicableForSector(signal, sectorBucket) {
+  const id = String(signal?.id || "").toLowerCase();
+  if (!id) return true;
+  if (BIOTECH_ONLY_FILING_SIGNALS.has(id)) {
+    return sectorBucket === "Biotech/Pharma";
+  }
+  return true;
+}
+
+function filingSignalCapForSector(sectorBucket) {
+  return sectorBucket === "Biotech/Pharma" ? 12 : 8;
+}
 
 function logPriceOnce(kind, ticker, msg, windowMs = 60_000) {
   const key = `${kind}-${ticker}`;
@@ -995,7 +1023,10 @@ function computeRuleRating({
 
   const isHiddenCard = (card) =>
     card?.hidden === true || card?.suppressed === true || card?.includeInScore === false;
-  const scoreableFilingSignals = (filingSignals || []).filter((s) => !isHiddenCard(s));
+  const scoreableFilingSignals = (filingSignals || []).filter((s) => {
+    if (isHiddenCard(s)) return false;
+    return isFilingSignalApplicableForSector(s, sectorBucket);
+  });
   const hasSpinoffSeparation = scoreableFilingSignals.some((s) => s?.id === "spinoff_separation");
 
   const sequentialRevenueRising = (() => {
@@ -1182,7 +1213,9 @@ function computeRuleRating({
     if (!skipped) {
       total += appliedScore;
     } else {
-      missingCategories[classifyMissing(rule.name)].push(rule.name);
+      if (!notApplicable) {
+        missingCategories[classifyMissing(rule.name)].push(rule.name);
+      }
       // If critical rule is missing, flag it but DO NOT apply penalty points.
       if (criticalRules.has(rule.name) && !notApplicable) {
         missingCritical = true;
@@ -1277,13 +1310,19 @@ function computeRuleRating({
 
   // Filing Intelligence Scoring
   if (filingSignals && Array.isArray(filingSignals)) {
-    const filingModifier = scoreableFilingSignals.reduce((acc, s) => acc + (s.score || 0), 0);
+    const filingModifierRaw = scoreableFilingSignals.reduce((acc, s) => acc + (s.score || 0), 0);
+    const filingCap = filingSignalCapForSector(sectorBucket);
+    const filingModifier = clamp(-filingCap, filingModifierRaw, filingCap) ?? 0;
     if (filingModifier !== 0) {
       total += filingModifier;
+      const cappedLabel =
+        filingModifier !== filingModifierRaw
+          ? ` (capped from ${filingModifierRaw > 0 ? `+${filingModifierRaw}` : filingModifierRaw})`
+          : "";
       reasons.push({
         name: "Filing signals",
         score: filingModifier,
-        message: `Net filing-signal impact: ${filingModifier > 0 ? `+${filingModifier}` : filingModifier} pts`,
+        message: `Net filing-signal impact: ${filingModifier > 0 ? `+${filingModifier}` : filingModifier} pts${cappedLabel}`,
         missing: false,
         notApplicable: false,
         weight: null,
@@ -1372,6 +1411,7 @@ function computeRuleRating({
   }
 
   const missingValuationCount = missingCategories.valuation.length;
+  const notApplicableCount = reasons.filter((r) => r.notApplicable).length;
   let normalized = normalizeRuleScore(total);
   if (ratingDebug) {
     console.log(`[RATING FINAL] ${ticker} | RAW: ${total} | NORM: ${normalized != null ? normalized.toFixed(1) : 'N/A'} | TIER: ${getScoreBand(normalized)} | PENNY: ${pennyStock}`);
@@ -1450,6 +1490,10 @@ function computeRuleRating({
       }
     });
 
+    if (notApplicableCount > 0) {
+      missingNotes.push(`Sector-scoped exclusions applied (${notApplicableCount} rules not applicable).`);
+    }
+
     return contradictions;
   };
 
@@ -1526,10 +1570,20 @@ function computeKeyMetrics({ ttm, latestQuarter, latestBalance, shares, priceSum
     fcf != null && lastPrice != null && Number.isFinite(sharesNum) && sharesNum > 0
       ? fcf / (lastPrice * sharesNum)
       : null;
+  const marketCap =
+    lastPrice != null && Number.isFinite(sharesNum) && sharesNum > 0
+      ? lastPrice * sharesNum
+      : null;
   const netDebt = debt != null ? debt - cash - shortTermInvestments : null;
   const netDebtToEquity = safeDiv(netDebt, equity);
-  const peTtm =
-    lastPrice != null && epsTtm != null && epsTtm !== 0 ? lastPrice / epsTtm : null;
+  const peTtm = (() => {
+    if (lastPrice != null && epsTtm != null && epsTtm !== 0) return lastPrice / epsTtm;
+    // Fallback aligns display with valuation rule path when EPS field is unavailable.
+    if (Number.isFinite(marketCap) && Number.isFinite(netIncome) && netIncome !== 0) {
+      return marketCap / netIncome;
+    }
+    return null;
+  })();
   const psTtm =
     lastPrice != null && revenuePerShare != null && revenuePerShare !== 0
       ? lastPrice / revenuePerShare
@@ -1537,10 +1591,6 @@ function computeKeyMetrics({ ttm, latestQuarter, latestBalance, shares, priceSum
   const pb =
     lastPrice != null && bookValuePerShare != null && bookValuePerShare !== 0
       ? lastPrice / bookValuePerShare
-      : null;
-  const marketCap =
-    lastPrice != null && Number.isFinite(sharesNum) && sharesNum > 0
-      ? lastPrice * sharesNum
       : null;
 
   return {
@@ -2733,12 +2783,16 @@ export async function buildTickerViewModel(
 
     function computeMomentumHealth(stock, filingSignals) {
       let score = 50; // Base Neutral
+      const sector = stock.sectorBucket;
       const revTrend = stock.momentum?.revenueTrend || 0; // YoY trend of quarterly revenue
       const marginTrend = stock.momentum?.marginTrend || 0;
       const rndTrend = stock.momentum?.rndTrend || 0;
       const isHiddenCard = (card) =>
         card?.hidden === true || card?.suppressed === true || card?.includeInScore === false;
-      const scoreableFilingSignals = (filingSignals || []).filter((s) => !isHiddenCard(s));
+      const scoreableFilingSignals = (filingSignals || []).filter((s) => {
+        if (isHiddenCard(s)) return false;
+        return isFilingSignalApplicableForSector(s, sector);
+      });
 
       // 1. Operational Momentum
       if (revTrend > 0.5) score += 15; // Hypergrowth
@@ -2751,15 +2805,14 @@ export async function buildTickerViewModel(
       else if (marginTrend < -1) score -= 10;
 
       // 2. Innovation/Catalyst Proxy (Sector specific)
-      const sector = stock.sectorBucket;
       if ((sector === 'Biotech/Pharma' || sector === 'Tech/Internet') && rndTrend > 0.1) {
         score += 5; // Investing in future
       }
 
       // 3. Filing Sentiment Impact
       const filingScore = scoreableFilingSignals.reduce((acc, s) => acc + (s.score || 0), 0);
-      // Cap filing impact to +/- 20
-      score += Math.max(-20, Math.min(20, filingScore));
+      const filingCap = filingSignalCapForSector(sector);
+      score += clamp(-filingCap, filingScore, filingCap) ?? 0;
 
       return Math.max(0, Math.min(100, score));
     }
@@ -3579,12 +3632,30 @@ export async function buildScreenerRowForTicker(ticker, { allowFilingScan = fals
     // Align screener prices with ticker view (prices.json / NASDAQ patch as source of truth).
     let priceSummary = emptyPriceSummary();
     let priceHistory = [];
+    let priceSource = latestCached?.source || null;
     if (hit && Number.isFinite(Number(hit.p))) {
       priceSummary.lastClose = Number(hit.p);
       priceSummary.lastCloseDate = hit.t ? String(hit.t).slice(0, 10) : null;
+      priceSource = hit.s || priceSource;
     } else if (latestCached?.close != null) {
       priceSummary.lastClose = Number(latestCached.close);
       priceSummary.lastCloseDate = latestCached.date ? String(latestCached.date).slice(0, 10) : null;
+    }
+
+    // Keep screener/ticker scoring in sync by reusing the same stale-patch fallback.
+    const looksImplausible =
+      !Number.isFinite(priceSummary.lastClose) ||
+      priceSummary.lastClose <= 0 ||
+      !priceHistory.length ||
+      isDateStale(priceSummary.lastCloseDate, 5);
+    if (looksImplausible) {
+      const localPrices = loadLocalPriceHistory(key);
+      if (localPrices && localPrices.length) {
+        const fallbackPieces = buildPricePieces(localPrices);
+        priceSummary = fallbackPieces.priceSummary;
+        priceHistory = fallbackPieces.priceHistory;
+        priceSource = "LOCAL_PRICE_FILE";
+      }
     }
     priceSummary.stale = isDateStale(priceSummary.lastCloseDate, PRICE_PATCH_MAX_AGE_DAYS);
     const externalMarketCap = latestCached?.marketCap || null;
@@ -3792,6 +3863,9 @@ export async function buildScreenerRowForTicker(ticker, { allowFilingScan = fals
       peTTM: keyMetrics?.peTtm == null ? null : Number(keyMetrics.peTtm),
       dividendYield: dividend.dividendYield == null ? null : Number(dividend.dividendYield),
       dividendCovered: dividend.dividendCovered,
+      lastTradePrice: Number.isFinite(Number(priceSummary?.lastClose)) ? Number(priceSummary.lastClose) : null,
+      lastTradeAt: priceSummary?.lastCloseDate || null,
+      lastTradeSource: priceSource || null,
       signalTempo: projections?.trajectoryLabel || null,
       fcfPositive,
       lowDebt,
