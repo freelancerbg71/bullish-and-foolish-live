@@ -443,6 +443,23 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function pickLatestDate(...candidates) {
+    let bestRaw = null;
+    let bestTs = -Infinity;
+    for (const candidate of candidates) {
+        if (!candidate) continue;
+        const raw = String(candidate).trim();
+        if (!raw) continue;
+        const ts = Date.parse(raw);
+        if (!Number.isFinite(ts)) continue;
+        if (ts > bestTs) {
+            bestTs = ts;
+            bestRaw = raw.slice(0, 10);
+        }
+    }
+    return bestRaw || null;
+}
+
 function snapshotPath(ticker) {
     return path.join(EDGAR_SNAPSHOT_DIR, `${ticker.toUpperCase()}-fundamentals.json`);
 }
@@ -839,13 +856,15 @@ function buildSnapshotPayload(raw) {
     const issuerType = raw?.filingSignals?.meta?.issuerType || 'domestic';
     const filingProfile =
         raw?.filingSignals?.meta?.filingProfile || { annual: '10-K', interim: '10-Q', current: '8-K' };
-    const latestFiled =
-        snapshot?.latestQuarter?.filedDate ||
-        snapshot?.latestYear?.filedDate ||
-        snapshot?.latestQuarter?.filed ||
-        snapshot?.latestYear?.filed ||
-        raw.updatedAt ||
-        null;
+    const latestFiled = pickLatestDate(
+        snapshot?.latestQuarter?.filedDate,
+        snapshot?.latestYear?.filedDate,
+        snapshot?.latestQuarter?.filed,
+        snapshot?.latestYear?.filed,
+        ...(Array.isArray(raw?.data) ? raw.data.map((p) => p?.filedDate) : []),
+        raw?.filingSignals?.meta?.latestFiled,
+        raw.updatedAt
+    );
     const confidenceMeta = deriveSnapshotConfidence({
         completenessPercent: completeness.percent,
         lastFiledDate: latestFiled,
@@ -1149,8 +1168,17 @@ function isPathInside(base, target) {
     return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
 }
 
+function safeDecodeURIComponent(value) {
+    try {
+        return decodeURIComponent(String(value || ''));
+    } catch (_) {
+        return null;
+    }
+}
+
 function resolveSafePath(base, urlPath) {
-    const clean = decodeURIComponent(urlPath || '/');
+    const clean = safeDecodeURIComponent(urlPath || '/');
+    if (clean == null) return null;
     if (clean.includes('\0')) return null;
     const resolved = path.resolve(base, '.' + clean);
     if (!isPathInside(base, resolved)) return null;
@@ -1471,7 +1499,12 @@ const server = http.createServer(async (req, res) => {
             // Allow dots for tickers like BRK.B, but exclude common web extensions
             const isAsset = /\.(css|js|png|jpg|jpeg|webp|gif|ico|json|map|svg|woff2?|ttf|html)$/i.test(parts[1]);
             if (!isAsset) {
-                const tickerSymbol = decodeURIComponent(parts[1]).toUpperCase();
+                const decodedTicker = safeDecodeURIComponent(parts[1]);
+                if (decodedTicker == null) {
+                    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+                    return res.end('Bad Request');
+                }
+                const tickerSymbol = decodedTicker.toUpperCase();
                 return serveTickerWithSSR(req, res, tickerSymbol);
             }
         }

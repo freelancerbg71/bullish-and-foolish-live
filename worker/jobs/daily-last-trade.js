@@ -2,6 +2,8 @@ import { parseArgs, envNumber, envString } from "../lib/args.js";
 import { fetchText } from "../lib/http.js";
 import { loadSupportedTickers } from "../lib/tickerUniverse.js";
 import { getDb } from "../../server/edgar/fundamentalsStore.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 function normalizeTicker(t) {
   return t ? String(t).trim().toUpperCase() : "";
@@ -94,15 +96,13 @@ async function ensurePricesEodTable(db) {
   `);
 }
 
-async function main() {
+export async function runDailyLastTradeJob({ force = false } = {}) {
   const day = new Date().getUTCDay();
   const isWeekend = day === 0 || day === 6; // 0=Sunday, 6=Saturday
-  if (isWeekend && !process.argv.includes("--force")) {
+  if (isWeekend && !force) {
     console.log("[worker:daily-last-trade] skipping: market is closed on weekends. Use --force to override.");
     return;
   }
-
-  parseArgs(process.argv.slice(2)); // reserved for future flags
 
   // If DATA_DIR / RAILWAY_VOLUME_MOUNT_PATH are set, fundamentalsStore will place the DB in the persistent volume.
   // FUNDAMENTALS_DB_FILE is still supported but no longer required.
@@ -286,7 +286,21 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("[worker:daily-last-trade] failed", err?.stack || err);
-  process.exit(1);
-});
+function isDirectExecution() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  return path.resolve(entry) === fileURLToPath(import.meta.url);
+}
+
+async function main() {
+  parseArgs(process.argv.slice(2)); // reserved for future flags
+  const force = process.argv.includes("--force");
+  await runDailyLastTradeJob({ force });
+}
+
+if (isDirectExecution()) {
+  main().catch((err) => {
+    console.error("[worker:daily-last-trade] failed", err?.stack || err);
+    process.exit(1);
+  });
+}

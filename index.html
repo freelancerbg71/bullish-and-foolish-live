@@ -307,6 +307,23 @@
                     }
                 }
 
+                function pickLatestDate(...values) {
+                    let bestRaw = null;
+                    let bestTs = -Infinity;
+                    for (const value of values) {
+                        if (!value) continue;
+                        const raw = String(value).trim();
+                        if (!raw) continue;
+                        const ts = Date.parse(raw);
+                        if (!Number.isFinite(ts)) continue;
+                        if (ts > bestTs) {
+                            bestTs = ts;
+                            bestRaw = raw.slice(0, 10);
+                        }
+                    }
+                    return bestRaw || null;
+                }
+
                 function renderSavedTickers() {
                     const section = document.getElementById('savedTickersSection');
                     const listEl = document.getElementById('savedTickersList');
@@ -373,7 +390,7 @@
                             }
                             if (metaEl) {
                                 const score = data.ratingNormalizedScore != null ? `${data.ratingNormalizedScore}/100` : '--/100';
-                                const lastFiled = data.lastFilingDate ? String(data.lastFilingDate).slice(0, 10) : 'n/a';
+                                const lastFiled = pickLatestDate(data.lastFilingDate, data.filingSignalsMeta?.latestFiled) || 'n/a';
                                 metaEl.textContent = `Score ${score} • Last filing ${lastFiled}`;
                             }
                         } catch (_) {

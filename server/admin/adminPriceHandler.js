@@ -16,6 +16,7 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Personal Access Token with rep
 const GITHUB_REPO = process.env.GITHUB_REPO || 'freelancerbg71/bullish-and-foolish-live';
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
 const ADMIN_KEY = process.env.ADMIN_KEY; // Simple shared secret for auth
+const ADMIN_MAX_BODY_BYTES = Number(process.env.ADMIN_MAX_BODY_BYTES) || (8 * 1024 * 1024);
 
 /**
  * Push prices.json to GitHub via API
@@ -176,7 +177,14 @@ export async function handleAdminPriceUpdate(req, res, { sendJson }) {
     if (req.method === 'POST') {
         try {
             const chunks = [];
+            let totalBytes = 0;
             for await (const chunk of req) {
+                totalBytes += chunk.length;
+                if (totalBytes > ADMIN_MAX_BODY_BYTES) {
+                    return sendJson(req, res, 413, {
+                        error: `Payload too large. Max allowed is ${ADMIN_MAX_BODY_BYTES} bytes.`
+                    });
+                }
                 chunks.push(chunk);
             }
             const raw = Buffer.concat(chunks).toString();

@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -9,7 +8,7 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(ROOT, "data");
 const PRICE_PATCH_PATH = path.join(DATA_DIR, "prices.json");
 
-let jobProc = null;
+let jobRunning = false;
 
 function isWeekday() {
   const day = new Date().getUTCDay();
@@ -67,31 +66,24 @@ function isMissingTodaysPrices(newestDate) {
   return newestDate !== today;
 }
 
-function spawnDailyLastTradeJob({ force = false } = {}) {
-  if (jobProc && jobProc.exitCode == null) {
-    console.info("[dailyPricesScheduler] job already running, skipping spawn");
+async function runDailyLastTradeJob({ force = false } = {}) {
+  if (jobRunning) {
+    console.info("[dailyPricesScheduler] job already running, skipping run");
     return false;
   }
-
-  const scriptPath = path.join(ROOT, "worker", "jobs", "daily-last-trade.js");
-  const args = [scriptPath];
-  if (force) args.push("--force");
-
-  console.info("[dailyPricesScheduler] spawning daily-last-trade", { force, script: scriptPath });
-  jobProc = spawn(process.execPath, args, { stdio: "inherit", env: process.env });
-  jobProc.on("exit", (code) => {
-    console.info("[dailyPricesScheduler] daily-last-trade exited", { code });
-    jobProc = null;
-    if (code !== 0) {
-      console.warn("[dailyPricesScheduler] daily-last-trade exited non-zero", code);
-    }
-  });
-  jobProc.on("error", (err) => {
-    console.error("[dailyPricesScheduler] failed to spawn daily-last-trade", err?.message || err);
-    jobProc = null;
-  });
-
-  return true;
+  jobRunning = true;
+  try {
+    console.info("[dailyPricesScheduler] running in-process daily-last-trade", { force });
+    const { runDailyLastTradeJob: runDailyLastTradeUpdate } = await import("../../worker/jobs/daily-last-trade.js");
+    await runDailyLastTradeUpdate({ force });
+    console.info("[dailyPricesScheduler] daily-last-trade run finished");
+    return true;
+  } catch (err) {
+    console.warn("[dailyPricesScheduler] daily-last-trade run failed", err?.message || err);
+    return false;
+  } finally {
+    jobRunning = false;
+  }
 }
 
 function syncBundledPrices() {
@@ -143,6 +135,7 @@ export async function startDailyPricesScheduler() {
   const weekday = isWeekday();
   const pricesStale = isStale(info.newestAt, staleAfterMs);
   const missingToday = isMissingTodaysPrices(info.newestDate);
+  const weekendRunsAllowed = runOnWeekends || weekday;
 
   console.info("[dailyPricesScheduler] boot check", {
     pricesPath: PRICE_PATCH_PATH,
@@ -158,18 +151,18 @@ export async function startDailyPricesScheduler() {
 
   // Determine if we should refresh prices on boot
   const shouldWarm = warmOnStart || forceOnStart;
-  const needsRefresh = forceOnStart || !info.exists || pricesStale || (weekday && missingToday);
+  const needsRefresh = weekendRunsAllowed && (forceOnStart || !info.exists || pricesStale || missingToday);
 
   if (shouldWarm && needsRefresh) {
     console.info("[dailyPricesScheduler] prices need refresh, starting job in 10s...", {
       reason: forceOnStart ? "forceOnStart" : !info.exists ? "missing" : pricesStale ? "stale" : "missingToday"
     });
     // Delay spawn to let Railway networking stabilize after boot
-    setTimeout(() => {
-      console.info("[dailyPricesScheduler] spawning price refresh job now");
+    setTimeout(async () => {
+      console.info("[dailyPricesScheduler] starting in-process price refresh now");
       // Force the job to bypass weekend check when prices are stale or missing
-      const force = forceOnStart || pricesStale || !info.exists || (weekday && missingToday);
-      spawnDailyLastTradeJob({ force });
+      const force = runOnWeekends || weekday;
+      await runDailyLastTradeJob({ force });
     }, 10_000);
   } else if (shouldWarm) {
     console.info("[dailyPricesScheduler] prices are fresh, no refresh needed");
@@ -182,11 +175,16 @@ export async function startDailyPricesScheduler() {
     const delayHours = (delay / (1000 * 60 * 60)).toFixed(1);
     console.info("[dailyPricesScheduler] next run scheduled", { at: next.toISOString(), inHours: delayHours });
 
-    setTimeout(() => {
+    setTimeout(async () => {
       const nowInfo = summarizePricePatch(PRICE_PATCH_PATH);
       const nowStale = isStale(nowInfo.newestAt, staleAfterMs);
-      // Force if stale OR if it's a weekday and we don't have today's prices
-      const needsForce = runOnWeekends || nowStale || (isWeekday() && isMissingTodaysPrices(nowInfo.newestDate));
+      const nowWeekday = isWeekday();
+      if (!runOnWeekends && !nowWeekday) {
+        console.info("[dailyPricesScheduler] weekend run skipped");
+        scheduleNext();
+        return;
+      }
+      const needsForce = true;
 
       console.info("[dailyPricesScheduler] nightly refresh triggered", {
         at: new Date().toISOString(),
@@ -195,7 +193,7 @@ export async function startDailyPricesScheduler() {
         newestDate: nowInfo.newestDate
       });
 
-      spawnDailyLastTradeJob({ force: needsForce });
+      await runDailyLastTradeJob({ force: needsForce });
       scheduleNext();
     }, delay);
   };

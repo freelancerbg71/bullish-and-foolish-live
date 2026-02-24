@@ -75,6 +75,23 @@ function logPriceOnce(kind, ticker, msg, windowMs = 60_000) {
   console.warn(msg);
 }
 
+function pickLatestDate(...candidates) {
+  let bestRaw = null;
+  let bestTs = -Infinity;
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const raw = String(candidate).trim();
+    if (!raw) continue;
+    const ts = Date.parse(raw);
+    if (!Number.isFinite(ts)) continue;
+    if (ts > bestTs) {
+      bestTs = ts;
+      bestRaw = raw.slice(0, 10);
+    }
+  }
+  return bestRaw || null;
+}
+
 
 
 
@@ -2450,7 +2467,7 @@ export async function buildTickerViewModel(
     const sectorInfo = classifySector({ ticker, sic: baseSic });
     const sector = baseSector || sectorInfo.sector || null;
     const sectorBucket = resolveSectorBucket(sector);
-    const latestFiledDate =
+    const latestFiledDateFromFundamentals =
       fundamentals
         .map((p) => p.filedDate)
         .filter(Boolean)
@@ -2508,6 +2525,7 @@ export async function buildTickerViewModel(
     const resolvedFilingSignals = filingSignals?.signals || existing?.filingSignals || [];
     const resolvedFilingMeta = filingSignals?.meta || existing?.filingSignalsMeta || null;
     const resolvedFilingCachedAt = filingSignals?.cachedAt || existing?.filingSignalsCachedAt || null;
+    const latestFiledDate = pickLatestDate(latestFiledDateFromFundamentals, resolvedFilingMeta?.latestFiled);
     const defaultFilingProfile = { annual: "10-K", interim: "10-Q", current: "8-K" };
     const filingProfile =
       resolvedFilingMeta?.filingProfile ||

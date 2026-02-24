@@ -651,6 +651,23 @@
             return parsed.toISOString().slice(0, 10);
         }
 
+        function pickLatestDate(...values) {
+            let bestRaw = null;
+            let bestTs = -Infinity;
+            for (const value of values) {
+                if (!value) continue;
+                const raw = String(value).trim();
+                if (!raw) continue;
+                const ts = Date.parse(raw);
+                if (!Number.isFinite(ts)) continue;
+                if (ts > bestTs) {
+                    bestTs = ts;
+                    bestRaw = raw.slice(0, 10);
+                }
+            }
+            return bestRaw || null;
+        }
+
         function cleanSnippet(text) {
             if (!text) return '';
             return String(text)
@@ -1364,7 +1381,8 @@
                         || data.filingProfile?.interim
                         || data.filingProfile?.annual
                         || '--';
-                    const lastFiled = formatDate(data.lastFilingDate || data.filingSignalsMeta?.latestFiled);
+                    const lastFiledDate = pickLatestDate(data.lastFilingDate, data.filingSignalsMeta?.latestFiled);
+                    const lastFiled = formatDate(lastFiledDate);
                     summaryLastFiling.textContent = lastFiled === '--' ? lastForm : `${lastForm} - ${lastFiled}`;
                 }
 
