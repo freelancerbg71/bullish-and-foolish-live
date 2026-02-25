@@ -408,6 +408,31 @@
             <button class="btn btn-primary" id="updateBtn" onclick="triggerUpdate()">
                 <span>🔄 Update Prices Now</span>
             </button>
+            <div style="margin-top: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-secondary);">
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 10px; color: var(--text-secondary);">
+                    <input type="checkbox" id="allowServerNasdaqFetch">
+                    <span>Allow direct server NASDAQ fetch when no file is selected (often blocked)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-bottom: 10px;">
+                    <input type="checkbox" id="refreshScreenerRows" checked>
+                    <span>Also refresh screener rows (low-usage mode)</span>
+                </label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: var(--text-secondary);">
+                        <span>Max tickers (0 = all)</span>
+                        <input id="screenerRefreshLimit" type="number" min="0" step="50" value="600"
+                            style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text-primary);">
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem; color: var(--text-secondary);">
+                        <span>Concurrency</span>
+                        <input id="screenerRefreshConcurrency" type="number" min="1" step="1" value="2"
+                            style="padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text-primary);">
+                    </label>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 8px;">
+                    Uses local fundamentals and local prices only (no filing scans).
+                </div>
+            </div>
 
             <button class="btn btn-secondary" onclick="checkStatus()">
                 <span>📊 Refresh Status</span>
@@ -518,21 +543,51 @@
             output.scrollTop = output.scrollHeight;
         }
 
-        async function triggerUpdate() {
-            // Always prompt for key to ensure it's correct
+        function getScreenerRefreshPayload() {
+            const refreshScreener = document.getElementById('refreshScreenerRows')?.checked !== false;
+            const limitRaw = Number(document.getElementById('screenerRefreshLimit')?.value);
+            const concurrencyRaw = Number(document.getElementById('screenerRefreshConcurrency')?.value);
+            const screenerRefreshLimit = Number.isFinite(limitRaw) ? Math.max(0, Math.trunc(limitRaw)) : 600;
+            const screenerRefreshConcurrency = Number.isFinite(concurrencyRaw) ? Math.max(1, Math.trunc(concurrencyRaw)) : 2;
+            return {
+                refreshScreener,
+                screenerRefreshLimit,
+                screenerRefreshConcurrency
+            };
+        }
+
+        function promptForAdminKey() {
             const keyToUse = prompt('Enter admin key:', adminKey || '');
             if (!keyToUse) {
-                return; // User cancelled
+                return false;
             }
             adminKey = keyToUse;
             localStorage.setItem('bf_admin_key', adminKey);
+            return true;
+        }
+
+        async function triggerUpdate() {
+            if (!promptForAdminKey()) return;
+
+            if (selectedFile) {
+                log('Using selected NASDAQ file for manual update...', 'info');
+                return triggerConvertAndPush({ skipKeyPrompt: true });
+            }
+
+            const allowServerFetch = document.getElementById('allowServerNasdaqFetch')?.checked === true;
+            if (!allowServerFetch) {
+                document.getElementById('logOutput').innerHTML = '';
+                log('Direct server NASDAQ fetch is off. Use the manual upload workflow below.', 'warning');
+                document.getElementById('pricesFile')?.focus();
+                return;
+            }
 
             const btn = document.getElementById('updateBtn');
             btn.disabled = true;
             btn.innerHTML = '<div class="spinner"></div><span>Updating...</span>';
 
             document.getElementById('logOutput').innerHTML = '';
-            log('Starting price update...', 'info');
+            log('Starting direct NASDAQ fetch...', 'info');
 
             try {
                 const res = await fetch('/api/admin/update-prices', {
@@ -541,7 +596,11 @@
                         'Content-Type': 'application/json',
                         'X-Admin-Key': adminKey
                     },
-                    body: JSON.stringify({ pushToGithub: true })
+                    body: JSON.stringify({
+                        pushToGithub: true,
+                        skipNasdaqFetch: false,
+                        ...getScreenerRefreshPayload()
+                    })
                 });
 
                 const data = await res.json();
@@ -564,6 +623,14 @@
                     log(`GitHub push failed: ${data.githubError}`, 'warning');
                 } else {
                     log('GitHub push skipped (not configured)', 'warning');
+                }
+                if (data.screenerRefreshed) {
+                    const seconds = Number.isFinite(Number(data.screenerRefreshDurationMs))
+                        ? (Number(data.screenerRefreshDurationMs) / 1000).toFixed(1)
+                        : 'n/a';
+                    log(`Screener refresh: ${data.screenerRowsRefreshed}/${data.screenerRefreshPlanned} rows (${seconds}s)`, 'success');
+                } else if (data.screenerRefreshError) {
+                    log(`Screener refresh failed: ${data.screenerRefreshError}`, 'warning');
                 }
 
                 log('✨ Update complete!', 'success');
@@ -647,16 +714,11 @@
             return { prices, count: Object.keys(prices).length, skipped };
         }
 
-        async function triggerConvertAndPush() {
+        async function triggerConvertAndPush(options = {}) {
+            const { skipKeyPrompt = false } = options;
             if (!selectedFile) return;
 
-            // Always prompt for key to ensure it's correct
-            const keyToUse = prompt('Enter admin key:', adminKey || '');
-            if (!keyToUse) {
-                return; // User cancelled
-            }
-            adminKey = keyToUse;
-            localStorage.setItem('bf_admin_key', adminKey);
+            if (!skipKeyPrompt && !promptForAdminKey()) return;
 
             const btn = document.getElementById('uploadBtn');
             btn.disabled = true;
@@ -689,11 +751,19 @@
                     },
                     body: JSON.stringify({
                         prices: prices,
-                        pushToGithub: true
+                        pushToGithub: true,
+                        skipNasdaqFetch: true,
+                        ...getScreenerRefreshPayload()
                     })
                 });
 
                 const data = await res.json();
+
+                if (res.status === 401) {
+                    localStorage.removeItem('bf_admin_key');
+                    adminKey = '';
+                    throw new Error('Invalid admin key. Please try again.');
+                }
 
                 if (!res.ok) {
                     throw new Error(data.error || `HTTP ${res.status}`);
@@ -705,6 +775,14 @@
                     log(`Pushed to GitHub: ${data.githubCommit || 'success'}`, 'success');
                 } else if (data.githubError) {
                     log(`GitHub push failed: ${data.githubError}`, 'warning');
+                }
+                if (data.screenerRefreshed) {
+                    const seconds = Number.isFinite(Number(data.screenerRefreshDurationMs))
+                        ? (Number(data.screenerRefreshDurationMs) / 1000).toFixed(1)
+                        : 'n/a';
+                    log(`Screener refresh: ${data.screenerRowsRefreshed}/${data.screenerRefreshPlanned} rows (${seconds}s)`, 'success');
+                } else if (data.screenerRefreshError) {
+                    log(`Screener refresh failed: ${data.screenerRefreshError}`, 'warning');
                 }
 
                 log('✨ Prices updated successfully!', 'success');
