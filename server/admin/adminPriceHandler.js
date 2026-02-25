@@ -17,6 +17,9 @@ const GITHUB_REPO = process.env.GITHUB_REPO || 'freelancerbg71/bullish-and-fooli
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
 const ADMIN_KEY = process.env.ADMIN_KEY; // Simple shared secret for auth
 const ADMIN_MAX_BODY_BYTES = Number(process.env.ADMIN_MAX_BODY_BYTES) || (8 * 1024 * 1024);
+const ADMIN_SCREENER_REFRESH_LIMIT = Number(process.env.ADMIN_SCREENER_REFRESH_LIMIT) || 600;
+const ADMIN_SCREENER_REFRESH_CONCURRENCY = Number(process.env.ADMIN_SCREENER_REFRESH_CONCURRENCY) || 2;
+const ADMIN_SCREENER_REFRESH_INCLUDE_FILINGS = process.env.ADMIN_SCREENER_REFRESH_INCLUDE_FILINGS === '1';
 
 /**
  * Push prices.json to GitHub via API
@@ -162,6 +165,69 @@ async function fetchNasdaqPrices() {
     }
 }
 
+function parsePositiveInt(value, fallback) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.max(0, Math.trunc(n));
+}
+
+function normalizeTicker(value) {
+    return String(value || '').trim().toUpperCase();
+}
+
+async function selectScreenerRefreshTickers(prices = {}, limit = ADMIN_SCREENER_REFRESH_LIMIT) {
+    const incomingTickers = Object.keys(prices || {})
+        .map(normalizeTicker)
+        .filter(Boolean);
+    if (!incomingTickers.length) return [];
+
+    const tickerSet = new Set(incomingTickers);
+    const { ensureScreenerSchema, getScreenerDb } = await import('../screener/screenerStore.js');
+    await ensureScreenerSchema();
+    const db = await getScreenerDb();
+    const rows = db
+        .prepare(`
+            SELECT ticker, marketCap
+            FROM screener_index
+            ORDER BY COALESCE(marketCap, 0) DESC, ticker ASC
+        `)
+        .all();
+
+    const eligible = rows
+        .map((r) => normalizeTicker(r.ticker))
+        .filter((t) => tickerSet.has(t));
+
+    if (limit <= 0 || limit >= eligible.length) return eligible;
+    return eligible.slice(0, limit);
+}
+
+async function refreshScreenerRowsForPrices({
+    prices = {},
+    limit = ADMIN_SCREENER_REFRESH_LIMIT,
+    concurrency = ADMIN_SCREENER_REFRESH_CONCURRENCY,
+    includeFilings = false
+} = {}) {
+    const tickers = await selectScreenerRefreshTickers(prices, limit);
+    if (!tickers.length) {
+        return { planned: 0, rows: 0, tickers: 0, durationMs: 0 };
+    }
+
+    const started = Date.now();
+    const { refreshScreenerIndex } = await import('../screener/screenerService.js');
+    const refresh = await refreshScreenerIndex({
+        tickers,
+        concurrency: Math.max(1, parsePositiveInt(concurrency, ADMIN_SCREENER_REFRESH_CONCURRENCY)),
+        allowFilingScan: Boolean(includeFilings)
+    });
+    const durationMs = Date.now() - started;
+    return {
+        planned: tickers.length,
+        rows: refresh?.rows ?? 0,
+        tickers: refresh?.tickers ?? tickers.length,
+        durationMs
+    };
+}
+
 /**
  * Main handler for admin price update requests
  */
@@ -175,22 +241,26 @@ export async function handleAdminPriceUpdate(req, res, { sendJson }) {
     // Parse request body for uploaded prices
     let body = {};
     if (req.method === 'POST') {
-        try {
-            const chunks = [];
-            let totalBytes = 0;
-            for await (const chunk of req) {
-                totalBytes += chunk.length;
-                if (totalBytes > ADMIN_MAX_BODY_BYTES) {
-                    return sendJson(req, res, 413, {
-                        error: `Payload too large. Max allowed is ${ADMIN_MAX_BODY_BYTES} bytes.`
-                    });
-                }
-                chunks.push(chunk);
+        const chunks = [];
+        let totalBytes = 0;
+        for await (const chunk of req) {
+            totalBytes += chunk.length;
+            if (totalBytes > ADMIN_MAX_BODY_BYTES) {
+                return sendJson(req, res, 413, {
+                    error: `Payload too large. Max allowed is ${ADMIN_MAX_BODY_BYTES} bytes.`
+                });
             }
-            const raw = Buffer.concat(chunks).toString();
-            if (raw) body = JSON.parse(raw);
-        } catch (e) {
-            // Body parsing failed, continue with empty body
+            chunks.push(chunk);
+        }
+        const raw = Buffer.concat(chunks).toString();
+        if (raw.trim()) {
+            try {
+                body = JSON.parse(raw);
+            } catch (err) {
+                return sendJson(req, res, 400, {
+                    error: 'Invalid JSON body for admin update request.'
+                });
+            }
         }
     }
 
@@ -202,23 +272,32 @@ export async function handleAdminPriceUpdate(req, res, { sendJson }) {
         uploadedPrices: false,
         githubPushed: false,
         githubCommit: null,
-        githubError: null
+        githubError: null,
+        screenerRefreshed: false,
+        screenerRefreshPlanned: 0,
+        screenerRowsRefreshed: 0,
+        screenerRefreshDurationMs: null,
+        screenerRefreshError: null
     };
 
     let pricesContent = null;
+    let pricesObject = null;
+    const skipNasdaqFetch = body.skipNasdaqFetch === true;
 
     // Option 1: User uploaded prices directly
     if (body.prices && typeof body.prices === 'object') {
-        pricesContent = JSON.stringify(body.prices);
-        result.tickersUpdated = Object.keys(body.prices).length;
+        pricesObject = body.prices;
+        pricesContent = JSON.stringify(pricesObject);
+        result.tickersUpdated = Object.keys(pricesObject).length;
         result.uploadedPrices = true;
         console.log('[admin:update] using uploaded prices', { count: result.tickersUpdated });
     }
     // Option 2: Try to fetch from NASDAQ
-    else {
+    else if (!skipNasdaqFetch) {
         const nasdaq = await fetchNasdaqPrices();
         if (nasdaq.success) {
-            pricesContent = JSON.stringify(nasdaq.prices);
+            pricesObject = nasdaq.prices;
+            pricesContent = JSON.stringify(pricesObject);
             result.tickersUpdated = nasdaq.count;
             result.nasdaqFetched = true;
             console.log('[admin:update] fetched from NASDAQ', { count: nasdaq.count });
@@ -229,9 +308,11 @@ export async function handleAdminPriceUpdate(req, res, { sendJson }) {
     }
 
     if (!pricesContent) {
-        return sendJson(req, res, 500, {
+        return sendJson(req, res, skipNasdaqFetch ? 422 : 500, {
             ...result,
-            error: 'Failed to get price data. NASDAQ may be blocking this server. Try uploading prices directly.'
+            error: skipNasdaqFetch
+                ? 'No uploaded price data provided. Use manual upload from /admin/prices.'
+                : 'Failed to get price data. NASDAQ may be blocking this server. Try uploading prices directly.'
         });
     }
 
@@ -258,6 +339,28 @@ export async function handleAdminPriceUpdate(req, res, { sendJson }) {
             result.githubUrl = github.url;
         } else {
             result.githubError = github.error;
+        }
+    }
+
+    const refreshScreener = body.refreshScreener !== false;
+    if (refreshScreener && pricesObject && typeof pricesObject === 'object') {
+        const limit = parsePositiveInt(body.screenerRefreshLimit, ADMIN_SCREENER_REFRESH_LIMIT);
+        const concurrency = parsePositiveInt(body.screenerRefreshConcurrency, ADMIN_SCREENER_REFRESH_CONCURRENCY);
+        const includeFilings = ADMIN_SCREENER_REFRESH_INCLUDE_FILINGS && body.screenerIncludeFilings === true;
+        try {
+            const refresh = await refreshScreenerRowsForPrices({
+                prices: pricesObject,
+                limit,
+                concurrency,
+                includeFilings
+            });
+            result.screenerRefreshed = true;
+            result.screenerRefreshPlanned = refresh.planned;
+            result.screenerRowsRefreshed = refresh.rows;
+            result.screenerRefreshDurationMs = refresh.durationMs;
+        } catch (err) {
+            result.screenerRefreshError = err?.message || String(err);
+            console.warn('[admin:update] screener refresh failed', result.screenerRefreshError);
         }
     }
 
