@@ -36,6 +36,7 @@ import { closeDb as closeScreenerDb } from './server/screener/screenerStore.js';
 import { closeDb as closePricesDb } from './server/prices/priceStore.js';
 import { startDailyPricesScheduler } from './server/prices/dailyLastTradeScheduler.js';
 import { handleAdminPriceUpdate } from './server/admin/adminPriceHandler.js';
+import { isBot } from './server/lib/botDetection.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -715,6 +716,15 @@ async function getCachedViewModel(symbol) {
     try {
         const stats = await fsPromises.stat(cachePath);
 
+        // Invalidate if fundamentals DB is newer than this cache entry.
+        try {
+            const fundamentalsDbPath = path.join(DATA_DIR, 'edgar', 'fundamentals.db');
+            const fundamentalsStats = await fsPromises.stat(fundamentalsDbPath);
+            if (fundamentalsStats.mtimeMs > stats.mtimeMs) {
+                return null;
+            }
+        } catch (_) { }
+
         // Invalidate if prices.json is newer than this cache entry
         try {
             const pricesPath = path.join(DATA_DIR, 'prices.json');
@@ -754,8 +764,11 @@ async function buildTickerPayload(symbol, section) {
         err.status = 410;
         throw err;
     }
-    const snapshot = await ensureFundamentalsSnapshot(symbol);
-    const fundamentals = snapshot?.data?.periods || [];
+    let fundamentals = await getFundamentalsForTicker(symbol);
+    if (!Array.isArray(fundamentals) || fundamentals.length === 0) {
+        const snapshot = await ensureFundamentalsSnapshot(symbol);
+        fundamentals = snapshot?.data?.periods || [];
+    }
     if (!fundamentals.length) {
         const err = new Error('Ticker data unavailable');
         err.status = 404;
@@ -916,6 +929,13 @@ async function handleApi(req, res, url) {
                     const parts = url.pathname.split('/').filter(Boolean);
                     const symbol = parts[2];
                     if (!symbol) return sendJson(req, res, 400, { error: 'ticker is required' });
+                    const ua = req.headers['user-agent'] || '';
+                    if (isBot(ua)) {
+                        console.log(`[bot] ${ua.slice(0, 80)} → ${url.pathname}`);
+                        const cached = await getCachedViewModel(symbol);
+                        return sendJson(req, res, cached ? 200 : 202,
+                            cached ? { status: 'ready', data: cached } : { status: 'pending' });
+                    }
                     const payload = await buildEdgarStatusPayload(symbol);
                     const statusCode =
                         payload.status === 'ready'
@@ -952,6 +972,11 @@ async function handleApi(req, res, url) {
                         }
                     }
 
+                    const ua2 = req.headers['user-agent'] || '';
+                    if (isBot(ua2)) {
+                        console.log(`[bot] ${ua2.slice(0, 80)} → /api/ticker?symbol=${ticker}`);
+                        return sendJson(req, res, 202, { status: 'pending' });
+                    }
                     const data = await buildTickerPayload(ticker, section);
                     return sendJson(req, res, 200, data);
                 }
