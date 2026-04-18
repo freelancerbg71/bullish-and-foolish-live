@@ -28,7 +28,10 @@ jobs:
       
     - name: Run Engine Tests
       run: npm run test:engine
-      
+
     - name: Run Price Tests
       # Price tests might require mock data or simplified environment
       run: npm run test:prices
+
+    - name: Run Server Tests
+      run: npm run test:server
