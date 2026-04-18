@@ -668,12 +668,18 @@
             return bestRaw || null;
         }
 
+        function decodeHtmlEntities(text) {
+            if (!text) return '';
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = String(text);
+            return textarea.value;
+        }
+
         function cleanSnippet(text) {
             if (!text) return '';
-            return String(text)
+            return decodeHtmlEntities(String(text))
                 .replace(/<[^>]+>/g, ' ')
-                .replace(/&nbsp;|&#160;|&#xA0;|&#xa0;/g, ' ')
-                .replace(/&#\d+;|&#x[0-9a-f]+;/gi, ' ')
+                .replace(/[\u0000-\u001f\u007f]+/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
         }
@@ -1196,9 +1202,6 @@
 
                 const formatReasonLabel = (reason) => cleanReasonName(reason.name) || 'Signal';
 
-                const stripNumbers = (text) =>
-                    String(text || '').replace(/[$]?\d+(\.\d+)?%?([BMK]?)?/g, '').replace(/\s+/g, ' ').trim();
-
                 const formatPercentSmart = (val) => {
                     if (val == null) return '--';
                     const num = Number(val);
@@ -1245,7 +1248,7 @@
                     const map = new Map();
                     (signals || []).forEach(sig => {
                         const title = String(sig.title || sig.id || 'Signal').trim();
-                        const snippet = stripNumbers(sig.snippet || '').trim();
+                        const snippet = cleanSnippet(sig.snippet || '').trim();
                         const titleKey = normalizeSignalText(title) || 'signal';
                         const snippetKey = normalizeSignalText(snippet);
                         const key = snippetKey ? `${titleKey}|${snippetKey.slice(0, 60)}` : titleKey;
@@ -1270,7 +1273,7 @@
                     const explainer = ruleExplainers[reason.name]
                         ? (reason.score >= 0 ? ruleExplainers[reason.name].pos : ruleExplainers[reason.name].neg)
                         : '';
-                    const rawMessage = stripNumbers(reason.message || '');
+                    const rawMessage = cleanSnippet(reason.message || '');
                     const detail = explainer || rawMessage || 'Flagged in the scoring rules.';
                     return `${label}: ${detail}`.trim();
                 };
@@ -1311,7 +1314,7 @@
                     .sort((a, b) => Math.abs(Number(b.score) || 0) - Math.abs(Number(a.score) || 0))
                     .slice(0, 3)
                     .map(s => {
-                        const detail = stripNumbers(s.snippet || '').trim() || 'Positive filing signal.';
+                        const detail = cleanSnippet(s.snippet || '').trim() || 'Positive filing signal.';
                         const countLabel = s.count > 1 ? ` (x${s.count})` : '';
                         return `${s.title}${countLabel}: ${detail}`;
                     });
