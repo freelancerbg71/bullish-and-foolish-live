@@ -2215,7 +2215,7 @@ function computeStrategicOutlook({ stock, snapshot, filingSignals, momentumScore
 
 export async function buildTickerViewModel(
   ticker,
-  { fundamentalsOverride = null, allowFilingScan = true } = {}
+  { fundamentalsOverride = null, allowFilingScan = true, allowEdgarRefresh = true } = {}
 ) {
   try {
     if (!ticker) return null;
@@ -2467,8 +2467,10 @@ export async function buildTickerViewModel(
                   : newCardsFieldsMissing
                     ? "new-card fields missing"
                     : "growth-speed history missing";
-          console.warn(`[tickerAssembler] enqueue EDGAR refresh for ${ticker.toUpperCase()} (${reason})`);
-          enqueueFundamentalsJob(ticker);
+          if (allowEdgarRefresh) {
+            console.warn(`[tickerAssembler] enqueue EDGAR refresh for ${ticker.toUpperCase()} (${reason})`);
+            enqueueFundamentalsJob(ticker);
+          }
         } catch (err) {
           console.warn("[tickerAssembler] failed to enqueue EDGAR refresh", ticker, err?.message || err);
         }

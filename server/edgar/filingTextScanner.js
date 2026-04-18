@@ -130,8 +130,34 @@ function formMatches(candidate, allowed) {
 function stripTagsToText(html) {
   if (!html) return "";
   const withoutTags = html.replace(/<[^>]+>/g, " ");
-  const text = withoutTags.replace(/\s+/g, " ").trim();
+  const decoded = decodeHtmlEntities(withoutTags);
+  const text = decoded.replace(/\s+/g, " ").trim();
   return truncateForwardLookingFooter(text);
+}
+
+function decodeHtmlEntities(input) {
+  if (!input) return "";
+  const named = {
+    nbsp: " ",
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: "\"",
+    apos: "'"
+  };
+  const decodeCodePoint = (cp) => {
+    const codePoint = Number(cp);
+    if (!Number.isFinite(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return " ";
+    try {
+      return String.fromCodePoint(codePoint);
+    } catch (_) {
+      return " ";
+    }
+  };
+  return String(input)
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => decodeCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#([0-9]+);/g, (_, dec) => decodeCodePoint(Number.parseInt(dec, 10)))
+    .replace(/&([a-z]+);/gi, (_, name) => named[name.toLowerCase()] ?? " ");
 }
 
 export function truncateForwardLookingFooter(text) {
