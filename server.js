@@ -920,6 +920,29 @@ async function handleApi(req, res, url) {
 
     try {
         if (isTickerEndpoint) {
+            const ua = req.headers['user-agent'] || '';
+            if (isBot(ua)) {
+                if (url.pathname.startsWith('/api/ticker/')) {
+                    const parts = url.pathname.split('/').filter(Boolean);
+                    const symbol = parts[2];
+                    if (!symbol) return sendJson(req, res, 400, { error: 'ticker is required' });
+                    const cached = await getCachedViewModel(symbol);
+                    const botStatus = cached ? 200 : 202;
+                    console.log(`[bot] ${ua.slice(0, 80)} → ${url.pathname} (${botStatus})`);
+                    return sendJson(req, res, botStatus,
+                        cached ? { status: 'ready', data: cached } : { status: 'pending' });
+                }
+                if (url.pathname === '/api/ticker') {
+                    const ticker = url.searchParams.get('symbol')?.toUpperCase();
+                    const cached = await getCachedViewModel(ticker);
+                    const botStatus = cached ? 200 : 202;
+                    console.log(`[bot] ${ua.slice(0, 80)} → /api/ticker?symbol=${ticker} (${botStatus})`);
+                    return sendJson(req, res, botStatus,
+                        cached ? { status: 'ready', data: cached } : { status: 'pending' });
+                }
+                // Unknown ticker endpoint — just 202
+                return sendJson(req, res, 202, { status: 'pending' });
+            }
             if (activeTickerRequests >= MAX_TICKER_CONCURRENCY) {
                 return sendJson(req, res, 503, { error: 'Server busy, try again shortly.' });
             }
@@ -929,13 +952,6 @@ async function handleApi(req, res, url) {
                     const parts = url.pathname.split('/').filter(Boolean);
                     const symbol = parts[2];
                     if (!symbol) return sendJson(req, res, 400, { error: 'ticker is required' });
-                    const ua = req.headers['user-agent'] || '';
-                    if (isBot(ua)) {
-                        console.log(`[bot] ${ua.slice(0, 80)} → ${url.pathname}`);
-                        const cached = await getCachedViewModel(symbol);
-                        return sendJson(req, res, cached ? 200 : 202,
-                            cached ? { status: 'ready', data: cached } : { status: 'pending' });
-                    }
                     const payload = await buildEdgarStatusPayload(symbol);
                     const statusCode =
                         payload.status === 'ready'
@@ -972,11 +988,6 @@ async function handleApi(req, res, url) {
                         }
                     }
 
-                    const ua2 = req.headers['user-agent'] || '';
-                    if (isBot(ua2)) {
-                        console.log(`[bot] ${ua2.slice(0, 80)} → /api/ticker?symbol=${ticker}`);
-                        return sendJson(req, res, 202, { status: 'pending' });
-                    }
                     const data = await buildTickerPayload(ticker, section);
                     return sendJson(req, res, 200, data);
                 }
