@@ -934,6 +934,7 @@ async function handleApi(req, res, url) {
                 }
                 if (url.pathname === '/api/ticker') {
                     const ticker = url.searchParams.get('symbol')?.toUpperCase();
+                    if (!ticker) return sendJson(req, res, 400, { error: 'ticker is required' });
                     const cached = await getCachedViewModel(ticker);
                     const botStatus = cached ? 200 : 202;
                     console.log(`[bot] ${ua.slice(0, 80)} → /api/ticker?symbol=${ticker} (${botStatus})`);
