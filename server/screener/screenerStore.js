@@ -33,6 +33,8 @@ async function initDb() {
     const db = new Database(DB_FILE);
     dbInstance = db;
     db.pragma("journal_mode = WAL");
+    db.pragma("cache_size = -2000"); // 2 MB page cache
+    db.pragma("mmap_size = 0"); // no mmap → smaller RSS
     return db;
   })();
   return dbPromise;

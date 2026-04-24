@@ -258,6 +258,8 @@ async function initDb() {
     const db = new Database(dbFile);
     dbInstance = db;
     db.pragma("journal_mode = WAL");
+    db.pragma("cache_size = -2000"); // 2 MB page cache
+    db.pragma("mmap_size = 0"); // no mmap → smaller RSS
     db.exec(`
       CREATE TABLE IF NOT EXISTS fundamentals (
         id INTEGER PRIMARY KEY,

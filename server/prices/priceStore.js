@@ -38,6 +38,8 @@ async function initDb() {
     dbInstance = db;
     await yieldToEventLoop(); // Allow pending I/O to proceed
     db.pragma("journal_mode = WAL");
+    db.pragma("cache_size = -2000"); // 2 MB page cache
+    db.pragma("mmap_size = 0"); // no mmap → smaller RSS
     db.exec(`
       CREATE TABLE IF NOT EXISTS prices_eod (
         id INTEGER PRIMARY KEY,
