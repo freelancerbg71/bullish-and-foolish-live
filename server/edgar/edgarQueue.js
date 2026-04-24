@@ -4,6 +4,9 @@ const MAX_PARALLEL_JOBS = Number(process.env.EDGAR_MAX_PARALLEL_JOBS) || 2;
 const BETWEEN_JOBS_DELAY_MS = Number(process.env.EDGAR_JOB_DELAY_MS) || 400;
 const MAX_QUEUE_LENGTH = Number(process.env.EDGAR_MAX_QUEUE) || 100;
 const TICKER_NOT_FOUND_COOLDOWN_MS = Number(process.env.EDGAR_TICKER_NOT_FOUND_COOLDOWN_MS) || 24 * 60 * 60 * 1000; // 24h
+const QUEUE_STATE_SWEEP_INTERVAL_MS = 15 * 60 * 1000; // 15 min
+const JOB_STATE_RETENTION_MS = 60 * 60 * 1000; // 1 hour after finishedAt
+const NOT_FOUND_LOG_RETENTION_MS = TICKER_NOT_FOUND_COOLDOWN_MS; // 24 hours
 
 const queue = [];
 const jobState = new Map();
@@ -11,6 +14,25 @@ const notFoundUntil = new Map(); // ticker -> ts
 const notFoundLogOnce = new Map(); // ticker -> lastLogTs
 let activeJobs = 0;
 let processing = false;
+
+function sweepQueueState() {
+  const now = Date.now();
+  for (const [key, job] of jobState.entries()) {
+    const active = job?.status === "queued" || job?.status === "running";
+    if (active) continue;
+    const finishedIso = job?.finishedAt || job?.startedAt || job?.enqueuedAt;
+    const finishedAt = finishedIso ? Date.parse(finishedIso) : NaN;
+    if (!Number.isFinite(finishedAt)) continue;
+    if (now - finishedAt > JOB_STATE_RETENTION_MS) jobState.delete(key);
+  }
+  for (const [key, ts] of notFoundLogOnce.entries()) {
+    if (!Number.isFinite(ts) || now - ts > NOT_FOUND_LOG_RETENTION_MS) {
+      notFoundLogOnce.delete(key);
+    }
+  }
+}
+
+setInterval(sweepQueueState, QUEUE_STATE_SWEEP_INTERVAL_MS).unref();
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
