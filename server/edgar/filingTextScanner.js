@@ -23,6 +23,16 @@ const EDGAR_FILING_SIGNALS_ENABLED = process.env.EDGAR_FILING_SIGNALS_ENABLED !=
 const FILING_SIGNALS_SCANNER_VERSION = "2025-12-24-label-fix-v7";
 const goingConcernCache = new Map();
 const filingSignalCache = new Map();
+const FILING_CACHE_MAX_ENTRIES = Number(process.env.FILING_CACHE_MAX_ENTRIES) || 100;
+
+function lruCacheSet(map, key, value) {
+  if (map.has(key)) map.delete(key);
+  map.set(key, value);
+  while (map.size > FILING_CACHE_MAX_ENTRIES) {
+    const oldest = map.keys().next().value;
+    map.delete(oldest);
+  }
+}
 const MAX_RECENT_FILINGS_DEFAULT = Number(process.env.FILING_SIGNALS_MAX_FILINGS) || 3;
 const MAX_RECENT_FILINGS_DEEP = Number(process.env.FILING_SIGNALS_MAX_FILINGS_DEEP) || 10;
 const PRIMARY_FORMS = new Set(["10-Q", "10-K", "20-F", "6-K"]);
@@ -522,7 +532,7 @@ export async function scanFilingForGoingConcern(ticker) {
   const meta = await fetchLatestFilingMeta(ticker);
   if (!meta) {
     const result = { found: false, reason: "No recent 10-Q/10-K found" };
-    goingConcernCache.set(key, { fetchedAt: now, result });
+    lruCacheSet(goingConcernCache, key, { fetchedAt: now, result });
     return result;
   }
 
@@ -538,11 +548,11 @@ export async function scanFilingForGoingConcern(ticker) {
       filed: meta.filed,
       cik: meta.cik
     };
-    goingConcernCache.set(key, { fetchedAt: now, result });
+    lruCacheSet(goingConcernCache, key, { fetchedAt: now, result });
     return result;
   } catch (err) {
     const result = { found: false, error: err?.message || String(err) };
-    goingConcernCache.set(key, { fetchedAt: now, result });
+    lruCacheSet(goingConcernCache, key, { fetchedAt: now, result });
     return result;
   }
 }
@@ -1170,7 +1180,7 @@ export async function scanFilingForSignals(ticker, opts = {}) {
     const cachedMax = diskCached.maxFilings || 0;
     // If we need a deep scan but cache is shallow, bypass cache and re-scan.
     if (requestedMax <= cachedMax) {
-      filingSignalCache.set(key, { fetchedAt: now, result: diskCached });
+      lruCacheSet(filingSignalCache, key, { fetchedAt: now, result: diskCached });
       return diskCached;
     }
   }
@@ -1306,7 +1316,7 @@ export async function scanFilingForSignals(ticker, opts = {}) {
       },
       cachedAt: diskCached.cachedAt || new Date().toISOString()
     };
-    filingSignalCache.set(key, { fetchedAt: now, result });
+    lruCacheSet(filingSignalCache, key, { fetchedAt: now, result });
     return result;
   }
 
@@ -1319,7 +1329,7 @@ export async function scanFilingForSignals(ticker, opts = {}) {
       cachedAt: new Date().toISOString()
     };
     persistFilingSignals(key, result);
-    filingSignalCache.set(key, { fetchedAt: now, result });
+    lruCacheSet(filingSignalCache, key, { fetchedAt: now, result });
     return result;
   }
 
@@ -1423,7 +1433,7 @@ export async function scanFilingForSignals(ticker, opts = {}) {
     signalIds: signals.map(s => s.id).join(',') || 'none'
   });
   persistFilingSignals(key, result);
-  filingSignalCache.set(key, { fetchedAt: now, result });
+  lruCacheSet(filingSignalCache, key, { fetchedAt: now, result });
   return result;
 }
 
