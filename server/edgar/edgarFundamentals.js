@@ -29,6 +29,15 @@ const YEARS_TO_KEEP = Math.max(2, Number(process.env.EDGAR_YEARS_TO_KEEP) || 4);
 const NOT_FOUND_LOG_TTL_MS = 10 * 60 * 1000;
 const notFoundLogCache = new Map();
 
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, ts] of notFoundLogCache.entries()) {
+    if (!Number.isFinite(ts) || now - ts > NOT_FOUND_LOG_TTL_MS) {
+      notFoundLogCache.delete(key);
+    }
+  }
+}, NOT_FOUND_LOG_TTL_MS).unref();
+
 const revenueTags = [
   "Revenues",
   "Revenue",
