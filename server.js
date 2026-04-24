@@ -45,6 +45,13 @@ const DATA_DIR = process.env.DATA_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH |
 const EDGAR_SNAPSHOT_DIR = path.join(DATA_DIR, 'edgar');
 const JSON_SNAPSHOT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Periodic GC when --expose-gc is set (Railway boot flag). No-op in dev.
+if (typeof global.gc === "function") {
+  setInterval(() => {
+    try { global.gc(); } catch { /* ignore */ }
+  }, 30 * 60 * 1000).unref();
+}
+
 // S&P 100 tickers get special clickbait SEO treatment
 const SP100_TICKERS = new Set([
     'AAPL', 'ABBV', 'ABT', 'ACN', 'ADBE', 'AIG', 'AMD', 'AMGN', 'AMZN', 'AVGO',
